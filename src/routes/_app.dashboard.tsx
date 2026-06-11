@@ -1,275 +1,343 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router"
 import {
-  ArrowDownRight,
-  ArrowUpRight,
-  Clock,
-  FileText,
   Inbox,
-  Mail,
-  PackageCheck,
-  Plus,
-  ShoppingCart,
-  Sparkles,
+  FileClock,
   TrendingUp,
-  Upload,
-  Users,
-} from "lucide-react";
+  Truck,
+  ArrowUpRight,
+  ArrowDownRight,
+  Sparkles,
+  AlertTriangle,
+  FileText,
+  PackageCheck,
+  ReceiptText,
+  Mailbox,
+  ArrowRight,
+} from "lucide-react"
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
+import { StatusBadge } from "@/components/status-badge"
+import { FxRatesCard } from "@/components/fx-rates-card"
+import { ShippingRatesCard } from "@/components/shipping-rates-card"
+import { QuotesPerWeekChart } from "@/components/quotes-per-week-chart"
+import { DashboardWelcome } from "@/components/dashboard-welcome"
+import { rfqs, buyers } from "@/lib/data"
+import { cn } from "@/lib/utils"
 
-export const Route = createFileRoute("/_app/dashboard")({
-  head: () => ({ meta: [{ title: "Command Center — wekbench" }] }),
-  component: DashboardPage,
-});
-
+/* ---- KPI strip ---- */
 const kpis = [
-  { label: "Open RFQs", value: "24", change: "+6", trend: "up", hint: "vs last week", icon: Inbox },
-  { label: "Quotes awaiting review", value: "11", change: "+3", trend: "up", hint: "from 7 suppliers", icon: FileText },
-  { label: "Orders in flight", value: "38", change: "-2", trend: "down", hint: "5 delayed", icon: ShoppingCart },
-  { label: "Avg. cycle time", value: "2.4d", change: "-0.6d", trend: "up", hint: "RFQ → PO", icon: Clock },
-];
+  {
+    label: "Open RFQs",
+    value: "4",
+    icon: Inbox,
+    href: "/inbox",
+    delta: { dir: "up" as const, text: "+2 vs last week" },
+  },
+  {
+    label: "Quotes awaiting response",
+    value: "3",
+    icon: FileClock,
+    href: "/quotes",
+    delta: { dir: "flat" as const, text: "avg 4.2 days waiting" },
+  },
+  {
+    label: "Won this month",
+    value: "GH₵94.2M",
+    icon: TrendingUp,
+    href: "/quotes",
+    delta: { dir: "up" as const, text: "61% win rate" },
+  },
+  {
+    label: "Orders in transit",
+    value: "2",
+    icon: Truck,
+    href: "/orders",
+    delta: { dir: "down" as const, text: "1 overdue", alert: true },
+  },
+]
 
-const pipeline = [
-  { stage: "Captured", count: 42, value: "$182k", pct: 100, tone: "bg-info" },
-  { stage: "Sourcing", count: 28, value: "$124k", pct: 72, tone: "bg-primary" },
-  { stage: "Quoted", count: 19, value: "$96k", pct: 54, tone: "bg-accent" },
-  { stage: "Awarded", count: 12, value: "$71k", pct: 38, tone: "bg-success" },
-  { stage: "Delivered", count: 9, value: "$54k", pct: 26, tone: "bg-chart-5" },
-];
-
-const recent = [
-  { id: "RFQ-2841", buyer: "Northwind Industrial", items: 14, value: "$28,400", status: "Quotes received", tone: "info", time: "8m" },
-  { id: "RFQ-2840", buyer: "Pacific Mining Co.", items: 6, value: "$11,950", status: "Awaiting suppliers", tone: "warning", time: "27m" },
-  { id: "RFQ-2839", buyer: "Helios Aerospace", items: 22, value: "$74,210", status: "Awarded", tone: "success", time: "1h" },
-  { id: "RFQ-2838", buyer: "Brightwater Utilities", items: 3, value: "$4,120", status: "Quotes received", tone: "info", time: "2h" },
-  { id: "RFQ-2837", buyer: "Cascade Robotics", items: 9, value: "$18,640", status: "Drafting", tone: "muted", time: "3h" },
-];
-
-const tasks = [
-  { title: "Review 3 quotes for RFQ-2841", meta: "Northwind Industrial · $28.4k", priority: "High" },
-  { title: "Approve PO for Helios Aerospace", meta: "RFQ-2839 · awarded to Acme Bearings", priority: "High" },
-  { title: "Chase Pacific Mining for spec on item #4", meta: "RFQ-2840 · open 27m", priority: "Med" },
-  { title: "Confirm delivery date with Forge Steel", meta: "PO-19022 · expected Fri", priority: "Med" },
-];
-
+/* ---- Activity feed ---- */
 const activity = [
-  { who: "Acme Bearings", what: "submitted a quote for", target: "RFQ-2841", tone: "info", icon: FileText, time: "5m" },
-  { who: "Forge Steel Co.", what: "shipped", target: "PO-19022", tone: "success", icon: PackageCheck, time: "42m" },
-  { who: "wekbench", what: "captured 3 RFQs from", target: "purchasing@northwind.com", tone: "muted", icon: Mail, time: "1h" },
-  { who: "Maria L.", what: "awarded", target: "RFQ-2839 → Acme Bearings", tone: "success", icon: Sparkles, time: "2h" },
-  { who: "Pacific Mining", what: "uploaded a revised spec to", target: "RFQ-2840", tone: "warning", icon: Upload, time: "3h" },
-];
+  { id: 1, type: "rfq", icon: Inbox, text: "New RFQ from Meridian Bank Plc", meta: "25 x Dell Latitude laptops", time: "12m ago" },
+  { id: 2, type: "quote", icon: FileText, text: "Quote QT-2026-0418 sent to Meridian Bank", meta: "GH₵53.1M · v1", time: "1h ago" },
+  { id: 3, type: "po", icon: PackageCheck, text: "PO received from Equator Logistics", meta: "30 x Rugged tablets", time: "3h ago" },
+  { id: 4, type: "invoice", icon: ReceiptText, text: "Invoice INV-0392 marked paid", meta: "GH₵27.3M settled", time: "5h ago" },
+  { id: 5, type: "rfq", icon: Inbox, text: "New RFQ from Sahel Health Group", meta: "Network switches & UPS", time: "Yesterday" },
+  { id: 6, type: "delivered", icon: Truck, text: "Order ORD-0356 delivered", meta: "Atlas Manufacturing", time: "Yesterday" },
+  { id: 7, type: "quote", icon: FileText, text: "Quote QT-2026-0381 approved", meta: "Atlas Manufacturing · GH₵14.8M", time: "2 days ago" },
+  { id: 8, type: "po", icon: PackageCheck, text: "PO received from Sahel Health", meta: "6 x APC UPS units", time: "2 days ago" },
+  { id: 9, type: "rfq", icon: Inbox, text: "New RFQ from Coastal Telecoms", meta: "Server rack & cooling", time: "3 days ago" },
+  { id: 10, type: "invoice", icon: ReceiptText, text: "Invoice INV-0370 issued", meta: "Sahel Health · GH₵19.2M", time: "4 days ago" },
+]
+
+const activityTone: Record<string, string> = {
+  rfq: "bg-info/10 text-info",
+  quote: "bg-primary/10 text-primary",
+  po: "bg-accent/10 text-accent",
+  invoice: "bg-success/10 text-success",
+  delivered: "bg-success/10 text-success",
+}
+
+/* ---- Quote pipeline ---- */
+const pipeline = [
+  { stage: "Drafted", count: 3, value: 41.5, className: "bg-muted-foreground/30", text: "text-foreground" },
+  { stage: "Submitted", count: 5, value: 88.2, className: "bg-info", text: "text-info-foreground" },
+  { stage: "Clarification", count: 2, value: 22.7, className: "bg-warning", text: "text-warning-foreground" },
+  { stage: "Won", count: 4, value: 94.2, className: "bg-success", text: "text-success-foreground" },
+  { stage: "Lost", count: 2, value: 18.4, className: "bg-destructive/70", text: "text-destructive-foreground" },
+  { stage: "Expired", count: 1, value: 7.9, className: "bg-muted-foreground/50", text: "text-foreground" },
+]
+const pipelineTotalValue = pipeline.reduce((s, p) => s + p.value, 0)
+const pipelineTotalCount = pipeline.reduce((s, p) => s + p.count, 0)
+
+/* ---- Top buyers this quarter ---- */
+const topBuyers = [...buyers]
+  .map((b) => ({ company: b.company, value: Number(b.lifetimeValue.replace(/[^\d]/g, "")) / 1_000_000 }))
+  .sort((a, b) => b.value - a.value)
+  .slice(0, 5)
+const topBuyerMax = Math.max(...topBuyers.map((b) => b.value))
+
+/* ---- RFQs needing attention (closest deadlines) ---- */
+const attentionRfqs = [...rfqs].sort((a, b) => +new Date(a.deadline) - +new Date(b.deadline)).slice(0, 5)
+const isUrgent = (rel: string) => /today|tomorrow|24/i.test(rel)
+
+function DeltaIcon({ dir }: { dir: "up" | "down" | "flat" }) {
+  if (dir === "up") return <ArrowUpRight className="size-3.5 text-success" />
+  if (dir === "down") return <ArrowDownRight className="size-3.5 text-destructive" />
+  return <span className="block h-px w-3 bg-muted-foreground" />
+}
 
 function DashboardPage() {
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
-      <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Command Center</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            Good afternoon, Maria
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            You have <span className="font-medium text-foreground">11 quotes</span> waiting on review and{" "}
-            <span className="font-medium text-foreground">5 orders</span> running behind.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/email-capture"><Mail className="size-4" /> Capture from email</Link>
-          </Button>
-          <Button size="sm" asChild>
-            <Link to="/inbox"><Plus className="size-4" /> New RFQ</Link>
-          </Button>
-        </div>
-      </header>
+    <div className="mx-auto max-w-[1400px] px-4 pb-12 pt-4 md:px-8">
+      {/* First sign-in welcome (shows once after onboarding) */}
+      <DashboardWelcome />
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.map((k) => {
-          const Icon = k.icon;
-          const positive = k.trend === "up";
+      {/* Row 1: greeting + what's new */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Good morning, Samuel</h1>
+          <p className="text-sm text-muted-foreground">Tuesday, 9 June 2026</p>
+        </div>
+        <Link
+          to="/inbox"
+          className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
+        >
+          <Sparkles className="size-3.5" />
+          What&apos;s new · 3 RFQs arrived overnight
+        </Link>
+      </div>
+
+      {/* Row 2: KPI strip */}
+      <section aria-label="Key metrics" className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {kpis.map((kpi) => {
+          const Icon = kpi.icon
           return (
-            <Card key={k.label} className="border-border/70">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Icon className="size-4" />
-                  </span>
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                      positive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
-                    }`}
-                  >
-                    {positive ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
-                    {k.change}
-                  </span>
-                </div>
-                <div className="mt-4">
-                  <p className="text-sm text-muted-foreground">{k.label}</p>
-                  <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{k.value}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{k.hint}</p>
-                </div>
-              </CardContent>
-            </Card>
-          );
+            <Link
+              key={kpi.label}
+              to={kpi.href}
+              className="group rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-secondary/40"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{kpi.label}</span>
+                <Icon className="size-4 text-muted-foreground" />
+              </div>
+              <p className="mt-3 text-3xl font-semibold tabular-nums tracking-tight text-foreground">{kpi.value}</p>
+              <div className="mt-1.5 flex items-center gap-1 text-xs">
+                <DeltaIcon dir={kpi.delta.dir} />
+                <span className={cn("font-medium", kpi.delta.alert ? "text-destructive" : "text-muted-foreground")}>
+                  {kpi.delta.text}
+                </span>
+              </div>
+            </Link>
+          )
         })}
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2 border-border/70">
-          <CardHeader className="flex flex-row items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-base">Procurement pipeline</CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">Live volume across the last 30 days</p>
-            </div>
-            <Badge variant="secondary" className="gap-1">
-              <TrendingUp className="size-3" /> +18% MoM
-            </Badge>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {pipeline.map((p) => (
-              <div key={p.stage} className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className={`size-2 rounded-full ${p.tone}`} />
-                    <span className="font-medium text-foreground">{p.stage}</span>
-                    <span className="text-muted-foreground">· {p.count}</span>
-                  </div>
-                  <span className="font-medium tabular-nums text-foreground">{p.value}</span>
-                </div>
-                <Progress value={p.pct} className="h-2" />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+      {/* Row 3: RFQs needing attention (8) + Activity feed (4) */}
+      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-12">
+        <section className="overflow-hidden rounded-lg border border-border bg-card lg:col-span-8">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <h2 className="text-sm font-semibold text-foreground">RFQs needing attention</h2>
+            <Link to="/inbox" className="text-xs font-medium text-primary hover:underline">
+              View all RFQs
+            </Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                  <th className="px-4 py-2 font-medium">Buyer</th>
+                  <th className="px-4 py-2 font-medium">Reference</th>
+                  <th className="px-4 py-2 text-center font-medium">Items</th>
+                  <th className="px-4 py-2 font-medium">Deadline</th>
+                  <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 text-right font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {attentionRfqs.map((rfq) => {
+                  const urgent = isUrgent(rfq.deadlineRelative)
+                  return (
+                    <tr key={rfq.id} className="border-b border-border last:border-0 hover:bg-secondary/40">
+                      <td className="px-4 py-2.5 font-medium text-foreground">{rfq.buyer}</td>
+                      <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{rfq.ref}</td>
+                      <td className="px-4 py-2.5 text-center tabular-nums text-muted-foreground">
+                        {rfq.lineItems.length}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium tabular-nums",
+                            urgent ? "bg-destructive/10 text-destructive" : "text-muted-foreground",
+                          )}
+                        >
+                          {urgent && <AlertTriangle className="size-3" />}
+                          {rfq.deadlineRelative}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <StatusBadge status={rfq.status} />
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <Link
+                          to={`/rfq/${rfq.id}`}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                        >
+                          Open <ArrowRight className="size-3" />
+                        </Link>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-        <Card className="border-border/70">
-          <CardHeader>
-            <CardTitle className="text-base">Your task queue</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Sorted by urgency</p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {tasks.map((t) => (
-              <div
-                key={t.title}
-                className="flex items-start justify-between gap-3 rounded-lg border border-border/70 p-3 transition-colors hover:bg-muted/50"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">{t.title}</p>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">{t.meta}</p>
-                </div>
-                <Badge
-                  variant="outline"
-                  className={
-                    t.priority === "High"
-                      ? "border-destructive/30 bg-destructive/10 text-destructive"
-                      : "border-warning/30 bg-warning/10 text-warning"
-                  }
-                >
-                  {t.priority}
-                </Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2 border-border/70">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-base">Recent RFQs</CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">Latest activity from buyers and suppliers</p>
-            </div>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/inbox">View all</Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="px-0">
-            <div className="divide-y divide-border/70">
-              {recent.map((r) => (
-                <Link
-                  to="/inbox"
-                  key={r.id}
-                  className="grid grid-cols-12 items-center gap-3 px-6 py-3 transition-colors hover:bg-muted/40"
-                >
-                  <div className="col-span-3">
-                    <p className="text-sm font-medium text-foreground">{r.id}</p>
-                    <p className="text-xs text-muted-foreground">{r.time} ago</p>
-                  </div>
-                  <div className="col-span-4 min-w-0">
-                    <p className="truncate text-sm text-foreground">{r.buyer}</p>
-                    <p className="text-xs text-muted-foreground">{r.items} line items</p>
-                  </div>
-                  <div className="col-span-2 text-sm font-medium tabular-nums text-foreground">{r.value}</div>
-                  <div className="col-span-3 flex justify-end">
-                    <Badge
-                      variant="outline"
-                      className={
-                        r.tone === "success"
-                          ? "border-success/30 bg-success/10 text-success"
-                          : r.tone === "warning"
-                            ? "border-warning/30 bg-warning/10 text-warning"
-                            : r.tone === "info"
-                              ? "border-info/30 bg-info/10 text-info"
-                              : "border-border bg-muted text-muted-foreground"
-                      }
-                    >
-                      {r.status}
-                    </Badge>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70">
-          <CardHeader>
-            <CardTitle className="text-base">Activity</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Across your workspace</p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {activity.map((a, i) => {
-              const Icon = a.icon;
+        {/* Activity feed */}
+        <section className="overflow-hidden rounded-lg border border-border bg-card lg:col-span-4">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <h2 className="text-sm font-semibold text-foreground">Activity feed</h2>
+            <span className="text-xs text-muted-foreground">Last 10 events</span>
+          </div>
+          <ol className="relative px-4 py-3">
+            <span className="absolute left-[27px] top-4 bottom-4 w-px bg-border" aria-hidden />
+            {activity.map((e) => {
+              const Icon = e.icon
               return (
-                <div key={i} className="flex gap-3">
+                <li key={e.id} className="relative flex gap-3 pb-3.5 last:pb-0">
                   <span
-                    className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full ${
-                      a.tone === "success"
-                        ? "bg-success/10 text-success"
-                        : a.tone === "warning"
-                          ? "bg-warning/10 text-warning"
-                          : a.tone === "info"
-                            ? "bg-info/10 text-info"
-                            : "bg-muted text-muted-foreground"
-                    }`}
+                    className={cn(
+                      "z-10 flex size-7 shrink-0 items-center justify-center rounded-full ring-4 ring-card",
+                      activityTone[e.type],
+                    )}
                   >
                     <Icon className="size-3.5" />
                   </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-foreground">
-                      <span className="font-medium">{a.who}</span>{" "}
-                      <span className="text-muted-foreground">{a.what}</span>{" "}
-                      <span className="font-medium">{a.target}</span>
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{a.time} ago</p>
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <p className="text-xs font-medium leading-snug text-foreground">{e.text}</p>
+                    <p className="truncate text-xs text-muted-foreground">{e.meta}</p>
                   </div>
-                </div>
-              );
+                  <span className="shrink-0 pt-0.5 text-[11px] text-muted-foreground">{e.time}</span>
+                </li>
+              )
             })}
-            <Separator />
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Users className="size-3.5" />
-              4 teammates active now
-            </div>
-          </CardContent>
-        </Card>
+          </ol>
+        </section>
+      </div>
+
+      {/* Row 4: Quote pipeline summary */}
+      <section className="mt-5 overflow-hidden rounded-lg border border-border bg-card">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
+          <h2 className="text-sm font-semibold text-foreground">Quote pipeline summary</h2>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span>
+              <span className="font-semibold tabular-nums text-foreground">{pipelineTotalCount}</span> quotes
+            </span>
+            <span>
+              <span className="font-semibold tabular-nums text-foreground">GH₵{pipelineTotalValue.toFixed(1)}M</span>{" "}
+              total value
+            </span>
+          </div>
+        </div>
+        <div className="px-4 py-4">
+          <div className="flex h-9 w-full overflow-hidden rounded-md">
+            {pipeline.map((seg) => (
+              <Link
+                key={seg.stage}
+                to={`/quotes?stage=${seg.stage.toLowerCase()}`}
+                style={{ width: `${(seg.value / pipelineTotalValue) * 100}%` }}
+                className={cn(
+                  "flex items-center justify-center text-[11px] font-semibold tabular-nums transition-opacity hover:opacity-80",
+                  seg.className,
+                  seg.text,
+                )}
+                title={`${seg.stage}: ${seg.count} quotes · GH₵${seg.value}M`}
+              >
+                {seg.count}
+              </Link>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
+            {pipeline.map((seg) => (
+              <div key={seg.stage} className="flex items-center gap-1.5 text-xs">
+                <span className={cn("size-2.5 rounded-sm", seg.className)} aria-hidden />
+                <span className="text-muted-foreground">{seg.stage}</span>
+                <span className="font-medium tabular-nums text-foreground">{seg.count}</span>
+                <span className="tabular-nums text-muted-foreground">· GH₵{seg.value}M</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Row 5: weekly metrics (6) + top buyers (6) */}
+      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <section className="rounded-lg border border-border bg-card p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground">This month&apos;s metrics</h2>
+            <span className="text-xs text-muted-foreground">Quotes sent per week</span>
+          </div>
+          <div className="mt-3">
+            <QuotesPerWeekChart />
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-border bg-card p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground">Top buyers by value</h2>
+            <span className="text-xs text-muted-foreground">This quarter</span>
+          </div>
+          <ul className="mt-4 flex flex-col gap-3">
+            {topBuyers.map((b) => (
+              <li key={b.company} className="flex items-center gap-3">
+                <span className="w-36 shrink-0 truncate text-sm text-foreground">{b.company}</span>
+                <div className="h-5 flex-1 overflow-hidden rounded bg-secondary">
+                  <div
+                    className="h-full rounded bg-primary/80"
+                    style={{ width: `${(b.value / topBuyerMax) * 100}%` }}
+                  />
+                </div>
+                <span className="w-16 shrink-0 text-right font-mono text-xs font-medium tabular-nums text-foreground">
+                  GH₵{b.value.toFixed(1)}M
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+
+      {/* Market data: FX + shipping (carried over from earlier request) */}
+      <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <FxRatesCard />
+        <ShippingRatesCard />
       </section>
     </div>
-  );
+  )
 }
+
+
+export const Route = createFileRoute("/_app/dashboard")({
+  component: DashboardPage,
+});

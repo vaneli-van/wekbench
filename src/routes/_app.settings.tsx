@@ -1,7 +1,174 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PlaceholderPage } from "@/components/placeholder-page";
+import { PageHeader } from "@/components/page-header"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { Separator } from "@/components/ui/separator"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+const teamMembers = [
+  { name: "Dana Whitfield", email: "dana@westernpremium.com", role: "Admin", initials: "DW" },
+  { name: "Marcus Lee", email: "marcus@westernpremium.com", role: "Sourcing Lead", initials: "ML" },
+  { name: "Priya Anand", email: "priya@westernpremium.com", role: "Quote Analyst", initials: "PA" },
+  { name: "Tomás Rivera", email: "tomas@westernpremium.com", role: "Logistics", initials: "TR" },
+]
+
+function SettingsPage() {
+  return (
+    <div className="mx-auto max-w-4xl px-4 py-6 md:px-8">
+      <PageHeader title="Settings" description="Manage your workspace, team, and quote defaults." />
+
+      <Tabs defaultValue="general">
+        <TabsList className="mb-6">
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="team">Team</TabsTrigger>
+          <TabsTrigger value="quoting">Quote Defaults</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="general" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Workspace</CardTitle>
+              <CardDescription>Basic information about your organization.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="org">Organization name</Label>
+                <Input id="org" defaultValue="Western Premium" />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="domain">Primary domain</Label>
+                <Input id="domain" defaultValue="westernpremium.com" />
+              </div>
+              <div className="grid gap-2 sm:max-w-xs">
+                <Label htmlFor="currency">Base currency</Label>
+                <Select defaultValue="usd">
+                  <SelectTrigger id="currency">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="usd">USD — US Dollar</SelectItem>
+                    <SelectItem value="eur">EUR — Euro</SelectItem>
+                    <SelectItem value="gbp">GBP — British Pound</SelectItem>
+                    <SelectItem value="cad">CAD — Canadian Dollar</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button>Save changes</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="team" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Team members</CardTitle>
+              <CardDescription>People with access to this procurement workspace.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              {teamMembers.map((member, i) => (
+                <div key={member.email}>
+                  <div className="flex items-center justify-between py-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback className="bg-muted text-xs">{member.initials}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{member.name}</p>
+                        <p className="text-xs text-muted-foreground">{member.email}</p>
+                      </div>
+                    </div>
+                    <span className="text-sm text-muted-foreground">{member.role}</span>
+                  </div>
+                  {i < teamMembers.length - 1 && <Separator />}
+                </div>
+              ))}
+              <Button variant="outline" className="mt-4">
+                Invite member
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="quoting" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Quote defaults</CardTitle>
+              <CardDescription>Applied automatically to new quotes. Override per RFQ as needed.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="margin">Default target margin (%)</Label>
+                  <Input id="margin" type="number" defaultValue="22" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="validity">Quote validity (days)</Label>
+                  <Input id="validity" type="number" defaultValue="30" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="incoterm">Default Incoterm</Label>
+                  <Select defaultValue="ddp">
+                    <SelectTrigger id="incoterm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="exw">EXW — Ex Works</SelectItem>
+                      <SelectItem value="fob">FOB — Free On Board</SelectItem>
+                      <SelectItem value="cif">CIF — Cost, Insurance, Freight</SelectItem>
+                      <SelectItem value="ddp">DDP — Delivered Duty Paid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="lead">Default lead time (weeks)</Label>
+                  <Input id="lead" type="number" defaultValue="8" />
+                </div>
+              </div>
+              <Button>Save defaults</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notifications" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notifications</CardTitle>
+              <CardDescription>Choose what you want to be alerted about.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              {[
+                { label: "New RFQ received", desc: "When an inbound email is parsed into an RFQ.", on: true },
+                { label: "High-value RFQ", desc: "RFQs with estimated value over $50,000.", on: true },
+                { label: "Quote accepted", desc: "When a buyer accepts a quote you sent.", on: true },
+                { label: "Quote expiring", desc: "48 hours before a sent quote expires.", on: false },
+                { label: "Document overdue", desc: "When an order document pack is incomplete past its due date.", on: true },
+              ].map((n, i, arr) => (
+                <div key={n.label}>
+                  <div className="flex items-center justify-between py-3">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{n.label}</p>
+                      <p className="text-xs text-muted-foreground">{n.desc}</p>
+                    </div>
+                    <Switch defaultChecked={n.on} />
+                  </div>
+                  {i < arr.length - 1 && <Separator />}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
 
 export const Route = createFileRoute("/_app/settings")({
-  head: () => ({ meta: [{ title: "Settings — wekbench" }] }),
-  component: () => <PlaceholderPage title="Settings" description="Workspace, team, branding, margins, and FX defaults." />,
+  component: SettingsPage,
 });

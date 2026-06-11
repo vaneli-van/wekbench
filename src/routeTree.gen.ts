@@ -14,6 +14,7 @@ import { Route as SigninRouteImport } from './routes/signin'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TrackTokenRouteImport } from './routes/track.$token'
 import { Route as AppSuppliersRouteImport } from './routes/_app.suppliers'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
@@ -23,11 +24,15 @@ import { Route as AppOrdersRouteImport } from './routes/_app.orders'
 import { Route as AppInvoicesRouteImport } from './routes/_app.invoices'
 import { Route as AppIntegrationsRouteImport } from './routes/_app.integrations'
 import { Route as AppInboxRouteImport } from './routes/_app.inbox'
+import { Route as AppFoundationsRouteImport } from './routes/_app.foundations'
 import { Route as AppEmailCaptureRouteImport } from './routes/_app.email-capture'
 import { Route as AppDocumentsRouteImport } from './routes/_app.documents'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCatalogRouteImport } from './routes/_app.catalog'
 import { Route as AppBuyersRouteImport } from './routes/_app.buyers'
+import { Route as AppRfqIdRouteImport } from './routes/_app.rfq.$id'
+import { Route as AppOrdersIdRouteImport } from './routes/_app.orders.$id'
+import { Route as AppInvoicesIdRouteImport } from './routes/_app.invoices.$id'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -51,6 +56,11 @@ const AppRoute = AppRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrackTokenRoute = TrackTokenRouteImport.update({
+  id: '/track/$token',
+  path: '/track/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppSuppliersRoute = AppSuppliersRouteImport.update({
@@ -98,6 +108,11 @@ const AppInboxRoute = AppInboxRouteImport.update({
   path: '/inbox',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFoundationsRoute = AppFoundationsRouteImport.update({
+  id: '/foundations',
+  path: '/foundations',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppEmailCaptureRoute = AppEmailCaptureRouteImport.update({
   id: '/email-capture',
   path: '/email-capture',
@@ -123,6 +138,21 @@ const AppBuyersRoute = AppBuyersRouteImport.update({
   path: '/buyers',
   getParentRoute: () => AppRoute,
 } as any)
+const AppRfqIdRoute = AppRfqIdRouteImport.update({
+  id: '/rfq/$id',
+  path: '/rfq/$id',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOrdersIdRoute = AppOrdersIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppOrdersRoute,
+} as any)
+const AppInvoicesIdRoute = AppInvoicesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppInvoicesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -134,15 +164,20 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
   '/email-capture': typeof AppEmailCaptureRoute
+  '/foundations': typeof AppFoundationsRoute
   '/inbox': typeof AppInboxRoute
   '/integrations': typeof AppIntegrationsRoute
-  '/invoices': typeof AppInvoicesRoute
-  '/orders': typeof AppOrdersRoute
+  '/invoices': typeof AppInvoicesRouteWithChildren
+  '/orders': typeof AppOrdersRouteWithChildren
   '/product-search': typeof AppProductSearchRoute
   '/quotes': typeof AppQuotesRoute
   '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
   '/suppliers': typeof AppSuppliersRoute
+  '/track/$token': typeof TrackTokenRoute
+  '/invoices/$id': typeof AppInvoicesIdRoute
+  '/orders/$id': typeof AppOrdersIdRoute
+  '/rfq/$id': typeof AppRfqIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -154,15 +189,20 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
   '/email-capture': typeof AppEmailCaptureRoute
+  '/foundations': typeof AppFoundationsRoute
   '/inbox': typeof AppInboxRoute
   '/integrations': typeof AppIntegrationsRoute
-  '/invoices': typeof AppInvoicesRoute
-  '/orders': typeof AppOrdersRoute
+  '/invoices': typeof AppInvoicesRouteWithChildren
+  '/orders': typeof AppOrdersRouteWithChildren
   '/product-search': typeof AppProductSearchRoute
   '/quotes': typeof AppQuotesRoute
   '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
   '/suppliers': typeof AppSuppliersRoute
+  '/track/$token': typeof TrackTokenRoute
+  '/invoices/$id': typeof AppInvoicesIdRoute
+  '/orders/$id': typeof AppOrdersIdRoute
+  '/rfq/$id': typeof AppRfqIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -176,15 +216,20 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/documents': typeof AppDocumentsRoute
   '/_app/email-capture': typeof AppEmailCaptureRoute
+  '/_app/foundations': typeof AppFoundationsRoute
   '/_app/inbox': typeof AppInboxRoute
   '/_app/integrations': typeof AppIntegrationsRoute
-  '/_app/invoices': typeof AppInvoicesRoute
-  '/_app/orders': typeof AppOrdersRoute
+  '/_app/invoices': typeof AppInvoicesRouteWithChildren
+  '/_app/orders': typeof AppOrdersRouteWithChildren
   '/_app/product-search': typeof AppProductSearchRoute
   '/_app/quotes': typeof AppQuotesRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/suppliers': typeof AppSuppliersRoute
+  '/track/$token': typeof TrackTokenRoute
+  '/_app/invoices/$id': typeof AppInvoicesIdRoute
+  '/_app/orders/$id': typeof AppOrdersIdRoute
+  '/_app/rfq/$id': typeof AppRfqIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -198,6 +243,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/documents'
     | '/email-capture'
+    | '/foundations'
     | '/inbox'
     | '/integrations'
     | '/invoices'
@@ -207,6 +253,10 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/suppliers'
+    | '/track/$token'
+    | '/invoices/$id'
+    | '/orders/$id'
+    | '/rfq/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -218,6 +268,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/documents'
     | '/email-capture'
+    | '/foundations'
     | '/inbox'
     | '/integrations'
     | '/invoices'
@@ -227,6 +278,10 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/suppliers'
+    | '/track/$token'
+    | '/invoices/$id'
+    | '/orders/$id'
+    | '/rfq/$id'
   id:
     | '__root__'
     | '/'
@@ -239,6 +294,7 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/documents'
     | '/_app/email-capture'
+    | '/_app/foundations'
     | '/_app/inbox'
     | '/_app/integrations'
     | '/_app/invoices'
@@ -248,6 +304,10 @@ export interface FileRouteTypes {
     | '/_app/reports'
     | '/_app/settings'
     | '/_app/suppliers'
+    | '/track/$token'
+    | '/_app/invoices/$id'
+    | '/_app/orders/$id'
+    | '/_app/rfq/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -256,6 +316,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
+  TrackTokenRoute: typeof TrackTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -293,6 +354,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/track/$token': {
+      id: '/track/$token'
+      path: '/track/$token'
+      fullPath: '/track/$token'
+      preLoaderRoute: typeof TrackTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/suppliers': {
@@ -358,6 +426,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInboxRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/foundations': {
+      id: '/_app/foundations'
+      path: '/foundations'
+      fullPath: '/foundations'
+      preLoaderRoute: typeof AppFoundationsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/email-capture': {
       id: '/_app/email-capture'
       path: '/email-capture'
@@ -393,8 +468,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBuyersRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/rfq/$id': {
+      id: '/_app/rfq/$id'
+      path: '/rfq/$id'
+      fullPath: '/rfq/$id'
+      preLoaderRoute: typeof AppRfqIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/orders/$id': {
+      id: '/_app/orders/$id'
+      path: '/$id'
+      fullPath: '/orders/$id'
+      preLoaderRoute: typeof AppOrdersIdRouteImport
+      parentRoute: typeof AppOrdersRoute
+    }
+    '/_app/invoices/$id': {
+      id: '/_app/invoices/$id'
+      path: '/$id'
+      fullPath: '/invoices/$id'
+      preLoaderRoute: typeof AppInvoicesIdRouteImport
+      parentRoute: typeof AppInvoicesRoute
+    }
   }
 }
+
+interface AppInvoicesRouteChildren {
+  AppInvoicesIdRoute: typeof AppInvoicesIdRoute
+}
+
+const AppInvoicesRouteChildren: AppInvoicesRouteChildren = {
+  AppInvoicesIdRoute: AppInvoicesIdRoute,
+}
+
+const AppInvoicesRouteWithChildren = AppInvoicesRoute._addFileChildren(
+  AppInvoicesRouteChildren,
+)
+
+interface AppOrdersRouteChildren {
+  AppOrdersIdRoute: typeof AppOrdersIdRoute
+}
+
+const AppOrdersRouteChildren: AppOrdersRouteChildren = {
+  AppOrdersIdRoute: AppOrdersIdRoute,
+}
+
+const AppOrdersRouteWithChildren = AppOrdersRoute._addFileChildren(
+  AppOrdersRouteChildren,
+)
 
 interface AppRouteChildren {
   AppBuyersRoute: typeof AppBuyersRoute
@@ -402,15 +522,17 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppDocumentsRoute: typeof AppDocumentsRoute
   AppEmailCaptureRoute: typeof AppEmailCaptureRoute
+  AppFoundationsRoute: typeof AppFoundationsRoute
   AppInboxRoute: typeof AppInboxRoute
   AppIntegrationsRoute: typeof AppIntegrationsRoute
-  AppInvoicesRoute: typeof AppInvoicesRoute
-  AppOrdersRoute: typeof AppOrdersRoute
+  AppInvoicesRoute: typeof AppInvoicesRouteWithChildren
+  AppOrdersRoute: typeof AppOrdersRouteWithChildren
   AppProductSearchRoute: typeof AppProductSearchRoute
   AppQuotesRoute: typeof AppQuotesRoute
   AppReportsRoute: typeof AppReportsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppSuppliersRoute: typeof AppSuppliersRoute
+  AppRfqIdRoute: typeof AppRfqIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -419,15 +541,17 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppDocumentsRoute: AppDocumentsRoute,
   AppEmailCaptureRoute: AppEmailCaptureRoute,
+  AppFoundationsRoute: AppFoundationsRoute,
   AppInboxRoute: AppInboxRoute,
   AppIntegrationsRoute: AppIntegrationsRoute,
-  AppInvoicesRoute: AppInvoicesRoute,
-  AppOrdersRoute: AppOrdersRoute,
+  AppInvoicesRoute: AppInvoicesRouteWithChildren,
+  AppOrdersRoute: AppOrdersRouteWithChildren,
   AppProductSearchRoute: AppProductSearchRoute,
   AppQuotesRoute: AppQuotesRoute,
   AppReportsRoute: AppReportsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppSuppliersRoute: AppSuppliersRoute,
+  AppRfqIdRoute: AppRfqIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -438,7 +562,18 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
+  TrackTokenRoute: TrackTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
