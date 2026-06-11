@@ -54,7 +54,7 @@ export function ProductDrawer({
             <SheetHeader className="space-y-0 border-b border-border p-5">
               <div className="flex items-start gap-4">
                 <div className="relative size-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
-                  <img src={product.image || "/placeholder.svg"} alt={product.model} fill className="object-cover" />
+                  <img src={product.image || "/placeholder.svg"} alt={product.model} className="object-cover" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">

@@ -484,7 +484,7 @@ function TableView({
               <td className="px-3 py-2.5">
                 <div className="flex items-center gap-3">
                   <div className="relative size-9 shrink-0 overflow-hidden rounded border border-border bg-muted">
-                    <img src={p.image || "/placeholder.svg"} alt="" fill className="object-cover" />
+                    <img src={p.image || "/placeholder.svg"} alt="" className="object-cover" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
@@ -566,7 +566,7 @@ function GridView({
           className="group flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border bg-card text-left transition-shadow hover:shadow-md"
         >
           <div className="relative aspect-[4/3] bg-muted">
-            <img src={p.image || "/placeholder.svg"} alt={p.model} fill className="object-cover" />
+            <img src={p.image || "/placeholder.svg"} alt={p.model} className="object-cover" />
             <div className="absolute left-2 top-2" onClick={(e) => e.stopPropagation()}>
               <Checkbox
                 checked={selected.has(p.id)}
@@ -622,7 +622,7 @@ function ListView({
             <Checkbox checked={selected.has(p.id)} onCheckedChange={() => onToggle(p.id)} aria-label={`Select ${p.model}`} />
           </div>
           <div className="relative size-14 shrink-0 overflow-hidden rounded border border-border bg-muted">
-            <img src={p.image || "/placeholder.svg"} alt="" fill className="object-cover" />
+            <img src={p.image || "/placeholder.svg"} alt="" className="object-cover" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
