@@ -1,29 +1,48 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { MarketingNav } from "@/components/marketing/marketing-nav";
+import { Hero } from "@/components/marketing/hero";
+import { LogoStrip } from "@/components/marketing/logo-strip";
+import { ProcurementNetwork } from "@/components/marketing/procurement-network";
+import { HowItWorks } from "@/components/marketing/how-it-works";
+import { Features } from "@/components/marketing/features";
+import { Metrics } from "@/components/marketing/metrics";
+import { CtaSection } from "@/components/marketing/cta-section";
+import { MarketingFooter } from "@/components/marketing/marketing-footer";
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "wekbench — Respond to RFQs in seconds" },
+      {
+        name: "description",
+        content:
+          "Vendor-first procurement platform. Manage the full RFQ-to-Quote-to-Order workflow for enterprise buyers.",
+      },
+      { property: "og:title", content: "wekbench — Respond to RFQs in seconds" },
+      {
+        property: "og:description",
+        content: "End-to-end B2B procurement. From inbox to quote in seconds.",
+      },
     ],
   }),
-  component: Index,
+  component: MarketingPage,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function MarketingPage() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="min-h-screen bg-background">
+      <MarketingNav />
+      <main>
+        <Hero />
+        <LogoStrip />
+        <ProcurementNetwork />
+        <HowItWorks />
+        <Features />
+        <Metrics />
+        <CtaSection />
+      </main>
+      <MarketingFooter />
     </div>
   );
 }
