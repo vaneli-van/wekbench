@@ -77,20 +77,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "wekbench" },
+      {
+        name: "description",
+        content:
+          "Vendor-first procurement workflow platform. Manage the full RFQ-to-Quote-to-Order workflow for enterprise buyers.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
+      { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/svg+xml", href: "/icon.svg" },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/icon-light-32x32.png" },
+      { rel: "apple-touch-icon", href: "/apple-icon.png" },
     ],
   }),
   shellComponent: RootShell,
