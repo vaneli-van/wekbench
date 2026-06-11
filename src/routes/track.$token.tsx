@@ -11,17 +11,12 @@ import { Wordmark } from "@/components/wordmark"
 
 function BuyerTrackingPage() {
   const { token } = Route.useParams();
-  return <TrackingResolver params={params} />
-}
 
-async function TrackingResolver({ params }: { params: Promise<{ token: string }> }) {
-
-  // Resolve the order whose share token matches.
   const match = orders
     .map((o) => ({ order: o, detail: getOrderDetail(o) }))
     .find((x) => x.detail.shareToken === token)
 
-  if (!match) return notFound()
+  if (!match) throw notFound()
   const { order, detail } = match
 
   // Steps the buyer sees (simplified, no internal supplier costs).
