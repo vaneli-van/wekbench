@@ -14,7 +14,7 @@ function InvoiceDetailPage() {
   if (id === "new") orderId = orders[0].id
 
   const prefill = getInvoicePrefill(orderId)
-  if (!prefill) notFound()
+  if (!prefill) throw notFound()
 
   return <InvoiceGenerator prefill={prefill} />
 }

@@ -50,7 +50,7 @@ export function FxRatesCard() {
                 <div className="h-4 w-16 animate-pulse rounded bg-muted" />
               </li>
             ))
-          : data?.rates.slice(0, 6).map((rate) => (
+          : data?.rates.slice(0, 6).map((rate: any) => (
               <li key={rate.code} className="flex items-center justify-between py-2.5">
                 <div className="flex items-center gap-3">
                   <span className="flex h-8 w-10 items-center justify-center rounded-lg bg-secondary text-xs font-bold text-foreground">
