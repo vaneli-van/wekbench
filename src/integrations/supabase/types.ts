@@ -98,6 +98,9 @@ export type Database = {
           id: string
           inbound_email_id: string
           raw_extraction: Json
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           status: Database["public"]["Enums"]["extracted_doc_status"]
           summary: string | null
           updated_at: string
@@ -114,6 +117,9 @@ export type Database = {
           id?: string
           inbound_email_id: string
           raw_extraction?: Json
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: Database["public"]["Enums"]["extracted_doc_status"]
           summary?: string | null
           updated_at?: string
@@ -130,6 +136,9 @@ export type Database = {
           id?: string
           inbound_email_id?: string
           raw_extraction?: Json
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: Database["public"]["Enums"]["extracted_doc_status"]
           summary?: string | null
           updated_at?: string
