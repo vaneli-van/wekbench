@@ -33,7 +33,7 @@ import { EmptyState } from "@/components/foundations/empty-state";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspaceId } from "@/hooks/use-workspace";
-import { reviewExtraction } from "@/lib/api/extraction.functions";
+import { reviewExtraction, bulkReviewExtractions } from "@/lib/api/extraction.functions";
 
 type DocType = "rfq" | "purchase_order" | "rfq_amendment" | "po_amendment" | "unknown";
 type LineMatch = "matched" | "not_found" | "sourcing" | "manual";
