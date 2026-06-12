@@ -176,6 +176,9 @@ export async function runExtractionForEmail(emailId: string): Promise<{ document
     .eq("id", emailId)
     .single();
   if (emailErr || !email) throw new Error(`Email not found: ${emailErr?.message ?? emailId}`);
+  if (!email.workspace_id) throw new Error("Email has no workspace");
+  const workspaceId: string = email.workspace_id;
+
 
   await supabaseAdmin
     .from("inbound_emails")
