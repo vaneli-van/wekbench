@@ -127,144 +127,63 @@ function SignInPage() {
       </div>
 
       <div className="relative hidden overflow-hidden border-l border-border bg-muted/40 lg:block">
-        <div className="absolute inset-0 bg-gradient-to-br from-secondary/30 via-transparent to-muted/50" />
-        <DashboardPreview />
+        <SignInPanel />
       </div>
     </div>
   );
 }
 
-function DashboardPreview() {
-  const rows = [
-    { w: "62%", pill: "won" },
-    { w: "48%", pill: "review" },
-    { w: "71%", pill: "won" },
-    { w: "55%", pill: "draft" },
-    { w: "64%", pill: "review" },
-    { w: "50%", pill: "won" },
-    { w: "58%", pill: "draft" },
-  ] as const;
+const SIGNIN_VALUE_PROPS = [
+  "Track pending quotes and order deadlines in real-time",
+  "Capture inbound RFQs, PDFs, Excel — all in one inbox",
+  "Close more deals with faster response times",
+];
 
-  const pillTone: Record<string, string> = {
-    won: "bg-foreground/80 text-background",
-    review: "bg-foreground/10 text-foreground/70 ring-1 ring-foreground/15",
-    draft: "bg-foreground/[0.06] text-foreground/45 ring-1 ring-foreground/10",
-  };
-  const pillText: Record<string, string> = { won: "Won", review: "Review", draft: "Draft" };
-
-  const bars = [38, 52, 44, 66, 58, 72, 64, 80, 70, 86, 78, 92];
-
+function SignInPanel() {
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 select-none">
-      <div className="absolute inset-0 z-10 bg-gradient-to-tl from-muted/70 via-transparent to-transparent" />
+    <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-secondary/20 via-muted/10 to-muted/30">
+      <div className="absolute inset-0" aria-hidden="true">
+        <div className="absolute right-0 top-0 size-96 rounded-full bg-primary/5 blur-3xl" />
+        <div className="absolute bottom-0 left-1/4 size-80 rounded-full bg-primary/[0.03] blur-3xl" />
+      </div>
+      <div className="relative flex h-full flex-col justify-between px-12 py-16">
+        <div />
 
-      <div className="absolute left-20 top-20 w-[135%] origin-top-left scale-[0.95] opacity-[0.78]">
-        <div className="flex h-[660px] overflow-hidden rounded-xl border border-border bg-card shadow-2xl shadow-black/10">
-          <div className="flex w-52 shrink-0 flex-col gap-1 border-r border-border bg-secondary/50 p-3">
-            <div className="mb-4 flex items-center gap-2">
-              <div className="size-7 rounded-md bg-primary/80" />
-              <div className="flex flex-col gap-1">
-                <div className="h-2.5 w-16 rounded bg-foreground/25" />
-                <div className="h-1.5 w-12 rounded bg-foreground/10" />
-              </div>
-            </div>
-            <div className="mb-3 h-8 w-full rounded-md bg-foreground/[0.06] ring-1 ring-foreground/5" />
-            {[
-              { w: "40%", active: false },
-              { w: "52%", active: true },
-              { w: "36%", active: false },
-              { w: "48%", active: false },
-              { w: "44%", active: false },
-              { w: "30%", active: false },
-              { w: "50%", active: false },
-            ].map((item, i) => (
-              <div
+        <div className="flex flex-col gap-8">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-widest text-primary">
+              Back to work
+            </p>
+            <h2 className="mt-4 max-w-md text-4xl font-bold leading-tight tracking-tight text-foreground text-balance">
+              Close deals faster with wekbench
+            </h2>
+          </div>
+
+          <ul className="flex flex-col gap-4">
+            {SIGNIN_VALUE_PROPS.map((prop) => (
+              <li key={prop} className="flex max-w-sm items-start gap-3">
+                <span className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                  <Check className="size-3.5 stroke-[3]" />
+                </span>
+                <span className="text-sm leading-relaxed text-foreground/90">{prop}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="flex max-w-sm items-center gap-3 rounded-lg border border-border/50 bg-card/40 p-4 backdrop-blur-sm">
+          <div className="flex -space-x-2">
+            {["bg-primary/90", "bg-foreground/60", "bg-primary/60"].map((tone, i) => (
+              <span
                 key={i}
-                className={cn("flex items-center gap-2 rounded-md px-2 py-2", item.active && "bg-foreground/[0.07]")}
-              >
-                <div className={cn("size-3.5 rounded", item.active ? "bg-foreground/35" : "bg-foreground/15")} />
-                <div
-                  className={cn("h-2.5 rounded", item.active ? "bg-foreground/30" : "bg-foreground/15")}
-                  style={{ width: item.w }}
-                />
-              </div>
+                className={cn("size-8 rounded-full ring-2 ring-background/80", tone)}
+                aria-hidden="true"
+              />
             ))}
           </div>
-
-          <div className="flex flex-1 flex-col">
-            <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
-              <div className="h-3.5 w-36 rounded bg-foreground/25" />
-              <div className="flex items-center gap-2">
-                <div className="size-7 rounded-md bg-foreground/[0.08]" />
-                <div className="size-7 rounded-full bg-foreground/15" />
-              </div>
-            </div>
-
-            <div className="flex-1 p-5">
-              <div className="mb-4 grid grid-cols-4 gap-3">
-                {[
-                  { w: "70%" },
-                  { w: "55%" },
-                  { w: "62%" },
-                  { w: "48%" },
-                ].map((kpi, i) => (
-                  <div key={i} className="rounded-lg border border-border p-3">
-                    <div className="mb-2 h-2 rounded bg-foreground/15" style={{ width: kpi.w }} />
-                    <div className="h-4 w-10 rounded bg-foreground/30" />
-                  </div>
-                ))}
-              </div>
-
-              <div className="mb-4 grid grid-cols-3 gap-3">
-                <div className="col-span-2 rounded-lg border border-border p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <div className="h-2.5 w-28 rounded bg-foreground/20" />
-                    <div className="h-2 w-12 rounded bg-foreground/10" />
-                  </div>
-                  <div className="flex h-24 items-end gap-1.5">
-                    {bars.map((h, i) => (
-                      <div key={i} className="flex-1 rounded-sm bg-foreground/15" style={{ height: `${h}%` }} />
-                    ))}
-                  </div>
-                </div>
-                <div className="rounded-lg border border-border p-4">
-                  <div className="mb-3 h-2.5 w-20 rounded bg-foreground/20" />
-                  <div className="flex flex-col gap-2.5">
-                    {["72%", "54%", "38%"].map((w, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <div className="size-2 rounded-full bg-foreground/30" />
-                        <div className="h-2 flex-1 rounded bg-foreground/10" />
-                        <div className="h-2 rounded bg-foreground/20" style={{ width: w === "72%" ? 18 : 14 }} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-border">
-                <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-                  <div className="h-2.5 w-24 rounded bg-foreground/20" />
-                  <div className="h-6 w-20 rounded-md bg-foreground/[0.08]" />
-                </div>
-                {rows.map((row, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-4 border-b border-border px-4 py-2.5 last:border-0"
-                  >
-                    <div className="size-3.5 rounded bg-foreground/10" />
-                    <div className="size-5 rounded-full bg-foreground/15" />
-                    <div className="h-2.5 rounded bg-foreground/15" style={{ width: row.w }} />
-                    <div className="ml-auto h-2.5 w-12 rounded bg-foreground/10" />
-                    <span
-                      className={cn("rounded-full px-2 py-0.5 text-[9px] font-semibold", pillTone[row.pill])}
-                    >
-                      {pillText[row.pill]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Trusted by procurement teams across Africa and beyond.
+          </p>
         </div>
       </div>
     </div>
