@@ -85,6 +85,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { property: "og:title", content: "wekbench" },
+      { name: "twitter:title", content: "wekbench" },
+      { name: "description", content: "The vendor-first procurement platform that turns RFQs into winning quotes in seconds." },
+      { property: "og:description", content: "The vendor-first procurement platform that turns RFQs into winning quotes in seconds." },
+      { name: "twitter:description", content: "The vendor-first procurement platform that turns RFQs into winning quotes in seconds." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/9025d86a-9485-42d3-b354-94d8b8054ec5/id-preview-9f1ffc91--81e2ae0e-1da3-498b-a6b3-3d34c25d2c92.lovable.app-1781224250912.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/9025d86a-9485-42d3-b354-94d8b8054ec5/id-preview-9f1ffc91--81e2ae0e-1da3-498b-a6b3-3d34c25d2c92.lovable.app-1781224250912.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
