@@ -30,11 +30,9 @@ function InvoicesPage() {
         title="Invoices"
         description="Commercial invoices generated from confirmed orders. Track delivery and payment status."
         actions={
-          <Button size="sm" asChild>
-            <Link to="/invoices/new">
-              <Plus className="size-4" />
-              New invoice
-            </Link>
+          <Button size="sm" onClick={() => toast.info("Generate an invoice from a confirmed order in the Orders page.")}>
+            <Plus className="size-4" />
+            New invoice
           </Button>
         }
       />
