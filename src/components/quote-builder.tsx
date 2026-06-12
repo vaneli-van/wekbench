@@ -606,12 +606,12 @@ export function QuoteBuilder({ quoteId, initialTitle, initialBuyer }: QuoteBuild
       </div>
 
       {/* STICKY ACTION BAR */}
-      <div className="sticky bottom-0 z-10 flex items-center justify-between gap-2 rounded-b-lg border border-border bg-card px-4 py-3 shadow-[0_-4px_12px_-8px_rgba(0,0,0,0.2)]">
+      <div className="sticky bottom-0 z-10 flex flex-col gap-3 rounded-b-lg border border-border bg-card px-4 py-3 shadow-[0_-4px_12px_-8px_rgba(0,0,0,0.2)] sm:flex-row sm:items-center sm:justify-between">
         <p className="hidden text-xs text-muted-foreground sm:block">
           <Check className="mr-1 inline size-3 text-success" />
           All changes saved automatically
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)}>
             <FileDown className="size-4" />
             Preview as PDF
@@ -626,7 +626,7 @@ export function QuoteBuilder({ quoteId, initialTitle, initialBuyer }: QuoteBuild
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="size-9">
+              <Button variant="outline" size="icon" className="size-9 shrink-0">
                 <MoreHorizontal className="size-4" />
                 <span className="sr-only">More actions</span>
               </Button>
