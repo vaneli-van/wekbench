@@ -34,7 +34,21 @@ import { EmptyState } from "@/components/foundations/empty-state";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspaceId } from "@/hooks/use-workspace";
-import { reviewExtraction, bulkReviewExtractions, exportReviewAuditLog } from "@/lib/api/extraction.functions";
+import {
+  reviewExtraction,
+  bulkReviewExtractions,
+  exportReviewAuditLog,
+  updateReviewSettings,
+  markNotificationsRead,
+} from "@/lib/api/extraction.functions";
+import { Input } from "@/components/ui/input";
+import { Bell, Mail, Settings as SettingsIcon } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
 
 type DocType = "rfq" | "purchase_order" | "rfq_amendment" | "po_amendment" | "unknown";
 type LineMatch = "matched" | "not_found" | "sourcing" | "manual";
