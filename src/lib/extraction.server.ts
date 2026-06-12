@@ -188,19 +188,41 @@ export async function runExtractionForEmail(emailId: string): Promise<{ document
 
   const { data: email, error: emailErr } = await supabaseAdmin
     .from("inbound_emails")
-    .select("id, workspace_id, subject, text_body, html_body, from_address, from_name")
+    .select("id, workspace_id, subject, text_body, html_body, from_address, from_name, attachments")
     .eq("id", emailId)
     .single();
   if (emailErr || !email) throw new Error(`Email not found: ${emailErr?.message ?? emailId}`);
   if (!email.workspace_id) throw new Error("Email has no workspace");
   const workspaceId: string = email.workspace_id;
 
-
-
   await supabaseAdmin
     .from("inbound_emails")
     .update({ extraction_status: "running" })
     .eq("id", emailId);
+
+  // Download supported attachments (PDFs, images) for multimodal extraction.
+  const attMeta = Array.isArray(email.attachments) ? (email.attachments as Array<{
+    filename: string; contentType: string; path: string; size?: number;
+  }>) : [];
+  const downloadable = attMeta.filter(
+    (a) => a && a.path && (a.contentType === "application/pdf" || a.contentType?.startsWith("image/")),
+  );
+  const attachments: Array<{ filename: string; contentType: string; data: Uint8Array }> = [];
+  for (const a of downloadable.slice(0, 5)) {
+    try {
+      const { data: blob, error: dlErr } = await supabaseAdmin.storage
+        .from("inbound-email-attachments")
+        .download(a.path);
+      if (dlErr || !blob) {
+        console.error("[extraction] attachment download failed", a.path, dlErr);
+        continue;
+      }
+      const buf = new Uint8Array(await blob.arrayBuffer());
+      attachments.push({ filename: a.filename, contentType: a.contentType, data: buf });
+    } catch (e) {
+      console.error("[extraction] attachment read error", a.path, e);
+    }
+  }
 
   let extraction: Extraction;
   try {
@@ -210,9 +232,11 @@ export async function runExtractionForEmail(emailId: string): Promise<{ document
       htmlBody: email.html_body,
       fromAddress: email.from_address,
       fromName: email.from_name,
+      attachments,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    console.error("[extraction] failed", emailId, msg);
     await supabaseAdmin
       .from("inbound_emails")
       .update({ extraction_status: "failed" })
