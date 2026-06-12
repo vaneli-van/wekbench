@@ -478,12 +478,14 @@ export const updateQuoteStatus = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const patch: Record<string, unknown> = { status: data.status };
     if (data.status === "sent") patch.sent_at = new Date().toISOString();
-    const { error } = await context.supabase.from("quotes").update(patch).eq("id", data.quoteId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await context.supabase.from("quotes").update(patch as any).eq("id", data.quoteId);
     if (error) throw new Error(error.message);
     // also mark the RFQ as quoted
     if (data.status === "sent") {
       const { data: q } = await context.supabase.from("quotes").select("rfq_id").eq("id", data.quoteId).single();
-      if (q?.rfq_id) await context.supabase.from("rfqs").update({ status: "quoted" }).eq("id", q.rfq_id);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (q?.rfq_id) await context.supabase.from("rfqs").update({ status: "quoted" } as any).eq("id", q.rfq_id);
     }
     return { ok: true };
   });
