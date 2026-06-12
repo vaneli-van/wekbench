@@ -53,7 +53,7 @@ const mobileNav = [
 
 const titleMap: Record<string, string> = {
   "/dashboard": "Command Center",
-  "/inbox": "In Toolbox",
+  "/inbox": "My Wekbench",
   "/email-capture": "Email Capture",
   "/quotes": "Quotes",
   "/product-search": "Product Search",
