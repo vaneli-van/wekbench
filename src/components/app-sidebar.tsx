@@ -62,6 +62,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { data: profile } = useProfile();
+  const counts = useSidebarCounts();
   const isActive = (href: string) =>
     href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
 
