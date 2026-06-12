@@ -109,6 +109,12 @@ function DeltaIcon({ dir }: { dir: "up" | "down" | "flat" }) {
 }
 
 function DashboardPage() {
+  const { data: profile } = useProfile();
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const today = new Date().toLocaleDateString(undefined, {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
+  });
   return (
     <div className="mx-auto max-w-[1400px] px-4 pb-12 pt-4 md:px-8">
       {/* First sign-in welcome (shows once after onboarding) */}
@@ -117,8 +123,10 @@ function DashboardPage() {
       {/* Row 1: greeting + what's new */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Good morning, Samuel</h1>
-          <p className="text-sm text-muted-foreground">Tuesday, 9 June 2026</p>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            {greeting}{profile?.firstName ? `, ${profile.firstName}` : ""}
+          </h1>
+          <p className="text-sm text-muted-foreground">{today}</p>
         </div>
         <Link
           to="/inbox"
