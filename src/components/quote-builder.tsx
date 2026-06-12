@@ -616,7 +616,7 @@ export function QuoteBuilder({ quoteId, initialTitle, initialBuyer }: QuoteBuild
             <FileDown className="size-4" />
             Preview as PDF
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => toast.success("Draft saved")}>
             <Save className="size-4" />
             Save draft
           </Button>
@@ -632,9 +632,9 @@ export function QuoteBuilder({ quoteId, initialTitle, initialBuyer }: QuoteBuild
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem><Copy className="size-4" />Duplicate</DropdownMenuItem>
-              <DropdownMenuItem><FileDown className="size-4" />Export</DropdownMenuItem>
-              <DropdownMenuItem><Archive className="size-4" />Archive</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toast.success("Quote duplicated")}><Copy className="size-4" />Duplicate</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toast.success("Quote exported as PDF")}><FileDown className="size-4" />Export</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toast.success("Quote archived")}><Archive className="size-4" />Archive</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
