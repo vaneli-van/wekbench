@@ -184,8 +184,8 @@ function QuotesPage() {
           onDragEndCard={() => setDragId(null)}
           onDragOverStage={setOverStage}
           onDrop={handleDrop}
-          onOpen={(q) => navigate({ to: `/rfq/RFQ-2026-0418` })}
-          onOpenFull={(q) => navigate({ to: `/rfq/RFQ-2026-0418` })}
+          onOpen={(q) => navigate({ to: "/quote/$id", params: { id: q.id } })}
+          onOpenFull={(q) => navigate({ to: "/quote/$id", params: { id: q.id } })}
         />
       ) : (
         <ListView
@@ -199,7 +199,7 @@ function QuotesPage() {
               setSortDir("desc")
             }
           }}
-          onOpen={() => navigate({ to: "/rfq/RFQ-2026-0418" })}
+          onOpen={(q) => navigate({ to: "/quote/$id", params: { id: q.id } })}
         />
       )}
     </div>
@@ -307,7 +307,7 @@ function ListView({
   sortKey: SortKey
   sortDir: "asc" | "desc"
   onSort: (k: SortKey) => void
-  onOpen: () => void
+  onOpen: (q: PipelineQuote) => void
 }) {
   const sorted = useMemo(() => {
     const arr = [...quotes]
@@ -340,7 +340,7 @@ function ListView({
             {sorted.map((q) => (
               <tr
                 key={q.id}
-                onClick={onOpen}
+                onClick={() => onOpen(q)}
                 className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/40"
               >
                 <td className="px-3 py-2.5">

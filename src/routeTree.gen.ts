@@ -32,6 +32,7 @@ import { Route as AppBuyersRouteImport } from './routes/_app.buyers'
 import { Route as AppOrdersIndexRouteImport } from './routes/_app.orders.index'
 import { Route as AppInvoicesIndexRouteImport } from './routes/_app.invoices.index'
 import { Route as AppRfqIdRouteImport } from './routes/_app.rfq.$id'
+import { Route as AppQuoteIdRouteImport } from './routes/_app.quote.$id'
 import { Route as AppOrdersIdRouteImport } from './routes/_app.orders.$id'
 import { Route as AppInvoicesIdRouteImport } from './routes/_app.invoices.$id'
 
@@ -149,6 +150,11 @@ const AppRfqIdRoute = AppRfqIdRouteImport.update({
   path: '/rfq/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const AppQuoteIdRoute = AppQuoteIdRouteImport.update({
+  id: '/quote/$id',
+  path: '/quote/$id',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppOrdersIdRoute = AppOrdersIdRouteImport.update({
   id: '/orders/$id',
   path: '/orders/$id',
@@ -182,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/track/$token': typeof TrackTokenRoute
   '/invoices/$id': typeof AppInvoicesIdRoute
   '/orders/$id': typeof AppOrdersIdRoute
+  '/quote/$id': typeof AppQuoteIdRoute
   '/rfq/$id': typeof AppRfqIdRoute
   '/invoices/': typeof AppInvoicesIndexRoute
   '/orders/': typeof AppOrdersIndexRoute
@@ -208,6 +215,7 @@ export interface FileRoutesByTo {
   '/track/$token': typeof TrackTokenRoute
   '/invoices/$id': typeof AppInvoicesIdRoute
   '/orders/$id': typeof AppOrdersIdRoute
+  '/quote/$id': typeof AppQuoteIdRoute
   '/rfq/$id': typeof AppRfqIdRoute
   '/invoices': typeof AppInvoicesIndexRoute
   '/orders': typeof AppOrdersIndexRoute
@@ -236,6 +244,7 @@ export interface FileRoutesById {
   '/track/$token': typeof TrackTokenRoute
   '/_app/invoices/$id': typeof AppInvoicesIdRoute
   '/_app/orders/$id': typeof AppOrdersIdRoute
+  '/_app/quote/$id': typeof AppQuoteIdRoute
   '/_app/rfq/$id': typeof AppRfqIdRoute
   '/_app/invoices/': typeof AppInvoicesIndexRoute
   '/_app/orders/': typeof AppOrdersIndexRoute
@@ -264,6 +273,7 @@ export interface FileRouteTypes {
     | '/track/$token'
     | '/invoices/$id'
     | '/orders/$id'
+    | '/quote/$id'
     | '/rfq/$id'
     | '/invoices/'
     | '/orders/'
@@ -290,6 +300,7 @@ export interface FileRouteTypes {
     | '/track/$token'
     | '/invoices/$id'
     | '/orders/$id'
+    | '/quote/$id'
     | '/rfq/$id'
     | '/invoices'
     | '/orders'
@@ -317,6 +328,7 @@ export interface FileRouteTypes {
     | '/track/$token'
     | '/_app/invoices/$id'
     | '/_app/orders/$id'
+    | '/_app/quote/$id'
     | '/_app/rfq/$id'
     | '/_app/invoices/'
     | '/_app/orders/'
@@ -495,6 +507,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRfqIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/quote/$id': {
+      id: '/_app/quote/$id'
+      path: '/quote/$id'
+      fullPath: '/quote/$id'
+      preLoaderRoute: typeof AppQuoteIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/orders/$id': {
       id: '/_app/orders/$id'
       path: '/orders/$id'
@@ -528,6 +547,7 @@ interface AppRouteChildren {
   AppSuppliersRoute: typeof AppSuppliersRoute
   AppInvoicesIdRoute: typeof AppInvoicesIdRoute
   AppOrdersIdRoute: typeof AppOrdersIdRoute
+  AppQuoteIdRoute: typeof AppQuoteIdRoute
   AppRfqIdRoute: typeof AppRfqIdRoute
   AppInvoicesIndexRoute: typeof AppInvoicesIndexRoute
   AppOrdersIndexRoute: typeof AppOrdersIndexRoute
@@ -549,6 +569,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSuppliersRoute: AppSuppliersRoute,
   AppInvoicesIdRoute: AppInvoicesIdRoute,
   AppOrdersIdRoute: AppOrdersIdRoute,
+  AppQuoteIdRoute: AppQuoteIdRoute,
   AppRfqIdRoute: AppRfqIdRoute,
   AppInvoicesIndexRoute: AppInvoicesIndexRoute,
   AppOrdersIndexRoute: AppOrdersIndexRoute,
