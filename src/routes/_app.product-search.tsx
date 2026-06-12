@@ -30,7 +30,7 @@ function ProductSearchPage() {
               className="pl-9"
             />
           </div>
-          <Button>
+          <Button onClick={() => toast.success("Matching across distributor catalogs…")}>
             <Sparkles className="size-4" />
             Find matches
           </Button>
