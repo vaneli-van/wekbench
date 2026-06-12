@@ -1,21 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createHmac, timingSafeEqual } from "crypto";
 
 /**
- * SendGrid Inbound Parse webhook.
+ * Mailgun Inbound Routes webhook (Fully parsed / "Forward" store-and-notify).
  *
- * SendGrid POSTs each received email as multipart/form-data with fields:
- *   from, to, subject, text, html, envelope, headers, attachments (count),
- *   attachment1, attachment2, ... (File parts), attachment-info, spam_score, ...
+ * Mailgun POSTs each received email as multipart/form-data with fields:
+ *   recipient, sender, from, subject, body-plain, body-html, stripped-text,
+ *   stripped-html, Message-Headers (JSON), attachment-count, attachment-1...,
+ *   timestamp, token, signature.
  *
- * Configure SendGrid Inbound Parse to POST to:
- *   https://<your-domain>/api/public/inbound-email?secret=<INBOUND_EMAIL_WEBHOOK_SECRET>
+ * Configure a Mailgun Route to POST to:
+ *   https://wekbench.com/api/public/inbound-email?secret=<INBOUND_EMAIL_WEBHOOK_SECRET>
+ *
+ * If MAILGUN_WEBHOOK_SIGNING_KEY is set, we additionally verify Mailgun's
+ * HMAC signature (timestamp + token signed with the HTTP webhook signing key).
  */
 export const Route = createFileRoute("/api/public/inbound-email")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
-          // 1. Verify shared secret (SendGrid doesn't sign requests, so we use a URL secret)
+          // 1. Verify shared URL secret
           const url = new URL(request.url);
           const providedSecret = url.searchParams.get("secret");
           const expected = process.env.INBOUND_EMAIL_WEBHOOK_SECRET;
@@ -29,18 +34,45 @@ export const Route = createFileRoute("/api/public/inbound-email")({
 
           // 2. Parse multipart payload
           const form = await request.formData();
-          const fromRaw = (form.get("from") as string) ?? "";
-          const toRaw = (form.get("to") as string) ?? "";
-          const subject = (form.get("subject") as string) ?? null;
-          const textBody = (form.get("text") as string) ?? null;
-          const htmlBody = (form.get("html") as string) ?? null;
-          const envelopeRaw = (form.get("envelope") as string) ?? null;
-          const headersRaw = (form.get("headers") as string) ?? null;
-          const spamScoreRaw = (form.get("spam_score") as string) ?? null;
 
-          const envelope = safeJson(envelopeRaw);
-          const headers = headersRaw ? { raw: headersRaw } : null;
-          const spamScore = spamScoreRaw ? Number(spamScoreRaw) : null;
+          // 3. Optional Mailgun HMAC signature verification
+          const signingKey = process.env.MAILGUN_WEBHOOK_SIGNING_KEY;
+          if (signingKey) {
+            const timestamp = (form.get("timestamp") as string) ?? "";
+            const token = (form.get("token") as string) ?? "";
+            const signature = (form.get("signature") as string) ?? "";
+            if (!timestamp || !token || !signature) {
+              return new Response("Missing Mailgun signature fields", { status: 401 });
+            }
+            const expectedSig = createHmac("sha256", signingKey)
+              .update(timestamp + token)
+              .digest("hex");
+            const a = Buffer.from(signature, "hex");
+            const b = Buffer.from(expectedSig, "hex");
+            if (a.length !== b.length || !timingSafeEqual(a, b)) {
+              return new Response("Invalid Mailgun signature", { status: 401 });
+            }
+          }
+
+          // 4. Mailgun field names
+          const fromRaw = (form.get("from") as string) ?? (form.get("sender") as string) ?? "";
+          const toRaw = (form.get("recipient") as string) ?? (form.get("To") as string) ?? "";
+          const subject = (form.get("subject") as string) ?? null;
+          const textBody =
+            (form.get("body-plain") as string) ??
+            (form.get("stripped-text") as string) ??
+            null;
+          const htmlBody =
+            (form.get("body-html") as string) ??
+            (form.get("stripped-html") as string) ??
+            null;
+          const headersRaw = (form.get("Message-Headers") as string) ?? null;
+
+          const headers = safeJson(headersRaw);
+          const envelope = {
+            sender: (form.get("sender") as string) ?? null,
+            recipient: (form.get("recipient") as string) ?? null,
+          };
 
           const { name: fromName, email: fromAddress } = parseAddress(fromRaw);
           const { email: toAddress } = parseAddress(toRaw);
@@ -49,20 +81,18 @@ export const Route = createFileRoute("/api/public/inbound-email")({
             return new Response("Missing from/to", { status: 400 });
           }
 
-          // 3. Load admin client (handler-local; never top-level)
+          // 5. Load admin client (handler-local; never top-level)
           const { supabaseAdmin } = await import(
             "@/integrations/supabase/client.server"
           );
 
-          // 4. Resolve workspace by the recipient address.
-          // Convention: <slug>@inbox.wekbench.com → workspace slug or buyer routing.
-          // For now we leave workspace_id null when no match; a follow-up will wire routing.
+          // 6. Resolve workspace by the recipient address.
           const workspaceId = await resolveWorkspaceForAddress(
             supabaseAdmin,
             toAddress,
           );
 
-          // 5. Insert the email row first so we have an ID to scope attachments.
+          // 7. Insert the email row first so we have an ID to scope attachments.
           const { data: inserted, error: insertError } = await supabaseAdmin
             .from("inbound_emails")
             .insert({
@@ -74,8 +104,8 @@ export const Route = createFileRoute("/api/public/inbound-email")({
               text_body: textBody,
               html_body: htmlBody,
               envelope: envelope as never,
-              headers,
-              spam_score: spamScore,
+              headers: headers as never,
+              spam_score: null,
               attachments: [],
               status: "received",
             })
@@ -87,8 +117,11 @@ export const Route = createFileRoute("/api/public/inbound-email")({
             return new Response("DB error", { status: 500 });
           }
 
-          // 6. Upload attachments and collect metadata
-          const attachmentCount = Number(form.get("attachments") ?? 0);
+          // 8. Upload attachments and collect metadata. Mailgun uses
+          //    `attachment-count` and `attachment-1`, `attachment-2`, ...
+          const attachmentCount = Number(
+            form.get("attachment-count") ?? form.get("attachments") ?? 0,
+          );
           const attachmentMeta: Array<{
             filename: string;
             contentType: string;
@@ -98,7 +131,8 @@ export const Route = createFileRoute("/api/public/inbound-email")({
 
           const folder = workspaceId ?? "unrouted";
           for (let i = 1; i <= attachmentCount; i++) {
-            const file = form.get(`attachment${i}`);
+            const file =
+              form.get(`attachment-${i}`) ?? form.get(`attachment${i}`);
             if (!(file instanceof File)) continue;
             const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
             const path = `${folder}/${inserted.id}/${i}-${safeName}`;
@@ -127,7 +161,7 @@ export const Route = createFileRoute("/api/public/inbound-email")({
               .eq("id", inserted.id);
           }
 
-          // 7. Kick off AI extraction in the background — don't block the webhook ack.
+          // 9. Kick off AI extraction in the background — don't block the webhook ack.
           if (workspaceId) {
             (async () => {
               try {
@@ -173,10 +207,6 @@ function parseAddress(input: string): { name: string | null; email: string | nul
   return { name, email };
 }
 
-/**
- * Look up the workspace for a given inbound address.
- * Today: returns null (unrouted) — wire to a per-buyer mapping table once routing UX is built.
- */
 async function resolveWorkspaceForAddress(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   admin: any,
