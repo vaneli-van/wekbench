@@ -475,13 +475,14 @@ export function QuoteBuilder({ quoteId, initialTitle, initialBuyer }: QuoteBuild
                             className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:border-ring"
                           />
                           {line.datasheet && (
-                            <a
-                              href="#"
+                            <button
+                              type="button"
+                              onClick={() => toast.info(`Datasheet "${line.datasheet}" will open in a new tab`)}
                               className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
                             >
                               <FileText className="size-3.5" />
                               {line.datasheet}
-                            </a>
+                            </button>
                           )}
                         </div>
                         <div>
