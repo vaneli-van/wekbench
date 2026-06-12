@@ -14,7 +14,7 @@ function BuyersPage() {
         title="Buyers"
         description="Enterprise accounts with dedicated RFQ capture addresses. Every inbound email is auto-routed to the right account."
         actions={
-          <Button size="sm">
+          <Button size="sm" onClick={() => toast.info("Add buyer dialog — coming soon")}>
             <Plus className="size-4" />
             Add buyer
           </Button>
