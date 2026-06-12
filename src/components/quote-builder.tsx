@@ -136,11 +136,17 @@ function computeLine(line: Line) {
 
 /* ---------------- main ---------------- */
 
-export function QuoteBuilder() {
+export type QuoteBuilderProps = {
+  quoteId?: string
+  initialTitle?: string
+  initialBuyer?: string
+}
+
+export function QuoteBuilder({ quoteId, initialTitle, initialBuyer }: QuoteBuilderProps = {}) {
   const [lines, setLines] = useState<Line[]>(initialLines)
   const [expanded, setExpanded] = useState<string | null>("L1")
-  const [title, setTitle] = useState("25 x Dell Latitude Business Laptops — Branch Rollout")
-  const [buyer, setBuyer] = useState("Meridian Bank Plc")
+  const [title, setTitle] = useState(initialTitle ?? "25 x Dell Latitude Business Laptops — Branch Rollout")
+  const [buyer, setBuyer] = useState(initialBuyer ?? "Meridian Bank Plc")
   const [currency, setCurrency] = useState("GHS")
   const [validity, setValidity] = useState("21")
   const [paymentTerms, setPaymentTerms] = useState("50-50")
@@ -151,6 +157,7 @@ export function QuoteBuilder() {
   const [internalNote, setInternalNote] = useState("Manager approval required before sending. Margin floor is 12%.")
   const [previewOpen, setPreviewOpen] = useState(false)
   const [emailOpen, setEmailOpen] = useState(false)
+  const displayId = quoteId ?? "QT-2026-0418"
 
   const updateLine = (id: string, patch: Partial<Line>) =>
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)))
