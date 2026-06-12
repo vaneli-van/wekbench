@@ -65,6 +65,6 @@ function OrdersPage() {
 }
 
 
-export const Route = createFileRoute("/_app/orders")({
+export const Route = createFileRoute("/_app/orders/")({
   component: OrdersPage,
 });
