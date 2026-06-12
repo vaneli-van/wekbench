@@ -111,7 +111,7 @@ export function AppSidebar() {
                         )}
                       />
                       <span className="flex-1">{item.name}</span>
-                      {item.badge ? (
+                      {item.badgeKey && counts[item.badgeKey] > 0 ? (
                         <span
                           className={cn(
                             "flex items-center justify-center min-w-5 h-5 px-1.5 rounded text-[10px] font-semibold tabular-nums",
@@ -120,7 +120,7 @@ export function AppSidebar() {
                               : "bg-sidebar-accent text-sidebar-foreground",
                           )}
                         >
-                          {item.badge}
+                          {counts[item.badgeKey]}
                         </span>
                       ) : null}
                     </Link>
