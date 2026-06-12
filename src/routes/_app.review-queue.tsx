@@ -268,7 +268,9 @@ function ReviewQueuePage() {
   }, [settings?.auto_approve_threshold, settings?.review_notify_email]);
 
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const reviewFn = useServerFn(reviewExtraction);
+  const approveToRfqFn = useServerFn(approveExtractionToRfq);
   const bulkReviewFn = useServerFn(bulkReviewExtractions);
   const exportAuditFn = useServerFn(exportReviewAuditLog);
   const updateSettingsFn = useServerFn(updateReviewSettings);
