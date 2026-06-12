@@ -482,14 +482,21 @@ function RFQDetail({ rfq }: { rfq: (typeof rfqs)[number] }) {
 
 /* ---------- Build Quote button (gated) ---------- */
 function BuildQuoteButton({ confirmed, onBuild }: { confirmed: boolean; onBuild: () => void }) {
-  if (!confirmed) {
-    return (
-      <Button disabled title="Confirm the extraction first">
-        Build Quote
-      </Button>
-    )
-  }
-  return <Button onClick={onBuild}>Build Quote</Button>
+  return (
+    <Button
+      onClick={() => {
+        if (!confirmed) {
+          toast.info("Confirm the extraction first", {
+            description: "Review the parsed items, then click \"Confirm extraction and start sourcing\".",
+          })
+          return
+        }
+        onBuild()
+      }}
+    >
+      Build Quote
+    </Button>
+  )
 }
 
 /* ---------- Workflow tabs (sourcing stage) ---------- */
