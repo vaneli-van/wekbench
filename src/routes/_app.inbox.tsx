@@ -322,6 +322,7 @@ function InboxPage() {
                     <StatusBadge status={selected.extraction_status === "done" ? "approved" : "new"} />
                   </div>
                 </div>
+                <p className="mt-3 text-sm font-medium text-foreground text-pretty">{selected.subject ?? "(no subject)"}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   To {selected.to_address} · Received {formatReceived(selected.received_at)}
                 </p>
