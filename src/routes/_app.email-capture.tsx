@@ -41,7 +41,7 @@ function EmailCapturePage() {
           </span>
           <h3 className="mt-3 font-semibold">3. Auto-route</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Emails are matched to the correct buyer and surfaced in your Toolbox, ready for review and routing.
+            Emails are matched to the correct buyer and surfaced in My Wekbench, ready for review and routing.
           </p>
         </Card>
       </div>
