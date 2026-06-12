@@ -28,6 +28,7 @@ import { Route as AppExtractionsRouteImport } from './routes/_app.extractions'
 import { Route as AppEmailCaptureRouteImport } from './routes/_app.email-capture'
 import { Route as AppDocumentsRouteImport } from './routes/_app.documents'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppCatalogItemsRouteImport } from './routes/_app.catalog-items'
 import { Route as AppCatalogRouteImport } from './routes/_app.catalog'
 import { Route as AppBuyersRouteImport } from './routes/_app.buyers'
 import { Route as AppOrdersIndexRouteImport } from './routes/_app.orders.index'
@@ -132,6 +133,11 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCatalogItemsRoute = AppCatalogItemsRouteImport.update({
+  id: '/catalog-items',
+  path: '/catalog-items',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCatalogRoute = AppCatalogRouteImport.update({
   id: '/catalog',
   path: '/catalog',
@@ -186,6 +192,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/buyers': typeof AppBuyersRoute
   '/catalog': typeof AppCatalogRoute
+  '/catalog-items': typeof AppCatalogItemsRoute
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
   '/email-capture': typeof AppEmailCaptureRoute
@@ -215,6 +222,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/buyers': typeof AppBuyersRoute
   '/catalog': typeof AppCatalogRoute
+  '/catalog-items': typeof AppCatalogItemsRoute
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
   '/email-capture': typeof AppEmailCaptureRoute
@@ -246,6 +254,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_app/buyers': typeof AppBuyersRoute
   '/_app/catalog': typeof AppCatalogRoute
+  '/_app/catalog-items': typeof AppCatalogItemsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/documents': typeof AppDocumentsRoute
   '/_app/email-capture': typeof AppEmailCaptureRoute
@@ -277,6 +286,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/buyers'
     | '/catalog'
+    | '/catalog-items'
     | '/dashboard'
     | '/documents'
     | '/email-capture'
@@ -306,6 +316,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/buyers'
     | '/catalog'
+    | '/catalog-items'
     | '/dashboard'
     | '/documents'
     | '/email-capture'
@@ -336,6 +347,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_app/buyers'
     | '/_app/catalog'
+    | '/_app/catalog-items'
     | '/_app/dashboard'
     | '/_app/documents'
     | '/_app/email-capture'
@@ -504,6 +516,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/catalog-items': {
+      id: '/_app/catalog-items'
+      path: '/catalog-items'
+      fullPath: '/catalog-items'
+      preLoaderRoute: typeof AppCatalogItemsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/catalog': {
       id: '/_app/catalog'
       path: '/catalog'
@@ -573,6 +592,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppBuyersRoute: typeof AppBuyersRoute
   AppCatalogRoute: typeof AppCatalogRoute
+  AppCatalogItemsRoute: typeof AppCatalogItemsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDocumentsRoute: typeof AppDocumentsRoute
   AppEmailCaptureRoute: typeof AppEmailCaptureRoute
@@ -596,6 +616,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppBuyersRoute: AppBuyersRoute,
   AppCatalogRoute: AppCatalogRoute,
+  AppCatalogItemsRoute: AppCatalogItemsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDocumentsRoute: AppDocumentsRoute,
   AppEmailCaptureRoute: AppEmailCaptureRoute,
