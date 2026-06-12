@@ -1,165 +1,192 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react"
-import { toast } from "sonner"
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+  Plus,
+  Search,
+  Trash2,
+  Package,
+  ChevronDown,
+  ArrowUpDown,
+  Users,
+  X,
+  EyeOff,
+  DollarSign,
+  PackageCheck,
+  Tag,
+} from "lucide-react";
 
-import { PageHeader } from "@/components/page-header"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
-import { StatusBadge } from "@/components/foundations/status-badge"
+import { PageHeader } from "@/components/page-header";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { ProductDrawer } from "@/components/catalog/product-drawer"
-import { AddProductDialog } from "@/components/catalog/add-product-dialog"
-import { EmptyState } from "@/components/foundations/empty-state"
+} from "@/components/ui/dropdown-menu";
 import {
-  catalogProducts,
-  categoryTree,
-  catalogBrands,
-  catalogSuppliers,
-  sourceLabels,
-  availabilityLabels,
-  catalogStats,
-  type CatalogProduct,
-  type ProductSource,
-  type Availability,
-  type AuthStatus,
-} from "@/lib/catalog"
-import {
-  Plus,
-  ChevronDown,
-  Search,
-  LayoutGrid,
-  List,
-  Table as TableIcon,
-  Star,
-  Eye,
-  EyeOff,
-  Pencil,
-  Users,
-  Tag,
-  DollarSign,
-  PackageCheck,
-  X,
-  ArrowUpDown,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { EmptyState } from "@/components/foundations/empty-state";
+import { supabase } from "@/integrations/supabase/client";
+import { useWorkspaceId } from "@/hooks/use-workspace";
+import { cn } from "@/lib/utils";
 
-type ViewMode = "grid" | "list" | "table"
+type CatalogItem = {
+  id: string;
+  sku: string | null;
+  brand: string | null;
+  model: string | null;
+  description: string;
+  unit_price: number | null;
+  currency: string | null;
+  lead_time_days: number | null;
+  stock_qty: number | null;
+  source: "manual" | "supplier_upload" | "external_api";
+  supplier_id: string | null;
+  suppliers: { name: string } | null;
+  created_at?: string;
+};
 
-function fmt(currency: string, n: number) {
-  return `${currency === "USD" ? "$" : currency + " "}${n.toLocaleString()}`
-}
+const sourceLabels: Record<string, string> = {
+  manual: "Manual",
+  supplier_upload: "Supplier upload",
+  external_api: "External API",
+};
 
-const availabilityTone: Record<Availability, "success" | "warning" | "error" | "neutral"> = {
-  "in-stock": "success",
-  "low-stock": "warning",
-  "out-of-stock": "error",
-  "on-request": "neutral",
+type SortKey = "recent" | "price-desc" | "price-asc" | "brand";
+
+function useCatalogItems(workspaceId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["catalog-items", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: async (): Promise<CatalogItem[]> => {
+      const { data, error } = await supabase
+        .from("catalog_items")
+        .select(
+          "id, sku, brand, model, description, unit_price, currency, lead_time_days, stock_qty, source, supplier_id, created_at, suppliers(name)",
+        )
+        .eq("workspace_id", workspaceId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as CatalogItem[];
+    },
+  });
 }
 
 function CatalogPage() {
-  const [view, setView] = useState<ViewMode>("table")
-  const [query, setQuery] = useState("")
-  const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [activeProduct, setActiveProduct] = useState<CatalogProduct | null>(null)
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [addOpen, setAddOpen] = useState(false)
-  const [sortKey, setSortKey] = useState<"price" | "updatedAt" | "brand">("updatedAt")
+  const { data: workspaceId, isLoading: wsLoading } = useWorkspaceId();
+  const { data: items, isLoading } = useCatalogItems(workspaceId);
+  const qc = useQueryClient();
 
-  // filters
-  const [cats, setCats] = useState<Set<string>>(new Set())
-  const [brands, setBrands] = useState<Set<string>>(new Set())
-  const [supps, setSupps] = useState<Set<string>>(new Set())
-  const [sources, setSources] = useState<Set<ProductSource>>(new Set())
-  const [avails, setAvails] = useState<Set<Availability>>(new Set())
-  const [auths, setAuths] = useState<Set<AuthStatus>>(new Set())
+  const [query, setQuery] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("recent");
+  const [brands, setBrands] = useState<Set<string>>(new Set());
+  const [supps, setSupps] = useState<Set<string>>(new Set());
+  const [sources, setSources] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const brandOptions = useMemo(
+    () => Array.from(new Set((items ?? []).map((i) => i.brand).filter(Boolean) as string[])).sort(),
+    [items],
+  );
+  const supplierOptions = useMemo(
+    () =>
+      Array.from(
+        new Set((items ?? []).map((i) => i.suppliers?.name).filter(Boolean) as string[]),
+      ).sort(),
+    [items],
+  );
+  const sourceOptions = useMemo(
+    () => Array.from(new Set((items ?? []).map((i) => i.source))),
+    [items],
+  );
 
   const filtered = useMemo(() => {
-    let list = catalogProducts.filter((p) => !p.hidden)
-    if (query) {
-      const q = query.toLowerCase()
-      list = list.filter(
-        (p) =>
-          p.model.toLowerCase().includes(q) ||
-          p.brand.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q) ||
-          p.id.toLowerCase().includes(q),
-      )
+    let list = items ?? [];
+    if (query.trim()) {
+      const t = query.toLowerCase();
+      list = list.filter((i) =>
+        [i.sku, i.brand, i.model, i.description, i.suppliers?.name].some((v) =>
+          v?.toLowerCase().includes(t),
+        ),
+      );
     }
-    if (cats.size) list = list.filter((p) => p.categoryPath.some((c) => cats.has(c)))
-    if (brands.size) list = list.filter((p) => brands.has(p.brand))
-    if (supps.size) list = list.filter((p) => supps.has(p.supplier))
-    if (sources.size) list = list.filter((p) => sources.has(p.source))
-    if (avails.size) list = list.filter((p) => avails.has(p.availability))
-    if (auths.size) list = list.filter((p) => auths.has(p.authStatus))
+    if (brands.size) list = list.filter((i) => i.brand && brands.has(i.brand));
+    if (supps.size) list = list.filter((i) => i.suppliers?.name && supps.has(i.suppliers.name));
+    if (sources.size) list = list.filter((i) => sources.has(i.source));
 
     list = [...list].sort((a, b) => {
-      if (sortKey === "price") return b.price - a.price
-      if (sortKey === "brand") return a.brand.localeCompare(b.brand)
-      return b.updatedAt.localeCompare(a.updatedAt)
-    })
-    return list
-  }, [query, cats, brands, supps, sources, avails, auths, sortKey])
+      if (sortKey === "price-desc") return (b.unit_price ?? 0) - (a.unit_price ?? 0);
+      if (sortKey === "price-asc") return (a.unit_price ?? 0) - (b.unit_price ?? 0);
+      if (sortKey === "brand") return (a.brand ?? "").localeCompare(b.brand ?? "");
+      return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+    });
+    return list;
+  }, [items, query, brands, supps, sources, sortKey]);
 
-  const open = (p: CatalogProduct) => {
-    setActiveProduct(p)
-    setDrawerOpen(true)
-  }
-
-  const toggle = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
-  }
-
-  const allVisibleSelected = filtered.length > 0 && filtered.every((p) => selected.has(p.id))
-  const toggleAll = () => {
-    setSelected(allVisibleSelected ? new Set() : new Set(filtered.map((p) => p.id)))
-  }
-
-  const activeFilterCount =
-    cats.size + brands.size + supps.size + sources.size + avails.size + auths.size
+  const activeFilterCount = brands.size + supps.size + sources.size;
   const clearFilters = () => {
-    setCats(new Set())
-    setBrands(new Set())
-    setSupps(new Set())
-    setSources(new Set())
-    setAvails(new Set())
-    setAuths(new Set())
-  }
+    setBrands(new Set());
+    setSupps(new Set());
+    setSources(new Set());
+  };
+
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  const allVisibleSelected =
+    filtered.length > 0 && filtered.every((p) => selected.has(p.id));
+  const toggleAll = () =>
+    setSelected(allVisibleSelected ? new Set() : new Set(filtered.map((p) => p.id)));
+
+  const del = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("catalog_items").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_d, ids) => {
+      toast.success(`${ids.length} item${ids.length === 1 ? "" : "s"} removed`);
+      qc.invalidateQueries({ queryKey: ["catalog-items", workspaceId] });
+      setSelected(new Set());
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to delete"),
+  });
 
   return (
     <div className="flex h-full flex-col">
       <div className="px-4 pt-6 md:px-8">
         <PageHeader
           title="Catalog"
-          description={`${catalogStats.totalSkus.toLocaleString()} SKUs · last updated ${catalogStats.lastUpdated}`}
+          description={`${items?.length ?? 0} item${items?.length === 1 ? "" : "s"} · matched against incoming RFQ line items by AI extraction.`}
           actions={
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" className="bg-transparent" asChild>
-                <Link to="/suppliers"><Users className="size-4" /> Manage suppliers</Link>
+                <Link to="/suppliers">
+                  <Users className="size-4" /> Manage suppliers
+                </Link>
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm">
-                    <Plus className="size-4" /> Add product
-                    <ChevronDown className="size-3.5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setAddOpen(true)}>Manual entry</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setAddOpen(true)}>Upload CSV</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setAddOpen(true)}>Sync supplier feed</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {workspaceId && <NewItemDialog workspaceId={workspaceId} />}
             </div>
           }
         />
@@ -171,67 +198,47 @@ function CatalogPage() {
           <div className="flex items-center justify-between py-3">
             <p className="text-sm font-semibold text-foreground">Filters</p>
             {activeFilterCount > 0 && (
-              <button onClick={clearFilters} className="text-xs text-muted-foreground hover:text-foreground">
+              <button
+                onClick={clearFilters}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
                 Clear ({activeFilterCount})
               </button>
             )}
           </div>
 
-          {/* Category tree */}
-          <FilterSection title="Category" defaultOpen>
-            <ul className="flex flex-col gap-0.5">
-              {categoryTree.map((cat) => (
-                <CategoryNode
-                  key={cat.name}
-                  cat={cat}
-                  selected={cats}
-                  onToggle={(name) =>
-                    setCats((prev) => {
-                      const next = new Set(prev)
-                      next.has(name) ? next.delete(name) : next.add(name)
-                      return next
-                    })
-                  }
-                />
-              ))}
-            </ul>
-          </FilterSection>
-
-          <FilterSection title="Brand" searchable items={catalogBrands} selected={brands} onToggle={(v) => toggleSet(setBrands, v)} />
-          <FilterSection title="Supplier" items={catalogSuppliers} selected={supps} onToggle={(v) => toggleSet(setSupps, v)} />
           <FilterSection
-            title="Availability"
-            items={Object.keys(availabilityLabels)}
-            labels={availabilityLabels}
-            selected={avails}
-            onToggle={(v) => toggleSet(setAvails as never, v)}
+            title="Brand"
+            defaultOpen
+            searchable
+            items={brandOptions}
+            selected={brands}
+            onToggle={(v) => toggleSet(setBrands, v)}
+          />
+          <FilterSection
+            title="Supplier"
+            items={supplierOptions}
+            selected={supps}
+            onToggle={(v) => toggleSet(setSupps, v)}
           />
           <FilterSection
             title="Source"
-            items={Object.keys(sourceLabels)}
+            items={sourceOptions}
             labels={sourceLabels}
             selected={sources}
-            onToggle={(v) => toggleSet(setSources as never, v)}
-          />
-          <FilterSection
-            title="Authorisation"
-            items={["authorised", "unauthorised", "pending"]}
-            labels={{ authorised: "Authorised", unauthorised: "Unauthorised", pending: "Pending review" }}
-            selected={auths}
-            onToggle={(v) => toggleSet(setAuths as never, v)}
+            onToggle={(v) => toggleSet(setSources, v)}
           />
         </aside>
 
         {/* Main */}
         <section className="flex min-w-0 flex-1 flex-col pl-0 lg:pl-5">
-          {/* Toolbar */}
           <div className="flex flex-wrap items-center gap-2 py-3">
             <div className="relative min-w-48 flex-1">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by model, brand, SKU…"
+                placeholder="Search by SKU, brand, model, description…"
                 className="pl-9"
               />
             </div>
@@ -244,63 +251,123 @@ function CatalogPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setSortKey("updatedAt")}>Last updated</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortKey("price")}>Price (high → low)</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortKey("brand")}>Brand (A → Z)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortKey("recent")}>
+                  Recently added
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortKey("price-desc")}>
+                  Price (high → low)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortKey("price-asc")}>
+                  Price (low → high)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortKey("brand")}>
+                  Brand (A → Z)
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
-            {/* View toggle */}
-            <div className="flex items-center rounded-md border border-border p-0.5">
-              {([
-                { id: "grid", icon: LayoutGrid },
-                { id: "list", icon: List },
-                { id: "table", icon: TableIcon },
-              ] as const).map((v) => (
-                <button
-                  key={v.id}
-                  onClick={() => setView(v.id)}
-                  aria-label={`${v.id} view`}
-                  className={cn(
-                    "flex size-7 items-center justify-center rounded",
-                    view === v.id ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <v.icon className="size-4" />
-                </button>
-              ))}
-            </div>
           </div>
 
-          {/* Results count */}
           <p className="pb-2 text-xs text-muted-foreground">
-            {filtered.length} {filtered.length === 1 ? "product" : "products"}
+            {filtered.length} {filtered.length === 1 ? "item" : "items"}
           </p>
 
-          {/* Views */}
           <div className="min-h-0 flex-1 overflow-y-auto">
-            {filtered.length === 0 ? (
+            {wsLoading || isLoading ? (
+              <Skeleton className="h-64" />
+            ) : !items?.length ? (
+              <Card className="p-10">
+                <EmptyState
+                  icon={Package}
+                  title="No catalog items yet"
+                  description="Add items manually, or upload a supplier's inventory CSV from the Suppliers page."
+                />
+              </Card>
+            ) : filtered.length === 0 ? (
               <EmptyState
                 className="h-full"
                 icon={Search}
-                title="No products match your filters."
-                description="Try clearing filters or add a product to your catalog."
-                action={{ label: "Add product", onClick: () => setAddOpen(true) }}
+                title="No items match your filters."
+                description="Try clearing filters or adjusting your search."
                 secondaryAction={{ label: "Clear filters", onClick: clearFilters }}
               />
-            ) : view === "table" ? (
-              <TableView
-                products={filtered}
-                selected={selected}
-                allSelected={allVisibleSelected}
-                onToggleAll={toggleAll}
-                onToggle={toggle}
-                onOpen={open}
-              />
-            ) : view === "grid" ? (
-              <GridView products={filtered} onOpen={open} selected={selected} onToggle={toggle} />
             ) : (
-              <ListView products={filtered} onOpen={open} selected={selected} onToggle={toggle} />
+              <Card className="overflow-hidden p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[900px] text-sm">
+                    <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
+                      <tr>
+                        <th className="w-10 px-3 py-2">
+                          <Checkbox
+                            checked={allVisibleSelected}
+                            onCheckedChange={toggleAll}
+                            aria-label="Select all"
+                          />
+                        </th>
+                        <th className="px-3 py-2 text-left">SKU</th>
+                        <th className="px-3 py-2 text-left">Item</th>
+                        <th className="px-3 py-2 text-left">Supplier</th>
+                        <th className="px-3 py-2 text-right">Price</th>
+                        <th className="px-3 py-2 text-right">Lead</th>
+                        <th className="px-3 py-2 text-right">Stock</th>
+                        <th className="px-3 py-2 text-left">Source</th>
+                        <th className="px-3 py-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {filtered.map((i) => (
+                        <tr
+                          key={i.id}
+                          className={cn(selected.has(i.id) && "bg-muted/30")}
+                        >
+                          <td className="px-3 py-2">
+                            <Checkbox
+                              checked={selected.has(i.id)}
+                              onCheckedChange={() => toggle(i.id)}
+                            />
+                          </td>
+                          <td className="px-3 py-2 font-mono text-xs">{i.sku ?? "—"}</td>
+                          <td className="px-3 py-2">
+                            <div className="font-medium">{i.description}</div>
+                            {(i.brand || i.model) && (
+                              <div className="text-xs text-muted-foreground">
+                                {[i.brand, i.model].filter(Boolean).join(" · ")}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-muted-foreground">
+                            {i.suppliers?.name ?? "—"}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {i.unit_price != null
+                              ? `${i.currency ?? ""} ${i.unit_price}`
+                              : "—"}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {i.lead_time_days != null ? `${i.lead_time_days}d` : "—"}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {i.stock_qty ?? "—"}
+                          </td>
+                          <td className="px-3 py-2">
+                            <Badge variant="outline" className="text-[10px]">
+                              {sourceLabels[i.source] ?? i.source}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => del.mutate([i.id])}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
             )}
           </div>
         </section>
@@ -310,43 +377,70 @@ function CatalogPage() {
       {selected.size > 0 && (
         <div className="sticky bottom-0 z-20 border-t border-border bg-card px-4 py-3 md:px-8">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-medium text-foreground">{selected.size} selected</span>
+            <span className="text-sm font-medium text-foreground">
+              {selected.size} selected
+            </span>
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" size="sm" className="bg-transparent" onClick={() => toast.success(`Updated pricing for ${selected.size} products`)}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-transparent"
+                onClick={() =>
+                  toast.info("Bulk pricing update coming soon")
+                }
+              >
                 <DollarSign className="size-4" /> Update pricing
               </Button>
-              <Button variant="outline" size="sm" className="bg-transparent" onClick={() => toast.success(`Updated availability for ${selected.size} products`)}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-transparent"
+                onClick={() =>
+                  toast.info("Bulk availability update coming soon")
+                }
+              >
                 <PackageCheck className="size-4" /> Update availability
               </Button>
-              <Button variant="outline" size="sm" className="bg-transparent" onClick={() => toast.success(`${selected.size} products tagged as preferred`)}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-transparent"
+                onClick={() => toast.info("Tagging coming soon")}
+              >
                 <Tag className="size-4" /> Tag as preferred
               </Button>
-              <Button variant="outline" size="sm" className="bg-transparent" onClick={() => { toast.success(`${selected.size} products hidden`); setSelected(new Set()); }}>
-                <EyeOff className="size-4" /> Hide from catalog
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-transparent"
+                onClick={() => del.mutate(Array.from(selected))}
+              >
+                <EyeOff className="size-4" /> Delete
               </Button>
             </div>
-            <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSelected(new Set())}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-auto"
+              onClick={() => setSelected(new Set())}
+            >
               <X className="size-4" /> Clear
             </Button>
           </div>
         </div>
       )}
-
-      <ProductDrawer product={activeProduct} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-      <AddProductDialog open={addOpen} onClose={() => setAddOpen(false)} />
     </div>
-  )
+  );
 }
 
 function toggleSet<T>(setter: React.Dispatch<React.SetStateAction<Set<T>>>, value: T) {
   setter((prev) => {
-    const next = new Set(prev)
-    next.has(value) ? next.delete(value) : next.add(value)
-    return next
-  })
+    const next = new Set(prev);
+    next.has(value) ? next.delete(value) : next.add(value);
+    return next;
+  });
 }
 
-/* ---------- Filter primitives ---------- */
 function FilterSection({
   title,
   defaultOpen = false,
@@ -355,19 +449,19 @@ function FilterSection({
   labels,
   selected,
   onToggle,
-  children,
 }: {
-  title: string
-  defaultOpen?: boolean
-  searchable?: boolean
-  items?: string[]
-  labels?: Record<string, string>
-  selected?: Set<string>
-  onToggle?: (v: string) => void
-  children?: React.ReactNode
+  title: string;
+  defaultOpen?: boolean;
+  searchable?: boolean;
+  items: string[];
+  labels?: Record<string, string>;
+  selected: Set<string>;
+  onToggle: (v: string) => void;
 }) {
-  const [q, setQ] = useState("")
-  const shown = items?.filter((i) => (labels?.[i] ?? i).toLowerCase().includes(q.toLowerCase()))
+  const [q, setQ] = useState("");
+  const shown = items.filter((i) =>
+    (labels?.[i] ?? i).toLowerCase().includes(q.toLowerCase()),
+  );
   return (
     <Collapsible defaultOpen={defaultOpen} className="border-t border-border py-2">
       <CollapsibleTrigger className="flex w-full items-center justify-between py-1.5 text-sm font-medium text-foreground">
@@ -375,16 +469,28 @@ function FilterSection({
         <ChevronDown className="size-4 text-muted-foreground transition-transform data-[state=closed]:-rotate-90" />
       </CollapsibleTrigger>
       <CollapsibleContent className="pt-1">
-        {searchable && (
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${title.toLowerCase()}`} className="mb-2 h-8 text-xs" />
+        {searchable && items.length > 5 && (
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={`Search ${title.toLowerCase()}`}
+            className="mb-2 h-8 text-xs"
+          />
         )}
-        {children ?? (
+        {shown.length === 0 ? (
+          <p className="px-1 py-1 text-xs text-muted-foreground">None</p>
+        ) : (
           <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto">
-            {shown?.map((item) => (
+            {shown.map((item) => (
               <li key={item}>
                 <label className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted">
-                  <Checkbox checked={selected?.has(item)} onCheckedChange={() => onToggle?.(item)} />
-                  <span className="text-muted-foreground">{labels?.[item] ?? item}</span>
+                  <Checkbox
+                    checked={selected.has(item)}
+                    onCheckedChange={() => onToggle(item)}
+                  />
+                  <span className="text-muted-foreground">
+                    {labels?.[item] ?? item}
+                  </span>
                 </label>
               </li>
             ))}
@@ -392,260 +498,144 @@ function FilterSection({
         )}
       </CollapsibleContent>
     </Collapsible>
-  )
+  );
 }
 
-function CategoryNode({
-  cat,
-  selected,
-  onToggle,
-}: {
-  cat: { name: string; count: number; children?: { name: string; count: number }[] }
-  selected: Set<string>
-  onToggle: (name: string) => void
-}) {
-  const [open, setOpen] = useState(false)
-  return (
-    <li>
-      <div className="flex items-center gap-1">
-        {cat.children ? (
-          <button onClick={() => setOpen((o) => !o)} className="text-muted-foreground">
-            <ChevronDown className={cn("size-3.5 transition-transform", !open && "-rotate-90")} />
-          </button>
-        ) : (
-          <span className="w-3.5" />
-        )}
-        <label className="flex flex-1 cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted">
-          <Checkbox checked={selected.has(cat.name)} onCheckedChange={() => onToggle(cat.name)} />
-          <span className="flex-1 text-muted-foreground">{cat.name}</span>
-          <span className="text-[11px] tabular-nums text-muted-foreground/60">{cat.count}</span>
-        </label>
-      </div>
-      {cat.children && open && (
-        <ul className="ml-5 flex flex-col gap-0.5 border-l border-border pl-2">
-          {cat.children.map((c) => (
-            <li key={c.name}>
-              <label className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted">
-                <Checkbox checked={selected.has(c.name)} onCheckedChange={() => onToggle(c.name)} />
-                <span className="flex-1 text-muted-foreground">{c.name}</span>
-                <span className="text-[11px] tabular-nums text-muted-foreground/60">{c.count}</span>
-              </label>
-            </li>
-          ))}
-        </ul>
-      )}
-    </li>
-  )
-}
+function NewItemDialog({ workspaceId }: { workspaceId: string }) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    sku: "",
+    brand: "",
+    model: "",
+    description: "",
+    unit_price: "",
+    currency: "USD",
+    lead_time_days: "",
+    stock_qty: "",
+  });
+  const qc = useQueryClient();
+  const set = (k: keyof typeof form, v: string) =>
+    setForm((p) => ({ ...p, [k]: v }));
 
-/* ---------- Table view ---------- */
-function TableView({
-  products,
-  selected,
-  allSelected,
-  onToggleAll,
-  onToggle,
-  onOpen,
-}: {
-  products: CatalogProduct[]
-  selected: Set<string>
-  allSelected: boolean
-  onToggleAll: () => void
-  onToggle: (id: string) => void
-  onOpen: (p: CatalogProduct) => void
-}) {
-  return (
-    <div className="overflow-x-auto rounded-md border border-border">
-      <table className="w-full min-w-[1000px] text-sm">
-        <thead className="bg-muted/50 text-xs text-muted-foreground">
-          <tr>
-            <th className="w-10 px-3 py-2.5">
-              <Checkbox checked={allSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-            </th>
-            <th className="px-3 py-2.5 text-left font-medium">Product</th>
-            <th className="px-3 py-2.5 text-left font-medium">Category</th>
-            <th className="px-3 py-2.5 text-left font-medium">Supplier</th>
-            <th className="px-3 py-2.5 text-right font-medium">Price</th>
-            <th className="px-3 py-2.5 text-left font-medium">Lead time</th>
-            <th className="px-3 py-2.5 text-left font-medium">Source</th>
-            <th className="px-3 py-2.5 text-left font-medium">Updated</th>
-            <th className="w-10 px-3 py-2.5" />
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {products.map((p) => (
-            <tr
-              key={p.id}
-              className="group cursor-pointer hover:bg-muted/40"
-              onClick={() => onOpen(p)}
-            >
-              <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                <Checkbox checked={selected.has(p.id)} onCheckedChange={() => onToggle(p.id)} aria-label={`Select ${p.model}`} />
-              </td>
-              <td className="px-3 py-2.5">
-                <div className="flex items-center gap-3">
-                  <div className="relative size-9 shrink-0 overflow-hidden rounded border border-border bg-muted">
-                    <img src={p.image || "/placeholder.svg"} alt="" className="object-cover" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-medium text-foreground">{p.brand}</span>
-                      {p.preferred && <Star className="size-3 fill-foreground text-foreground" />}
-                    </div>
-                    <p className="truncate text-xs text-muted-foreground">{p.model} · {p.id}</p>
-                  </div>
-                </div>
-              </td>
-              <td className="px-3 py-2.5 text-muted-foreground">{p.category}</td>
-              <td className="px-3 py-2.5 text-muted-foreground">{p.supplier}</td>
-              <td className="px-3 py-2.5 text-right font-medium tabular-nums text-foreground">
-                {fmt(p.currency, p.price)}
-              </td>
-              <td className="px-3 py-2.5 text-muted-foreground">{p.leadTime}</td>
-              <td className="px-3 py-2.5">
-                <StatusBadge variant="neutral" dot={false}>
-                  {sourceLabels[p.source]}
-                </StatusBadge>
-              </td>
-              <td className="px-3 py-2.5 text-muted-foreground">{p.updatedAt}</td>
-              <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                <RowActions product={p} onOpen={onOpen} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
+  const mut = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("catalog_items").insert({
+        workspace_id: workspaceId,
+        sku: form.sku || null,
+        brand: form.brand || null,
+        model: form.model || null,
+        description: form.description || form.model || form.sku || "Untitled",
+        unit_price: form.unit_price ? Number(form.unit_price) : null,
+        currency: form.currency || null,
+        lead_time_days: form.lead_time_days ? Number(form.lead_time_days) : null,
+        stock_qty: form.stock_qty ? Number(form.stock_qty) : null,
+        source: "manual",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Item added");
+      qc.invalidateQueries({ queryKey: ["catalog-items", workspaceId] });
+      setOpen(false);
+      setForm({
+        sku: "",
+        brand: "",
+        model: "",
+        description: "",
+        unit_price: "",
+        currency: "USD",
+        lead_time_days: "",
+        stock_qty: "",
+      });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
 
-function RowActions({ product, onOpen }: { product: CatalogProduct; onOpen: (p: CatalogProduct) => void }) {
   return (
-    <div className="flex items-center justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-      <Button variant="ghost" size="icon" className="size-7" aria-label="View" onClick={() => onOpen(product)}>
-        <Eye className="size-3.5" />
-      </Button>
-      <Button variant="ghost" size="icon" className="size-7" aria-label="Edit" onClick={() => onOpen(product)}>
-        <Pencil className="size-3.5" />
-      </Button>
-      <Button variant="ghost" size="icon" className="size-7" aria-label="Set preferred" onClick={() => toast.success(`${product.brand} ${product.model} marked as preferred`)}>
-        <Star className="size-3.5" />
-      </Button>
-      <Button variant="ghost" size="icon" className="size-7" aria-label="Hide" onClick={() => toast.success(`${product.brand} ${product.model} hidden from catalog`)}>
-        <EyeOff className="size-3.5" />
-      </Button>
-    </div>
-  )
-}
-
-/* ---------- Grid view ---------- */
-function GridView({
-  products,
-  onOpen,
-  selected,
-  onToggle,
-}: {
-  products: CatalogProduct[]
-  onOpen: (p: CatalogProduct) => void
-  selected: Set<string>
-  onToggle: (id: string) => void
-}) {
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {products.map((p) => (
-        <div
-          key={p.id}
-          role="button"
-          tabIndex={0}
-          onClick={() => onOpen(p)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault()
-              onOpen(p)
-            }
-          }}
-          className="group flex cursor-pointer flex-col overflow-hidden rounded-lg border border-border bg-card text-left transition-shadow hover:shadow-md"
-        >
-          <div className="relative aspect-[4/3] bg-muted">
-            <img src={p.image || "/placeholder.svg"} alt={p.model} className="object-cover" />
-            <div className="absolute left-2 top-2" onClick={(e) => e.stopPropagation()}>
-              <Checkbox
-                checked={selected.has(p.id)}
-                onCheckedChange={() => onToggle(p.id)}
-                className="border-foreground/30 bg-background/80"
-                aria-label={`Select ${p.model}`}
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm">
+          <Plus className="size-4" /> Add item
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Add catalog item</DialogTitle>
+        </DialogHeader>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="SKU">
+            <Input value={form.sku} onChange={(e) => set("sku", e.target.value)} />
+          </Field>
+          <Field label="Brand">
+            <Input value={form.brand} onChange={(e) => set("brand", e.target.value)} />
+          </Field>
+          <Field label="Model">
+            <Input value={form.model} onChange={(e) => set("model", e.target.value)} />
+          </Field>
+          <Field label="Currency">
+            <Input
+              value={form.currency}
+              onChange={(e) => set("currency", e.target.value)}
+            />
+          </Field>
+          <div className="col-span-2">
+            <Field label="Description">
+              <Input
+                value={form.description}
+                onChange={(e) => set("description", e.target.value)}
               />
-            </div>
-            {p.preferred && (
-              <span className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-medium text-background">
-                <Star className="size-2.5" /> Preferred
-              </span>
-            )}
+            </Field>
           </div>
-          <div className="flex flex-1 flex-col p-3">
-            <span className="text-xs text-muted-foreground">{p.brand}</span>
-            <p className="line-clamp-1 text-sm font-medium text-foreground">{p.model}</p>
-            <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{p.description}</p>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-sm font-semibold text-foreground">{fmt(p.currency, p.price)}</span>
-              <StatusBadge variant={availabilityTone[p.availability]} dot={false}>
-                {availabilityLabels[p.availability]}
-              </StatusBadge>
-            </div>
-          </div>
+          <Field label="Unit price">
+            <Input
+              type="number"
+              step="0.01"
+              value={form.unit_price}
+              onChange={(e) => set("unit_price", e.target.value)}
+            />
+          </Field>
+          <Field label="Lead time (days)">
+            <Input
+              type="number"
+              value={form.lead_time_days}
+              onChange={(e) => set("lead_time_days", e.target.value)}
+            />
+          </Field>
+          <Field label="Stock qty">
+            <Input
+              type="number"
+              value={form.stock_qty}
+              onChange={(e) => set("stock_qty", e.target.value)}
+            />
+          </Field>
         </div>
-      ))}
-    </div>
-  )
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button disabled={mut.isPending} onClick={() => mut.mutate()}>
+            Add item
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
-/* ---------- List view ---------- */
-function ListView({
-  products,
-  onOpen,
-  selected,
-  onToggle,
+function Field({
+  label,
+  children,
 }: {
-  products: CatalogProduct[]
-  onOpen: (p: CatalogProduct) => void
-  selected: Set<string>
-  onToggle: (id: string) => void
+  label: string;
+  children: React.ReactNode;
 }) {
   return (
-    <ul className="flex flex-col gap-2">
-      {products.map((p) => (
-        <li
-          key={p.id}
-          onClick={() => onOpen(p)}
-          className="flex cursor-pointer items-center gap-4 rounded-lg border border-border bg-card p-3 hover:bg-muted/40"
-        >
-          <div onClick={(e) => e.stopPropagation()}>
-            <Checkbox checked={selected.has(p.id)} onCheckedChange={() => onToggle(p.id)} aria-label={`Select ${p.model}`} />
-          </div>
-          <div className="relative size-14 shrink-0 overflow-hidden rounded border border-border bg-muted">
-            <img src={p.image || "/placeholder.svg"} alt="" className="object-cover" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">{p.brand}</span>
-              {p.preferred && <Star className="size-3 fill-foreground text-foreground" />}
-            </div>
-            <p className="truncate text-sm font-medium text-foreground">{p.model}</p>
-            <p className="truncate text-xs text-muted-foreground">{p.description}</p>
-          </div>
-          <div className="hidden text-right sm:block">
-            <p className="text-sm font-semibold text-foreground">{fmt(p.currency, p.price)}</p>
-            <p className="text-xs text-muted-foreground">{p.leadTime}</p>
-          </div>
-          <StatusBadge variant={availabilityTone[p.availability]} dot={false}>
-            {availabilityLabels[p.availability]}
-          </StatusBadge>
-        </li>
-      ))}
-    </ul>
-  )
+    <div>
+      <Label className="text-xs">{label}</Label>
+      <div className="mt-1">{children}</div>
+    </div>
+  );
 }
-
 
 export const Route = createFileRoute("/_app/catalog")({
   component: CatalogPage,

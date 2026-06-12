@@ -36,7 +36,6 @@ const navGroups: {
       { name: "Quotes", href: "/quotes", icon: FileText, badge: 1 },
       { name: "Product Search", href: "/product-search", icon: Search },
       { name: "Catalog", href: "/catalog", icon: Library },
-      { name: "Catalog Items", href: "/catalog-items", icon: Package },
       { name: "Orders", href: "/orders", icon: Package, badge: 2 },
       { name: "Invoices", href: "/invoices", icon: ReceiptText },
       { name: "Documents", href: "/documents", icon: FolderArchive },
