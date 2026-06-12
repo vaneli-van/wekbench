@@ -46,7 +46,7 @@ function AttachmentIcon({ type }: { type: string }) {
 function InboxPage() {
   const [selected, setSelected] = useState<InboxEmail | null>(inboxEmails[1])
   const [copied, setCopied] = useState(false)
-  const toolboxEmail = "meridian.toolbox@toolbox.westernpremium.com"
+  const toolboxEmail = "meridian.rfq@inbox.wekbench.app"
 
   const copyEmail = () => {
     navigator.clipboard?.writeText(toolboxEmail)
@@ -63,7 +63,7 @@ function InboxPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
       <PageHeader
-        title="In Toolbox"
+        title="My Wekbench"
         description="Inbound emails captured through your unique wekbench addresses. wekbench classifies each message — RFQs, purchase orders, amendments and more — and suggests the next action."
         actions={
           <button

@@ -1,4 +1,4 @@
-// Shared mock procurement data for the ToolBox demo journey.
+// Shared mock procurement data for the Wekbench demo journey.
 // All data is realistic (no lorem ipsum) and centered on the
 // "25 Dell laptops" RFQ-to-Quote-to-Order demo.
 
@@ -504,7 +504,7 @@ export const timeline: TimelineEvent[] = [
     label: "RFQ email received",
     detail: "Inbound email captured from a.okafor@meridianbank.com",
     timestamp: "2026-06-08 09:14",
-    actor: "ToolBox Email Capture",
+    actor: "Wekbench Email Capture",
     type: "system",
     status: "done",
   },
@@ -513,7 +513,7 @@ export const timeline: TimelineEvent[] = [
     label: "Attachment extracted",
     detail: "Meridian-RFQ-2026-0418.pdf parsed (248 KB)",
     timestamp: "2026-06-08 09:14",
-    actor: "ToolBox AI",
+    actor: "Wekbench AI",
     type: "ai",
     status: "done",
   },
@@ -522,7 +522,7 @@ export const timeline: TimelineEvent[] = [
     label: "Line items detected",
     detail: '1 line item extracted: 25 x Dell laptop, i7, 16GB, 512GB, 14"',
     timestamp: "2026-06-08 09:15",
-    actor: "ToolBox AI",
+    actor: "Wekbench AI",
     type: "ai",
     status: "done",
   },
@@ -594,7 +594,7 @@ export const timeline: TimelineEvent[] = [
     label: "Quote sent to buyer",
     detail: "Will email to a.okafor@meridianbank.com",
     timestamp: "—",
-    actor: "ToolBox",
+    actor: "Wekbench",
     type: "system",
     status: "upcoming",
   },
@@ -729,7 +729,7 @@ export const buyers: Buyer[] = [
     openRfqs: 1,
     activeOrders: 0,
     lifetimeValue: "GH₵210,400,000",
-    rfqEmail: "meridian.rfq@toolbox.westernpremium.com",
+    rfqEmail: "meridian.rfq@inbox.wekbench.app",
   },
   {
     id: "B-2",
@@ -740,7 +740,7 @@ export const buyers: Buyer[] = [
     openRfqs: 1,
     activeOrders: 1,
     lifetimeValue: "GH₵156,800,000",
-    rfqEmail: "sahel.rfq@toolbox.westernpremium.com",
+    rfqEmail: "sahel.rfq@inbox.wekbench.app",
   },
   {
     id: "B-3",
@@ -751,7 +751,7 @@ export const buyers: Buyer[] = [
     openRfqs: 0,
     activeOrders: 1,
     lifetimeValue: "GH₵98,200,000",
-    rfqEmail: "equator.rfq@toolbox.westernpremium.com",
+    rfqEmail: "equator.rfq@inbox.wekbench.app",
   },
   {
     id: "B-4",
@@ -762,7 +762,7 @@ export const buyers: Buyer[] = [
     openRfqs: 1,
     activeOrders: 1,
     lifetimeValue: "GH₵142,600,000",
-    rfqEmail: "atlas.rfq@toolbox.westernpremium.com",
+    rfqEmail: "atlas.rfq@inbox.wekbench.app",
   },
   {
     id: "B-5",
@@ -773,7 +773,7 @@ export const buyers: Buyer[] = [
     openRfqs: 1,
     activeOrders: 0,
     lifetimeValue: "GH₵67,900,000",
-    rfqEmail: "coastal.rfq@toolbox.westernpremium.com",
+    rfqEmail: "coastal.rfq@inbox.wekbench.app",
   },
 ]
 

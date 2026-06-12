@@ -41,7 +41,7 @@ function EmailCapturePage() {
           </span>
           <h3 className="mt-3 font-semibold">3. Auto-route</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Emails are matched to the correct buyer and surfaced in your Toolbox, ready for review and routing.
+            Emails are matched to the correct buyer and surfaced in My Wekbench, ready for review and routing.
           </p>
         </Card>
       </div>
@@ -63,7 +63,7 @@ function EmailCapturePage() {
           </Badge>
         </div>
         <div className="mt-4 flex items-center justify-between gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-3">
-          <code className="truncate text-sm">toolbox@toolbox.westernpremium.com</code>
+          <code className="truncate text-sm">capture@inbox.wekbench.app</code>
           <Button variant="ghost" size="sm" className="gap-1.5 shrink-0">
             <Copy className="size-3.5" />
             Copy

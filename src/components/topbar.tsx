@@ -37,7 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const mobileNav = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "In Toolbox", href: "/inbox", icon: Inbox },
+  { name: "My Wekbench", href: "/inbox", icon: Inbox },
   { name: "Email Capture", href: "/email-capture", icon: AtSign },
   { name: "Quotes", href: "/quotes", icon: FileText },
   { name: "Product Search", href: "/product-search", icon: SearchIcon },
@@ -53,7 +53,7 @@ const mobileNav = [
 
 const titleMap: Record<string, string> = {
   "/dashboard": "Command Center",
-  "/inbox": "In Toolbox",
+  "/inbox": "My Wekbench",
   "/email-capture": "Email Capture",
   "/quotes": "Quotes",
   "/product-search": "Product Search",
