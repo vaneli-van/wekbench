@@ -312,16 +312,16 @@ function CatalogPage() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-medium text-foreground">{selected.size} selected</span>
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" size="sm" className="bg-transparent">
+              <Button variant="outline" size="sm" className="bg-transparent" onClick={() => toast.success(`Updated pricing for ${selected.size} products`)}>
                 <DollarSign className="size-4" /> Update pricing
               </Button>
-              <Button variant="outline" size="sm" className="bg-transparent">
+              <Button variant="outline" size="sm" className="bg-transparent" onClick={() => toast.success(`Updated availability for ${selected.size} products`)}>
                 <PackageCheck className="size-4" /> Update availability
               </Button>
-              <Button variant="outline" size="sm" className="bg-transparent">
+              <Button variant="outline" size="sm" className="bg-transparent" onClick={() => toast.success(`${selected.size} products tagged as preferred`)}>
                 <Tag className="size-4" /> Tag as preferred
               </Button>
-              <Button variant="outline" size="sm" className="bg-transparent">
+              <Button variant="outline" size="sm" className="bg-transparent" onClick={() => { toast.success(`${selected.size} products hidden`); setSelected(new Set()); }}>
                 <EyeOff className="size-4" /> Hide from catalog
               </Button>
             </div>
