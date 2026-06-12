@@ -69,7 +69,7 @@ function InvoicesPage() {
               {orders.map((o) => (
                 <TableRow key={o.id}>
                   <TableCell>
-                    <Link to={`/invoices/${o.id}`} className="flex items-center gap-2 group">
+                    <Link to="/invoices/$id" params={{ id: o.id }} className="flex items-center gap-2 group">
                       <span className="flex size-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
                         <FileText className="size-4" />
                       </span>
@@ -84,7 +84,7 @@ function InvoicesPage() {
                     <p className="text-xs text-muted-foreground">{o.buyerContact}</p>
                   </TableCell>
                   <TableCell>
-                    <Link to={`/orders/${o.id}`} className="text-sm text-info hover:underline">
+                    <Link to="/orders/$id" params={{ id: o.id }} className="text-sm text-info hover:underline">
                       {o.poNumber}
                     </Link>
                   </TableCell>
@@ -97,7 +97,7 @@ function InvoicesPage() {
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="icon" className="size-8" aria-label="Open invoice" asChild>
-                        <Link to={`/invoices/${o.id}`}>
+                        <Link to="/invoices/$id" params={{ id: o.id }}>
                           <FileText className="size-4" />
                         </Link>
                       </Button>
