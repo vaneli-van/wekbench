@@ -75,12 +75,14 @@ export function NewQuoteDialog({
         if (!o) reset()
       }}
     >
-      <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="size-4" />
-          New quote
-        </Button>
-      </DialogTrigger>
+      {controlledOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button size="sm">
+            <Plus className="size-4" />
+            New quote
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>New quote</DialogTitle>
