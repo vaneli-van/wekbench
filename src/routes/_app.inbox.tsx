@@ -46,7 +46,7 @@ function AttachmentIcon({ type }: { type: string }) {
 function InboxPage() {
   const [selected, setSelected] = useState<InboxEmail | null>(inboxEmails[1])
   const [copied, setCopied] = useState(false)
-  const toolboxEmail = "meridian.toolbox@toolbox.westernpremium.com"
+  const toolboxEmail = "meridian.rfq@inbox.wekbench.app"
 
   const copyEmail = () => {
     navigator.clipboard?.writeText(toolboxEmail)
