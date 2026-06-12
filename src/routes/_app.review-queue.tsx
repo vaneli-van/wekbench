@@ -13,6 +13,7 @@ import {
   Search,
   FileText,
   ChevronRight,
+  Download,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
@@ -33,7 +34,7 @@ import { EmptyState } from "@/components/foundations/empty-state";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspaceId } from "@/hooks/use-workspace";
-import { reviewExtraction, bulkReviewExtractions } from "@/lib/api/extraction.functions";
+import { reviewExtraction, bulkReviewExtractions, exportReviewAuditLog } from "@/lib/api/extraction.functions";
 
 type DocType = "rfq" | "purchase_order" | "rfq_amendment" | "po_amendment" | "unknown";
 type LineMatch = "matched" | "not_found" | "sourcing" | "manual";
@@ -174,6 +175,7 @@ function ReviewQueuePage() {
   const qc = useQueryClient();
   const reviewFn = useServerFn(reviewExtraction);
   const bulkReviewFn = useServerFn(bulkReviewExtractions);
+  const exportAuditFn = useServerFn(exportReviewAuditLog);
 
   const selectedDoc = useMemo(
     () => queue?.find((d) => d.id === selected) ?? null,
@@ -247,6 +249,24 @@ function ReviewQueuePage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Bulk review failed"),
   });
 
+  const exportMutation = useMutation({
+    mutationFn: async () => {
+      const result = await exportAuditFn({ data: { workspaceId: workspaceId! } });
+      return result.csv;
+    },
+    onSuccess: (csv) => {
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `review-audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Audit log downloaded");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Export failed"),
+  });
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
       <PageHeader
@@ -275,6 +295,15 @@ function ReviewQueuePage() {
           <p className="text-xs text-muted-foreground">
             Documents below this score (or classified as Unclassified) need a human OK.
           </p>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={exportMutation.isPending || !workspaceId}
+            onClick={() => exportMutation.mutate()}
+          >
+            <Download className="size-3.5" />
+            Export audit log
+          </Button>
         </div>
       </Card>
 

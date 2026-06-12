@@ -123,3 +123,80 @@ export const updateExtractedLineItem = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const exportReviewAuditLog = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        workspaceId: z.string().uuid(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("extracted_documents")
+      .select(
+        "id, doc_type, status, confidence, buyer_ref, reviewed_by, reviewed_at, review_notes, inbound_emails(subject, from_address, from_name)",
+      )
+      .eq("workspace_id", data.workspaceId)
+      .in("status", ["approved", "rejected"])
+      .order("reviewed_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const reviewerIds = [...new Set((rows ?? []).map((r) => r.reviewed_by).filter(Boolean))] as string[];
+    const reviewerNames: Record<string, string> = {};
+    if (reviewerIds.length > 0) {
+      const { data: profiles } = await context.supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", reviewerIds);
+      for (const p of profiles ?? []) {
+        reviewerNames[p.id] = p.full_name ?? "";
+      }
+    }
+
+    const headers = [
+      "document_id",
+      "doc_type",
+      "decision",
+      "confidence",
+      "buyer_ref",
+      "email_subject",
+      "email_from",
+      "reviewer_name",
+      "reviewed_at",
+      "review_notes",
+    ];
+
+    const escape = (v: string | null | undefined) => {
+      if (v == null) return "";
+      const s = String(v);
+      if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    };
+
+    const lines = [headers.join(",")];
+    for (const doc of rows ?? []) {
+      const ie = (doc.inbound_emails ?? {}) as Record<string, unknown>;
+      const fromDisplay = (ie.from_name as string | null) || (ie.from_address as string | null);
+      lines.push(
+        [
+          escape(doc.id),
+          escape(doc.doc_type),
+          escape(doc.status),
+          escape(doc.confidence != null ? String(doc.confidence) : ""),
+          escape(doc.buyer_ref),
+          escape(ie.subject as string | null),
+          escape(fromDisplay),
+          escape(reviewerNames[doc.reviewed_by ?? ""] ?? ""),
+          escape(doc.reviewed_at),
+          escape(doc.review_notes),
+        ].join(","),
+      );
+    }
+
+    return { csv: lines.join("\r\n") };
+  });
