@@ -62,7 +62,16 @@ function BuyersPage() {
                   <p className="text-xs text-muted-foreground">Dedicated RFQ address</p>
                   <p className="truncate font-mono text-xs text-foreground">{b.rfqEmail}</p>
                 </div>
-                <Button variant="ghost" size="icon" className="size-7 shrink-0" aria-label="Copy RFQ email">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 shrink-0"
+                  aria-label="Copy RFQ email"
+                  onClick={() => {
+                    navigator.clipboard.writeText(b.rfqEmail)
+                    toast.success("RFQ address copied")
+                  }}
+                >
                   <Copy className="size-3.5" />
                 </Button>
               </div>
