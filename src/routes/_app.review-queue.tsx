@@ -33,7 +33,7 @@ import { EmptyState } from "@/components/foundations/empty-state";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspaceId } from "@/hooks/use-workspace";
-import { reviewExtraction } from "@/lib/api/extraction.functions";
+import { reviewExtraction, bulkReviewExtractions } from "@/lib/api/extraction.functions";
 
 type DocType = "rfq" | "purchase_order" | "rfq_amendment" | "po_amendment" | "unknown";
 type LineMatch = "matched" | "not_found" | "sourcing" | "manual";
@@ -168,10 +168,12 @@ function ReviewQueuePage() {
   const [threshold, setThreshold] = useState(0.8);
   const { data: queue, isLoading } = useReviewQueue(workspaceId, threshold);
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [draftType, setDraftType] = useState<DocType | null>(null);
   const [notes, setNotes] = useState("");
   const qc = useQueryClient();
   const reviewFn = useServerFn(reviewExtraction);
+  const bulkReviewFn = useServerFn(bulkReviewExtractions);
 
   const selectedDoc = useMemo(
     () => queue?.find((d) => d.id === selected) ?? null,
@@ -184,6 +186,27 @@ function ReviewQueuePage() {
     setDraftType(selectedDoc?.doc_type ?? null);
     setNotes(selectedDoc?.review_notes ?? "");
   }, [selectedDoc?.id, selectedDoc?.doc_type, selectedDoc?.review_notes]);
+
+  const allSelected = queue && queue.length > 0 && selectedIds.size === queue.length;
+  const someSelected = selectedIds.size > 0 && !allSelected;
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (!queue) return;
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(queue.map((d) => d.id)));
+    }
+  };
 
   const reviewMutation = useMutation({
     mutationFn: async (vars: { action: "approve" | "reject" }) =>
@@ -202,6 +225,26 @@ function ReviewQueuePage() {
       setSelected(null);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not save review"),
+  });
+
+  const bulkReviewMutation = useMutation({
+    mutationFn: async (vars: { action: "approve" | "reject" }) =>
+      bulkReviewFn({
+        data: {
+          documentIds: Array.from(selectedIds),
+          action: vars.action,
+        },
+      }),
+    onSuccess: (_d, vars) => {
+      toast.success(
+        `${vars.action === "approve" ? "Approved" : "Rejected"} ${selectedIds.size} document(s)`,
+      );
+      qc.invalidateQueries({ queryKey: ["review-queue", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["extracted-documents", workspaceId] });
+      setSelectedIds(new Set());
+      setSelected(null);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Bulk review failed"),
   });
 
   return (
@@ -237,12 +280,47 @@ function ReviewQueuePage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[420px_1fr]">
         <Card className="overflow-hidden p-0">
-          <div className="border-b border-border px-4 py-3 text-sm font-medium">
-            Awaiting review
-            {queue && (
-              <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                {queue.length}
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                className="size-4 accent-primary"
+                checked={allSelected}
+                ref={(el) => { if (el) el.indeterminate = someSelected; }}
+                onChange={toggleSelectAll}
+                disabled={!queue?.length}
+                aria-label="Select all"
+              />
+              <span className="text-sm font-medium">
+                Awaiting review
+                {queue && (
+                  <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                    {queue.length}
+                  </span>
+                )}
               </span>
+            </div>
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{selectedIds.size} selected</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={bulkReviewMutation.isPending}
+                  onClick={() => bulkReviewMutation.mutate({ action: "reject" })}
+                >
+                  <XCircle className="size-3.5" />
+                  Reject
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={bulkReviewMutation.isPending}
+                  onClick={() => bulkReviewMutation.mutate({ action: "approve" })}
+                >
+                  <CheckCircle2 className="size-3.5" />
+                  Approve
+                </Button>
+              </div>
             )}
           </div>
           {wsLoading || isLoading ? (
@@ -261,14 +339,20 @@ function ReviewQueuePage() {
               {queue.map((d) => {
                 const meta = docMeta[d.doc_type];
                 const active = selected === d.id;
+                const checked = selectedIds.has(d.id);
                 return (
-                  <li key={d.id}>
+                  <li key={d.id} className={cn("flex items-start gap-2 px-4 py-3", active && "bg-muted/60")}>
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 size-4 accent-primary"
+                      checked={checked}
+                      onChange={() => toggleSelect(d.id)}
+                      aria-label={`Select ${d.inbound_emails?.subject ?? "document"}`}
+                      onClick={(e) => e.stopPropagation()}
+                    />
                     <button
                       onClick={() => setSelected(d.id)}
-                      className={cn(
-                        "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40",
-                        active && "bg-muted/60",
-                      )}
+                      className="flex flex-1 items-start gap-3 text-left transition-colors hover:bg-muted/40"
                     >
                       <FileText className="mt-0.5 size-4 text-muted-foreground" />
                       <div className="min-w-0 flex-1">

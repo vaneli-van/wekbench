@@ -58,6 +58,43 @@ export const reviewExtraction = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const bulkReviewExtractions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        documentIds: z.array(z.string().uuid()).min(1).max(100),
+        action: z.enum(["approve", "reject"]),
+        docType: DocTypeEnum.optional(),
+        notes: z.string().max(2000).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: docs, error: docErr } = await context.supabase
+      .from("extracted_documents")
+      .select("id, workspace_id")
+      .in("id", data.documentIds);
+    if (docErr || !docs) throw new Error("Failed to load documents");
+
+    const patch = {
+      status: data.action === "approve" ? "approved" : "rejected",
+      reviewed_by: context.userId,
+      reviewed_at: new Date().toISOString(),
+      ...(data.docType ? { doc_type: data.docType } : {}),
+      ...(data.notes !== undefined ? { review_notes: data.notes } : {}),
+    };
+
+    const { error: updErr } = await context.supabase
+      .from("extracted_documents")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update(patch as any)
+      .in("id", data.documentIds)
+      .eq("status", "pending_review");
+    if (updErr) throw new Error(updErr.message);
+    return { ok: true, count: data.documentIds.length };
+  });
+
 export const updateExtractedLineItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
