@@ -163,7 +163,7 @@ function DashboardPage() {
       {/* First sign-in welcome (shows once after onboarding) */}
       <DashboardWelcome />
 
-      {/* Row 1: greeting + what's new */}
+      {/* Row 1: greeting + actions */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-foreground">
@@ -171,13 +171,16 @@ function DashboardPage() {
           </h1>
           <p className="text-sm text-muted-foreground">{today}</p>
         </div>
-        <Link
-          to="/inbox"
-          className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
-        >
-          <Sparkles className="size-3.5" />
-          What&apos;s new · 3 RFQs arrived overnight
-        </Link>
+        <div className="flex items-center gap-2">
+          <CreateQuoteButton />
+          <Link
+            to="/inbox"
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
+          >
+            <Sparkles className="size-3.5" />
+            What&apos;s new · 3 RFQs arrived overnight
+          </Link>
+        </div>
       </div>
 
       {/* Row 2: KPI strip */}
