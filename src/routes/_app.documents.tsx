@@ -85,7 +85,14 @@ function DocumentsPage() {
                 </div>
                 <div className="flex items-center gap-3 sm:justify-end">
                   <StatusBadge status={doc.status} />
-                  <button className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted">
+                  <button
+                    onClick={() => {
+                      if (action.label === "Upload") toast.success(`${doc.name} uploaded`)
+                      else if (action.label === "Send") toast.success(`${doc.name} sent to buyer`)
+                      else toast.info(`Downloading ${doc.name}…`)
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+                  >
                     <ActionIcon className="size-3.5" />
                     {action.label}
                   </button>
