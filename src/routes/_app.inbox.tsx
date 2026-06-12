@@ -288,118 +288,75 @@ function InboxPage() {
               <div className="border-b border-border px-5 py-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">{selected.sender}</p>
-                    <p className="text-xs text-muted-foreground">{selected.senderEmail}</p>
+                    <p className="text-sm font-semibold text-foreground">{selected.from_name ?? selected.from_address}</p>
+                    <p className="text-xs text-muted-foreground">{selected.from_address}</p>
                   </div>
-                  <StatusBadge status={selected.status === "processed" ? "approved" : "new"} />
+                  <StatusBadge status={selected.extraction_status === "done" ? "approved" : "new"} />
                 </div>
-                <p className="mt-3 text-sm font-medium text-foreground text-pretty">{selected.subject}</p>
+                <p className="mt-3 text-sm font-medium text-foreground text-pretty">{selected.subject ?? "(no subject)"}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {selected.buyerCompany} · Received {selected.receivedAt}
+                  To {selected.to_address} · Received {formatReceived(selected.received_at)}
                 </p>
               </div>
 
               <div className="space-y-4 px-5 py-4">
-                <p className="text-sm text-muted-foreground text-pretty">{selected.preview}</p>
+                <p className="text-sm text-muted-foreground text-pretty">{selectedDoc?.summary ?? previewFor(selected)}</p>
 
-                {selected.attachments.length > 0 && (
+                {selectedAttachments.length > 0 && (
                   <div>
                     <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                       Attachments
                     </p>
                     <ul className="space-y-1.5">
-                      {selected.attachments.map((a) => (
+                      {selectedAttachments.map((a, index) => {
+                        const name = a.filename ?? a.name ?? `Attachment ${index + 1}`
+                        const type = a.contentType ?? a.type ?? "file"
+                        return (
                         <li
-                          key={a.name}
+                          key={`${name}-${index}`}
                           className="flex items-center gap-2.5 rounded-md border border-border bg-background px-3 py-2"
                         >
-                          <AttachmentIcon type={a.type} />
-                          <span className="min-w-0 flex-1 truncate text-sm text-foreground">{a.name}</span>
-                          <span className="text-xs text-muted-foreground">{a.size}</span>
+                          <AttachmentIcon type={type} />
+                          <span className="min-w-0 flex-1 truncate text-sm text-foreground">{name}</span>
+                          <span className="text-xs text-muted-foreground">{formatBytes(a.size)}</span>
                         </li>
-                      ))}
+                        )
+                      })}
                     </ul>
                   </div>
                 )}
 
-                {/* AI classification */}
                 <div className="rounded-lg border border-accent/20 bg-accent/5 p-3">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-accent">
                     <Sparkles className="size-3.5" />
                     wekbench Suggestion
                   </div>
-                  <p className="mt-1 text-sm text-foreground">
-                    {selected.type === "rfq" &&
-                      `Classified as a new RFQ${selected.detectedRef ? ` (${selected.detectedRef})` : ""}. Extract line items and create an RFQ.`}
-                    {selected.type === "amendment" &&
-                      `Detected as an amendment to ${selected.detectedRef}. Link to the existing RFQ and review the changes.`}
-                    {selected.type === "po" &&
-                      (matchedOrder
-                        ? `Detected as a Purchase Order against ${selected.detectedRef}. Already converted to order ${matchedOrder.id} — open to track fulfilment.`
-                        : `Detected as a Purchase Order linked to ${selected.detectedRef}. Convert the quote into an order.`)}
-                    {selected.type === "general" && "No RFQ, amendment, or PO detected. You can safely ignore this."}                  </p>
+                  <p className="mt-1 text-sm text-foreground">{suggestionFor(selectedType, selectedDoc)}</p>
                 </div>
 
-                {/* Actions */}
                 <div className="grid grid-cols-1 gap-2">
-                  {selected.type === "rfq" &&
-                    (selected.detectedRef ? (
-                      <Link
-                        to={`/rfq/${selected.detectedRef}`}
-                        className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-                      >
-                        <Plus className="size-4" />
-                        Open {selected.detectedRef}
-                      </Link>
-                    ) : (
-                      <Link
-                        to="/quotes"
-                        className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-                      >
-                        <Plus className="size-4" />
-                        Create RFQ
-                      </Link>
-                    ))}
-
-                  {selected.type === "amendment" && (
+                  {selectedType === "rfq" && (
                     <Link
-                      to={
-                        selected.detectedRef
-                          ? `/rfq/${selected.detectedRef}?tab=communication`
-                          : "/quotes"
-                      }
-                      className="inline-flex items-center justify-center gap-2 rounded-md bg-warning px-3 py-2 text-sm font-medium text-warning-foreground hover:opacity-90"
+                      to="/review-queue"
+                      className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
                     >
-                      <RefreshCcw className="size-4" />
-                      {selected.detectedRef ? `Apply to ${selected.detectedRef}` : "Apply Amendment"}
+                      <Plus className="size-4" />
+                      Review RFQ
                     </Link>
                   )}
 
-                  {selected.type === "po" &&
-                    (matchedOrder ? (
-                      <Link
-                        to="/orders/$id"
-                        params={{ id: matchedOrder.id }}
-                        className="inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground hover:opacity-90"
-                      >
-                        <ShoppingCart className="size-4" />
-                        Open {matchedOrder.id}
-                      </Link>
-                    ) : (
-                      <Link
-                        to="/orders"
-                        className="inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground hover:opacity-90"
-                      >
-                        <ShoppingCart className="size-4" />
-                        Convert to Order
-                      </Link>
-                    ))}
+                  {selectedType === "amendment" && (
+                    <Link to="/review-queue" className="inline-flex items-center justify-center gap-2 rounded-md bg-warning px-3 py-2 text-sm font-medium text-warning-foreground hover:opacity-90">
+                      <RefreshCcw className="size-4" />
+                      Review Amendment
+                    </Link>
+                  )}
 
-                  {selected.type === "general" && (
-                    <button onClick={() => toast.success("Email pulled into a new RFQ draft")} className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
-                      <Plus className="size-4" />
-                      Pull into RFQ
-                    </button>
+                  {selectedType === "po" && (
+                    <Link to="/orders" className="inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground hover:opacity-90">
+                      <ShoppingCart className="size-4" />
+                      Convert to Order
+                    </Link>
                   )}
 
                   <button onClick={() => toast.info("Record picker — coming soon")} className="inline-flex items-center justify-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted">
