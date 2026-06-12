@@ -59,7 +59,7 @@ function OnboardingPage() {
   const [fullName, setFullName] = useState("");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState<RoleOption | "">("");
-  const [country, setCountry] = useState("GH");
+  const [country, setCountry] = useState("");
   const [demoChoice, setDemoChoice] = useState<DemoChoice | null>(null);
 
   // Redirect away if not signed in
