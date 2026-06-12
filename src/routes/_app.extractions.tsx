@@ -25,7 +25,10 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspaceId } from "@/hooks/use-workspace";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
 import { runExtraction } from "@/lib/api/extraction.functions";
+import { approveExtractionToRfq } from "@/lib/api/quotes.functions";
+import { ArrowRight } from "lucide-react";
 
 type DocType = "rfq" | "purchase_order" | "rfq_amendment" | "po_amendment" | "unknown";
 type LineMatch = "matched" | "not_found" | "sourcing" | "manual";
@@ -155,7 +158,9 @@ function ExtractionsPage() {
   const { data: pending } = usePendingEmails(workspaceId);
   const [selected, setSelected] = useState<string | null>(null);
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const runFn = useServerFn(runExtraction);
+  const approveFn = useServerFn(approveExtractionToRfq);
 
   const selectedDoc = useMemo(() => docs?.find((d) => d.id === selected) ?? null, [docs, selected]);
   const { data: lineItems } = useLineItems(selected);
@@ -178,6 +183,16 @@ function ExtractionsPage() {
       qc.invalidateQueries({ queryKey: ["pending-emails", workspaceId] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Extraction failed"),
+  });
+
+  const openRfqMutation = useMutation({
+    mutationFn: async (documentId: string) =>
+      approveFn({ data: { documentId, createQuote: true, defaultMarginPct: 20 } }),
+    onSuccess: ({ rfqId }) => {
+      qc.invalidateQueries({ queryKey: ["sidebar-counts", workspaceId] });
+      navigate({ to: "/rfq/$id", params: { id: rfqId } });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not open RFQ"),
   });
 
   return (
@@ -314,15 +329,25 @@ function ExtractionsPage() {
                     From {selectedDoc.inbound_emails?.from_name ?? selectedDoc.inbound_emails?.from_address}
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={runMutation.isPending}
-                  onClick={() => runMutation.mutate(selectedDoc.inbound_email_id)}
-                >
-                  <RefreshCcw className="size-4" />
-                  Re-run
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={runMutation.isPending}
+                    onClick={() => runMutation.mutate(selectedDoc.inbound_email_id)}
+                  >
+                    <RefreshCcw className="size-4" />
+                    Re-run
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={openRfqMutation.isPending}
+                    onClick={() => openRfqMutation.mutate(selectedDoc.id)}
+                  >
+                    {selectedDoc.status === "approved" ? "Open RFQ" : "Approve & build quote"}
+                    <ArrowRight className="size-4" />
+                  </Button>
+                </div>
               </div>
 
               {selectedDoc.summary && (

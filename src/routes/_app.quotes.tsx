@@ -1,6 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
+import { useQuery } from "@tanstack/react-query"
+import { useServerFn } from "@tanstack/react-start"
+import { listQuotes } from "@/lib/api/quotes.functions"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { ArrowRight } from "lucide-react"
 import {
   Plus,
   Search,
@@ -124,6 +130,8 @@ function QuotesPage() {
   return (
     <div className="flex h-full flex-col">
       <Toaster position="bottom-right" />
+
+      <LiveQuotesPanel />
 
       {/* Header + controls */}
       <div className="shrink-0 border-b border-border bg-background px-4 py-4 md:px-6">
@@ -501,3 +509,46 @@ function BoardEmptyState() {
 export const Route = createFileRoute("/_app/quotes")({
   component: QuotesPage,
 });
+
+function LiveQuotesPanel() {
+  const listFn = useServerFn(listQuotes);
+  const { data } = useQuery({
+    queryKey: ["quotes-live"],
+    queryFn: () => listFn(),
+  });
+  const quotes = data?.quotes ?? [];
+  if (quotes.length === 0) return null;
+  return (
+    <div className="border-b border-border bg-muted/20 px-4 py-4 md:px-6">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold">Live quotes</h2>
+          <p className="text-xs text-muted-foreground">From approved RFQ extractions</p>
+        </div>
+        <span className="text-xs text-muted-foreground">{quotes.length} quote(s)</span>
+      </div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        {quotes.map((q: any) => (
+          <Link key={q.id} to="/quote/$id" params={{ id: q.id }} className="block">
+            <Card className="p-4 transition-colors hover:bg-muted/40">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">{q.quote_number}</span>
+                <Badge variant="outline" className="capitalize">{q.status}</Badge>
+              </div>
+              <p className="mt-1 truncate text-xs text-muted-foreground">
+                {q.rfqs?.buyer_name ?? q.rfqs?.buyer_email ?? q.rfqs?.buyer_ref ?? "—"}
+              </p>
+              <div className="mt-2 flex items-center justify-between text-sm">
+                <span className="tabular-nums font-semibold">
+                  {q.currency ?? ""} {Number(q.total ?? 0).toFixed(2)}
+                </span>
+                <ArrowRight className="size-3.5 text-muted-foreground" />
+              </div>
+            </Card>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
