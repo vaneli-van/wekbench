@@ -348,7 +348,7 @@ function StepProfile({
             id="fullName"
             value={fullName}
             onChange={(e) => onFullName(e.target.value)}
-            placeholder="Ama Mensah"
+            placeholder="Jane Doe"
             autoFocus
           />
         </div>
