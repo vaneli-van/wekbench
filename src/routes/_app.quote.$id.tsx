@@ -12,7 +12,7 @@ function QuoteDetailPage() {
     return (
       <div className="mx-auto max-w-3xl px-4 py-12 md:px-8">
         <EmptyState
-          title="Quote not found"
+          icon={FileQuestion} title="Quote not found"
           description={`No quote with ID "${id}" exists in the pipeline.`}
           action={{ label: "Back to quotes", href: "/quotes" }}
         />
@@ -40,7 +40,7 @@ export const Route = createFileRoute("/_app/quote/$id")({
     return (
       <div className="mx-auto max-w-3xl px-4 py-12 md:px-8">
         <EmptyState
-          title="Something went wrong"
+          icon={AlertTriangle} title="Something went wrong"
           description={error instanceof Error ? error.message : "Unknown error"}
           action={{
             label: "Try again",
@@ -56,7 +56,7 @@ export const Route = createFileRoute("/_app/quote/$id")({
   notFoundComponent: () => (
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-8">
       <EmptyState
-        title="Quote not found"
+        icon={FileQuestion} title="Quote not found"
         description="That quote doesn't exist."
         action={{ label: "Back to quotes", href: "/quotes" }}
       />
