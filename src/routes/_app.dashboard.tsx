@@ -9,6 +9,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   AlertTriangle,
+  Sparkles,
   FileText,
   PackageCheck,
   ReceiptText,
@@ -172,6 +173,13 @@ function DashboardPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <CreateQuoteButton />
+          <Link
+            to="/inbox"
+            className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
+          >
+            <Sparkles className="size-3.5 shrink-0" />
+            <span className="truncate">What&apos;s new · 3 RFQs arrived overnight</span>
+          </Link>
         </div>
       </div>
 
