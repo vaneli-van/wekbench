@@ -155,7 +155,7 @@ export function InvoiceGenerator({ prefill }: { prefill: InvoicePrefill }) {
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {buyer.name} · linked to order{" "}
-              <Link to={`/orders/${prefill.order.id}`} className="text-info hover:underline">
+              <Link to="/orders/$id" params={{ id: prefill.order.id }} className="text-info hover:underline">
                 {prefill.order.id}
               </Link>
             </p>

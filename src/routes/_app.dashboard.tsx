@@ -201,7 +201,8 @@ function DashboardPage() {
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         <Link
-                          to={`/rfq/${rfq.id}`}
+                          to="/rfq/$id"
+                          params={{ id: rfq.id }}
                           className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                         >
                           Open <ArrowRight className="size-3" />
