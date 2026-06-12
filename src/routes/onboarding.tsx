@@ -39,7 +39,15 @@ export const Route = createFileRoute("/onboarding")({
 
 type AccountType = "vendor" | "buyer";
 type DemoChoice = "demo" | "fresh";
-type RoleOption = "Procurement Manager" | "Finance" | "Operations" | "Founder / Owner" | "Other";
+type RoleOption =
+  | "Procurement Manager"
+  | "Sales Manager"
+  | "Bid/Quotation Officer"
+  | "Account Manager"
+  | "Finance"
+  | "Operations"
+  | "Founder / Owner"
+  | "Other";
 
 const STEPS = [
   { id: 1, title: "Your role" },
