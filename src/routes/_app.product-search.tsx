@@ -87,11 +87,11 @@ function ProductSearchPage() {
                   <p className="text-xs text-muted-foreground">{m.confidence}% confidence</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => toast.info(`Opening datasheet for ${m.brand} ${m.model}…`)}>
                     <FileText className="size-4" />
                     Datasheet
                   </Button>
-                  <Button size="sm">Add to RFQ</Button>
+                  <Button size="sm" onClick={() => toast.success(`${m.brand} ${m.model} added to RFQ`)}>Add to RFQ</Button>
                 </div>
               </div>
             </div>
