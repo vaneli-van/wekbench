@@ -50,6 +50,7 @@ export async function extractEmailContent(input: {
   htmlBody: string | null;
   fromAddress: string;
   fromName: string | null;
+  attachments?: Array<{ filename: string; contentType: string; data: Uint8Array }>;
 }): Promise<Extraction> {
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
@@ -58,18 +59,33 @@ export async function extractEmailContent(input: {
   const model = gateway("google/gemini-3-flash-preview");
 
   const body = (input.textBody ?? stripHtml(input.htmlBody ?? "")).slice(0, 16000);
-  const prompt = [
+  const text = [
     `From: ${input.fromName ? `${input.fromName} <${input.fromAddress}>` : input.fromAddress}`,
     `Subject: ${input.subject ?? "(no subject)"}`,
     "",
     "Email body:",
-    body || "(empty body)",
+    body || "(empty body — content may be in the attached file(s) below)",
   ].join("\n");
+
+  const supportedAttachments = (input.attachments ?? []).filter((a) =>
+    a.contentType === "application/pdf" || a.contentType.startsWith("image/"),
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const content: any[] = [{ type: "text", text }];
+  for (const att of supportedAttachments) {
+    content.push({
+      type: "file",
+      data: att.data,
+      mediaType: att.contentType,
+      filename: att.filename,
+    });
+  }
 
   const { experimental_output } = await generateText({
     model,
     system: SYSTEM_PROMPT,
-    prompt,
+    messages: [{ role: "user", content }],
     experimental_output: Output.object({ schema: ExtractionSchema }),
   });
 
