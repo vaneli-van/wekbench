@@ -1,40 +1,31 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Check, Eye, EyeOff } from "lucide-react";
+import { Check, Eye, EyeOff, Loader2, Mail, Info } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/wordmark";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({ meta: [{ title: "Create your account — wekbench" }] }),
   component: SignUpPage,
 });
 
-function GoogleIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <path
-        fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09Z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.98.66-2.23 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.84 14.11a6.6 6.6 0 0 1 0-4.22V7.05H2.18a11 11 0 0 0 0 9.9l3.66-2.84Z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 4.75c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 1.46 14.97.5 12 .5A11 11 0 0 0 2.18 7.05l3.66 2.84C6.71 6.68 9.14 4.75 12 4.75Z"
-      />
-    </svg>
-  );
-}
+const FREE_EMAIL_DOMAINS = new Set([
+  "gmail.com",
+  "yahoo.com",
+  "hotmail.com",
+  "outlook.com",
+  "icloud.com",
+  "aol.com",
+  "live.com",
+  "proton.me",
+  "protonmail.com",
+]);
 
 const VALUE_PROPS = [
   "Quote inbound RFQs in minutes, not days",
@@ -42,16 +33,64 @@ const VALUE_PROPS = [
   "Win more deals with faster, branded quotes",
 ];
 
+function MicrosoftIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <rect x="2" y="2" width="9" height="9" fill="#F25022" />
+      <rect x="13" y="2" width="9" height="9" fill="#7FBA00" />
+      <rect x="2" y="13" width="9" height="9" fill="#00A4EF" />
+      <rect x="13" y="13" width="9" height="9" fill="#FFB900" />
+    </svg>
+  );
+}
+
 function SignUpPage() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const isPersonalEmail = useMemo(() => {
+    const domain = email.split("@")[1]?.toLowerCase().trim();
+    return domain ? FREE_EMAIL_DOMAINS.has(domain) : false;
+  }, [email]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters.");
+      return;
+    }
+    setSubmitting(true);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/onboarding`,
+        data: { full_name: fullName },
+      },
+    });
+    setSubmitting(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (data.session) {
+      navigate({ to: "/onboarding" });
+    } else {
+      toast.success("Check your inbox to confirm your email, then sign in.");
+      navigate({ to: "/signin" });
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 grid grid-cols-1 overflow-y-auto bg-background lg:grid-cols-2">
       <div className="flex flex-col px-6 py-8 sm:px-10 lg:px-16">
-        <div className="flex items-center gap-2.5">
+        <Link to="/" className="flex items-center gap-2.5">
           <Wordmark size="md" />
-        </div>
+        </Link>
 
         <div className="flex flex-1 items-center">
           <div className="mx-auto w-full max-w-sm py-10">
@@ -60,21 +99,37 @@ function SignUpPage() {
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">Free to start. No card required.</p>
 
-            <form
-              className="mt-8 flex flex-col gap-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                navigate({ to: "/onboarding" });
-              }}
-            >
+            <form className="mt-8 flex flex-col gap-4" onSubmit={handleSubmit}>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="name">Full name</Label>
-                <Input id="name" type="text" autoComplete="name" placeholder="Ama Mensah" required />
+                <Input
+                  id="name"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Ama Mensah"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                />
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="email">Work email</Label>
-                <Input id="email" type="email" autoComplete="email" placeholder="you@company.com" required />
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+                {isPersonalEmail && (
+                  <p className="mt-1 flex items-start gap-1.5 text-xs text-muted-foreground">
+                    <Info className="mt-0.5 size-3.5 shrink-0 text-warning" />
+                    <span>Looks like a personal address. Use your work email to unlock team features.</span>
+                  </p>
+                )}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -87,6 +142,8 @@ function SignUpPage() {
                     placeholder="At least 8 characters"
                     minLength={8}
                     className="pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
                   />
                   <button
@@ -100,7 +157,8 @@ function SignUpPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="mt-1 w-full">
+              <Button type="submit" className="mt-1 w-full gap-1.5" disabled={submitting}>
+                {submitting ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
                 Create account
               </Button>
             </form>
@@ -111,9 +169,18 @@ function SignUpPage() {
               <span className="h-px flex-1 bg-border" />
             </div>
 
-            <Button variant="outline" className="w-full gap-2 bg-transparent">
-              <GoogleIcon className="size-4" />
-              Sign up with Google
+            <Button
+              type="button"
+              variant="outline"
+              disabled
+              className="w-full gap-2 bg-transparent"
+              title="Microsoft sign-in is coming soon"
+            >
+              <MicrosoftIcon className="size-4" />
+              Continue with Microsoft
+              <span className="ml-1 rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                Soon
+              </span>
             </Button>
 
             <p className="mt-6 text-center text-xs leading-relaxed text-muted-foreground">

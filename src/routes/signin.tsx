@@ -1,51 +1,47 @@
 import { useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff, Check } from "lucide-react";
+import { Eye, EyeOff, Check, Loader2, Mail } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/wordmark";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/signin")({
   head: () => ({ meta: [{ title: "Sign in — wekbench" }] }),
   component: SignInPage,
 });
 
-function GoogleIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <path
-        fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09Z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.98.66-2.23 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.84 14.11a6.6 6.6 0 0 1 0-4.22V7.05H2.18a11 11 0 0 0 0 9.9l3.66-2.84Z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 4.75c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 1.46 14.97.5 12 .5A11 11 0 0 0 2.18 7.05l3.66 2.84C6.71 6.68 9.14 4.75 12 4.75Z"
-      />
-    </svg>
-  );
-}
-
 function SignInPage() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setSubmitting(false);
+    if (error) {
+      toast.error(error.message === "Invalid login credentials"
+        ? "That email and password don't match. Try again."
+        : error.message);
+      return;
+    }
+    navigate({ to: "/dashboard" });
+  };
 
   return (
     <div className="fixed inset-0 z-50 grid grid-cols-1 overflow-y-auto bg-background lg:grid-cols-2">
       <div className="flex flex-col px-6 py-8 sm:px-10 lg:px-16">
-        <div className="flex items-center gap-2.5">
+        <Link to="/" className="flex items-center gap-2.5">
           <Wordmark size="md" />
-        </div>
+        </Link>
 
         <div className="flex flex-1 items-center">
           <div className="mx-auto w-full max-w-sm py-10">
@@ -54,16 +50,18 @@ function SignInPage() {
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">Continue to your vendor dashboard</p>
 
-            <form
-              className="mt-8 flex flex-col gap-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                navigate({ to: "/dashboard" });
-              }}
-            >
+            <form className="mt-8 flex flex-col gap-4" onSubmit={handleSubmit}>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" autoComplete="email" placeholder="you@company.com" required />
+                <Label htmlFor="email">Work email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -75,6 +73,8 @@ function SignInPage() {
                     autoComplete="current-password"
                     placeholder="Enter your password"
                     className="pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
                   />
                   <button
@@ -87,17 +87,18 @@ function SignInPage() {
                   </button>
                 </div>
                 <div className="flex justify-end">
-                  <a
-                    href="#"
+                  <Link
+                    to="/reset-password"
                     className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
                   >
                     Forgot password?
-                  </a>
+                  </Link>
                 </div>
               </div>
 
-              <Button type="submit" className="mt-1 w-full">
-                Sign in
+              <Button type="submit" className="mt-1 w-full gap-1.5" disabled={submitting}>
+                {submitting ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
+                Continue with work email
               </Button>
             </form>
 
@@ -107,9 +108,18 @@ function SignInPage() {
               <span className="h-px flex-1 bg-border" />
             </div>
 
-            <Button variant="outline" className="w-full gap-2 bg-transparent">
-              <GoogleIcon className="size-4" />
-              Sign in with Google
+            <Button
+              type="button"
+              variant="outline"
+              disabled
+              className="w-full gap-2 bg-transparent"
+              title="Microsoft sign-in is coming soon"
+            >
+              <MicrosoftIcon className="size-4" />
+              Continue with Microsoft
+              <span className="ml-1 rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                Soon
+              </span>
             </Button>
 
             <p className="mt-8 text-center text-sm text-muted-foreground">
@@ -130,6 +140,17 @@ function SignInPage() {
         <SignInPanel />
       </div>
     </div>
+  );
+}
+
+function MicrosoftIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <rect x="2" y="2" width="9" height="9" fill="#F25022" />
+      <rect x="13" y="2" width="9" height="9" fill="#7FBA00" />
+      <rect x="2" y="13" width="9" height="9" fill="#00A4EF" />
+      <rect x="13" y="13" width="9" height="9" fill="#FFB900" />
+    </svg>
   );
 }
 
