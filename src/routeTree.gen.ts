@@ -31,6 +31,7 @@ import { Route as AppCatalogRouteImport } from './routes/_app.catalog'
 import { Route as AppBuyersRouteImport } from './routes/_app.buyers'
 import { Route as AppOrdersIndexRouteImport } from './routes/_app.orders.index'
 import { Route as AppInvoicesIndexRouteImport } from './routes/_app.invoices.index'
+import { Route as ApiPublicInboundEmailRouteImport } from './routes/api/public/inbound-email'
 import { Route as AppRfqIdRouteImport } from './routes/_app.rfq.$id'
 import { Route as AppQuoteIdRouteImport } from './routes/_app.quote.$id'
 import { Route as AppOrdersIdRouteImport } from './routes/_app.orders.$id'
@@ -145,6 +146,11 @@ const AppInvoicesIndexRoute = AppInvoicesIndexRouteImport.update({
   path: '/invoices/',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicInboundEmailRoute = ApiPublicInboundEmailRouteImport.update({
+  id: '/api/public/inbound-email',
+  path: '/api/public/inbound-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRfqIdRoute = AppRfqIdRouteImport.update({
   id: '/rfq/$id',
   path: '/rfq/$id',
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/orders/$id': typeof AppOrdersIdRoute
   '/quote/$id': typeof AppQuoteIdRoute
   '/rfq/$id': typeof AppRfqIdRoute
+  '/api/public/inbound-email': typeof ApiPublicInboundEmailRoute
   '/invoices/': typeof AppInvoicesIndexRoute
   '/orders/': typeof AppOrdersIndexRoute
 }
@@ -217,6 +224,7 @@ export interface FileRoutesByTo {
   '/orders/$id': typeof AppOrdersIdRoute
   '/quote/$id': typeof AppQuoteIdRoute
   '/rfq/$id': typeof AppRfqIdRoute
+  '/api/public/inbound-email': typeof ApiPublicInboundEmailRoute
   '/invoices': typeof AppInvoicesIndexRoute
   '/orders': typeof AppOrdersIndexRoute
 }
@@ -246,6 +254,7 @@ export interface FileRoutesById {
   '/_app/orders/$id': typeof AppOrdersIdRoute
   '/_app/quote/$id': typeof AppQuoteIdRoute
   '/_app/rfq/$id': typeof AppRfqIdRoute
+  '/api/public/inbound-email': typeof ApiPublicInboundEmailRoute
   '/_app/invoices/': typeof AppInvoicesIndexRoute
   '/_app/orders/': typeof AppOrdersIndexRoute
 }
@@ -275,6 +284,7 @@ export interface FileRouteTypes {
     | '/orders/$id'
     | '/quote/$id'
     | '/rfq/$id'
+    | '/api/public/inbound-email'
     | '/invoices/'
     | '/orders/'
   fileRoutesByTo: FileRoutesByTo
@@ -302,6 +312,7 @@ export interface FileRouteTypes {
     | '/orders/$id'
     | '/quote/$id'
     | '/rfq/$id'
+    | '/api/public/inbound-email'
     | '/invoices'
     | '/orders'
   id:
@@ -330,6 +341,7 @@ export interface FileRouteTypes {
     | '/_app/orders/$id'
     | '/_app/quote/$id'
     | '/_app/rfq/$id'
+    | '/api/public/inbound-email'
     | '/_app/invoices/'
     | '/_app/orders/'
   fileRoutesById: FileRoutesById
@@ -342,6 +354,7 @@ export interface RootRouteChildren {
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
   TrackTokenRoute: typeof TrackTokenRoute
+  ApiPublicInboundEmailRoute: typeof ApiPublicInboundEmailRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -500,6 +513,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInvoicesIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/public/inbound-email': {
+      id: '/api/public/inbound-email'
+      path: '/api/public/inbound-email'
+      fullPath: '/api/public/inbound-email'
+      preLoaderRoute: typeof ApiPublicInboundEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/rfq/$id': {
       id: '/_app/rfq/$id'
       path: '/rfq/$id'
@@ -585,7 +605,18 @@ const rootRouteChildren: RootRouteChildren = {
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
   TrackTokenRoute: TrackTokenRoute,
+  ApiPublicInboundEmailRoute: ApiPublicInboundEmailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
