@@ -14,6 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
+      inbound_emails: {
+        Row: {
+          attachments: Json
+          created_at: string
+          envelope: Json | null
+          error_message: string | null
+          from_address: string
+          from_name: string | null
+          headers: Json | null
+          html_body: string | null
+          id: string
+          received_at: string
+          spam_score: number | null
+          status: Database["public"]["Enums"]["inbound_email_status"]
+          subject: string | null
+          text_body: string | null
+          to_address: string
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          attachments?: Json
+          created_at?: string
+          envelope?: Json | null
+          error_message?: string | null
+          from_address: string
+          from_name?: string | null
+          headers?: Json | null
+          html_body?: string | null
+          id?: string
+          received_at?: string
+          spam_score?: number | null
+          status?: Database["public"]["Enums"]["inbound_email_status"]
+          subject?: string | null
+          text_body?: string | null
+          to_address: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          attachments?: Json
+          created_at?: string
+          envelope?: Json | null
+          error_message?: string | null
+          from_address?: string
+          from_name?: string | null
+          headers?: Json | null
+          html_body?: string | null
+          id?: string
+          received_at?: string
+          spam_score?: number | null
+          status?: Database["public"]["Enums"]["inbound_email_status"]
+          subject?: string | null
+          text_body?: string | null
+          to_address?: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbound_emails_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -131,6 +199,12 @@ export type Database = {
     }
     Enums: {
       app_role: "owner" | "admin" | "member"
+      inbound_email_status:
+        | "received"
+        | "processing"
+        | "processed"
+        | "failed"
+        | "ignored"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -259,6 +333,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["owner", "admin", "member"],
+      inbound_email_status: [
+        "received",
+        "processing",
+        "processed",
+        "failed",
+        "ignored",
+      ],
     },
   },
 } as const
