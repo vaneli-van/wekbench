@@ -62,6 +62,8 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
       .eq("id", data.documentId)
       .maybeSingle();
     if (docErr || !doc) throw new Error("Document not found");
+    if (!doc.workspace_id) throw new Error("Extracted document has no workspace");
+    const workspaceId: string = doc.workspace_id;
 
     // mark approved
     const { error: updErr } = await supabase
@@ -91,8 +93,9 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
       const email = (doc as any).inbound_emails as { from_address?: string; from_name?: string } | null;
       const { data: rfq, error: rfqErr } = await supabase
         .from("rfqs")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .insert({
-          workspace_id: doc.workspace_id,
+          workspace_id: workspaceId,
           extracted_document_id: doc.id,
           buyer_ref: doc.buyer_ref,
           summary: doc.summary,
@@ -101,7 +104,7 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
           buyer_email: email?.from_address ?? null,
           buyer_name: email?.from_name ?? null,
           status: "open",
-        })
+        } as any)
         .select("id")
         .single();
       if (rfqErr || !rfq) throw new Error(rfqErr?.message ?? "Could not create RFQ");
