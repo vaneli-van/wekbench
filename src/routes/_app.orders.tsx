@@ -26,7 +26,8 @@ function OrdersPage() {
           {orders.map((order) => (
             <li key={order.id}>
               <Link
-                to={`/orders/${order.id}`}
+                to="/orders/$id"
+                params={{ id: order.id }}
                 className="grid grid-cols-1 gap-3 px-5 py-4 transition-colors hover:bg-muted/30 md:grid-cols-[1.4fr_1fr_1fr_1fr_auto] md:items-center md:gap-4"
               >
                 <div className="flex items-start gap-3">
