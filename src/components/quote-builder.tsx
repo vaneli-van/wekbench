@@ -232,7 +232,7 @@ export function QuoteBuilder({ quoteId, initialTitle, initialBuyer }: QuoteBuild
         <nav className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
           <span>Quotes</span>
           <ChevronRight className="size-3" />
-          <span className="font-mono font-medium text-foreground">QT-2026-0418</span>
+          <span className="font-mono font-medium text-foreground">{displayId}</span>
         </nav>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
