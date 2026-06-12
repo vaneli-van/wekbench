@@ -162,7 +162,7 @@ export function Topbar() {
         </SheetContent>
       </Sheet>
 
-      <h1 className="text-base font-semibold tracking-tight text-foreground md:text-lg">{title}</h1>
+      <h1 className="min-w-0 flex-1 truncate text-base font-semibold tracking-tight text-foreground md:text-lg">{title}</h1>
 
       <div className="ml-auto flex items-center gap-1">
         <NotificationsButton />
