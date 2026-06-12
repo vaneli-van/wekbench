@@ -184,7 +184,8 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
               source: li.match_status === "matched" ? "catalog" : li.match_status === "sourcing" ? "sourcing" : "manual",
             };
           });
-          const { error: liErr } = await supabase.from("quote_line_items").insert(rows);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { error: liErr } = await supabase.from("quote_line_items").insert(rows as any);
           if (liErr) console.error("[approve] line items insert", liErr);
           await recomputeQuoteTotals(supabase, quoteId!);
         }
