@@ -180,10 +180,10 @@ function ReviewQueuePage() {
   const { data: lineItems } = useLineItems(selected);
 
   // reset draft when switching docs
-  useMemo(() => {
+  useEffect(() => {
     setDraftType(selectedDoc?.doc_type ?? null);
     setNotes(selectedDoc?.review_notes ?? "");
-  }, [selectedDoc?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedDoc?.id, selectedDoc?.doc_type, selectedDoc?.review_notes]);
 
   const reviewMutation = useMutation({
     mutationFn: async (vars: { action: "approve" | "reject" }) =>
