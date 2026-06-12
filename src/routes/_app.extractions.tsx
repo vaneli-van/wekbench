@@ -25,7 +25,10 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspaceId } from "@/hooks/use-workspace";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
 import { runExtraction } from "@/lib/api/extraction.functions";
+import { approveExtractionToRfq } from "@/lib/api/quotes.functions";
+import { ArrowRight } from "lucide-react";
 
 type DocType = "rfq" | "purchase_order" | "rfq_amendment" | "po_amendment" | "unknown";
 type LineMatch = "matched" | "not_found" | "sourcing" | "manual";
