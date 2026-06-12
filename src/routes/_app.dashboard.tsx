@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router"
+import { useState } from "react"
 import {
   Inbox,
   FileClock,
@@ -14,7 +15,19 @@ import {
   ReceiptText,
   Mailbox,
   ArrowRight,
+  Plus,
+  ChevronDown,
+  Mail,
+  PenLine,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { NewQuoteDialog } from "@/components/new-quote-dialog"
 
 import { StatusBadge } from "@/components/status-badge"
 import { FxRatesCard } from "@/components/fx-rates-card"
@@ -108,6 +121,36 @@ function DeltaIcon({ dir }: { dir: "up" | "down" | "flat" }) {
   return <span className="block h-px w-3 bg-muted-foreground" />
 }
 
+function CreateQuoteButton() {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" className="gap-1">
+            <Plus className="size-4" />
+            New quote
+            <ChevronDown className="size-3 opacity-60" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => setOpen(true)}>
+            <PenLine className="size-4" />
+            Create manually
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/email-capture" className="gap-2">
+              <Mail className="size-4" />
+              Upload via email
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <NewQuoteDialog open={open} onOpenChange={setOpen} />
+    </>
+  )
+}
+
 function DashboardPage() {
   const { data: profile } = useProfile();
   const hour = new Date().getHours();
@@ -120,7 +163,7 @@ function DashboardPage() {
       {/* First sign-in welcome (shows once after onboarding) */}
       <DashboardWelcome />
 
-      {/* Row 1: greeting + what's new */}
+      {/* Row 1: greeting + actions */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-foreground">
@@ -128,13 +171,16 @@ function DashboardPage() {
           </h1>
           <p className="text-sm text-muted-foreground">{today}</p>
         </div>
-        <Link
-          to="/inbox"
-          className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
-        >
-          <Sparkles className="size-3.5" />
-          What&apos;s new · 3 RFQs arrived overnight
-        </Link>
+        <div className="flex items-center gap-2">
+          <CreateQuoteButton />
+          <Link
+            to="/inbox"
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
+          >
+            <Sparkles className="size-3.5" />
+            What&apos;s new · 3 RFQs arrived overnight
+          </Link>
+        </div>
       </div>
 
       {/* Row 2: KPI strip */}

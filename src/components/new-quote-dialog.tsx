@@ -24,9 +24,20 @@ import { addManualQuote } from "@/lib/manual-quotes"
 import { ASSIGNEES, SECTORS } from "@/lib/pipeline"
 import { toast } from "sonner"
 
-export function NewQuoteDialog() {
+export function NewQuoteDialog({
+  open: controlledOpen,
+  onOpenChange,
+}: {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+} = {}) {
   const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = (value: boolean) => {
+    setInternalOpen(value)
+    onOpenChange?.(value)
+  }
   const [title, setTitle] = useState("")
   const [buyer, setBuyer] = useState("")
   const [sector, setSector] = useState<string>(SECTORS[0])
