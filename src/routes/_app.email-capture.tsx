@@ -63,7 +63,7 @@ function EmailCapturePage() {
           </Badge>
         </div>
         <div className="mt-4 flex items-center justify-between gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-3">
-          <code className="truncate text-sm">capture@inbox.wekbench.app</code>
+          <code className="truncate text-sm">capture@inbox.wekbench.com</code>
           <Button variant="ghost" size="sm" className="gap-1.5 shrink-0">
             <Copy className="size-3.5" />
             Copy
