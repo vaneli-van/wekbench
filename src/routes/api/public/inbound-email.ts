@@ -127,6 +127,20 @@ export const Route = createFileRoute("/api/public/inbound-email")({
               .eq("id", inserted.id);
           }
 
+          // 7. Kick off AI extraction in the background — don't block the webhook ack.
+          if (workspaceId) {
+            (async () => {
+              try {
+                const { runExtractionForEmail } = await import(
+                  "@/lib/extraction.server"
+                );
+                await runExtractionForEmail(inserted.id);
+              } catch (err) {
+                console.error("[inbound-email] extraction failed", err);
+              }
+            })();
+          }
+
           return new Response(JSON.stringify({ ok: true, id: inserted.id }), {
             status: 200,
             headers: { "Content-Type": "application/json" },

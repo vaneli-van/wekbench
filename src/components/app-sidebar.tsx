@@ -14,6 +14,7 @@ import {
   BarChart3,
   Plug,
   Settings,
+  Sparkles,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -29,9 +30,11 @@ const navGroups: {
     items: [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { name: "My Wekbench", href: "/inbox", icon: Inbox, badge: 3 },
+      { name: "AI Extractions", href: "/extractions", icon: Sparkles },
       { name: "Quotes", href: "/quotes", icon: FileText, badge: 1 },
       { name: "Product Search", href: "/product-search", icon: Search },
       { name: "Catalog", href: "/catalog", icon: Library },
+      { name: "Catalog Items", href: "/catalog-items", icon: Package },
       { name: "Orders", href: "/orders", icon: Package, badge: 2 },
       { name: "Invoices", href: "/invoices", icon: ReceiptText },
       { name: "Documents", href: "/documents", icon: FolderArchive },

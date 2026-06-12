@@ -24,9 +24,11 @@ import { Route as AppProductSearchRouteImport } from './routes/_app.product-sear
 import { Route as AppIntegrationsRouteImport } from './routes/_app.integrations'
 import { Route as AppInboxRouteImport } from './routes/_app.inbox'
 import { Route as AppFoundationsRouteImport } from './routes/_app.foundations'
+import { Route as AppExtractionsRouteImport } from './routes/_app.extractions'
 import { Route as AppEmailCaptureRouteImport } from './routes/_app.email-capture'
 import { Route as AppDocumentsRouteImport } from './routes/_app.documents'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppCatalogItemsRouteImport } from './routes/_app.catalog-items'
 import { Route as AppCatalogRouteImport } from './routes/_app.catalog'
 import { Route as AppBuyersRouteImport } from './routes/_app.buyers'
 import { Route as AppOrdersIndexRouteImport } from './routes/_app.orders.index'
@@ -111,6 +113,11 @@ const AppFoundationsRoute = AppFoundationsRouteImport.update({
   path: '/foundations',
   getParentRoute: () => AppRoute,
 } as any)
+const AppExtractionsRoute = AppExtractionsRouteImport.update({
+  id: '/extractions',
+  path: '/extractions',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppEmailCaptureRoute = AppEmailCaptureRouteImport.update({
   id: '/email-capture',
   path: '/email-capture',
@@ -124,6 +131,11 @@ const AppDocumentsRoute = AppDocumentsRouteImport.update({
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCatalogItemsRoute = AppCatalogItemsRouteImport.update({
+  id: '/catalog-items',
+  path: '/catalog-items',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCatalogRoute = AppCatalogRouteImport.update({
@@ -180,9 +192,11 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/buyers': typeof AppBuyersRoute
   '/catalog': typeof AppCatalogRoute
+  '/catalog-items': typeof AppCatalogItemsRoute
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
   '/email-capture': typeof AppEmailCaptureRoute
+  '/extractions': typeof AppExtractionsRoute
   '/foundations': typeof AppFoundationsRoute
   '/inbox': typeof AppInboxRoute
   '/integrations': typeof AppIntegrationsRoute
@@ -208,9 +222,11 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/buyers': typeof AppBuyersRoute
   '/catalog': typeof AppCatalogRoute
+  '/catalog-items': typeof AppCatalogItemsRoute
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
   '/email-capture': typeof AppEmailCaptureRoute
+  '/extractions': typeof AppExtractionsRoute
   '/foundations': typeof AppFoundationsRoute
   '/inbox': typeof AppInboxRoute
   '/integrations': typeof AppIntegrationsRoute
@@ -238,9 +254,11 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_app/buyers': typeof AppBuyersRoute
   '/_app/catalog': typeof AppCatalogRoute
+  '/_app/catalog-items': typeof AppCatalogItemsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/documents': typeof AppDocumentsRoute
   '/_app/email-capture': typeof AppEmailCaptureRoute
+  '/_app/extractions': typeof AppExtractionsRoute
   '/_app/foundations': typeof AppFoundationsRoute
   '/_app/inbox': typeof AppInboxRoute
   '/_app/integrations': typeof AppIntegrationsRoute
@@ -268,9 +286,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/buyers'
     | '/catalog'
+    | '/catalog-items'
     | '/dashboard'
     | '/documents'
     | '/email-capture'
+    | '/extractions'
     | '/foundations'
     | '/inbox'
     | '/integrations'
@@ -296,9 +316,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/buyers'
     | '/catalog'
+    | '/catalog-items'
     | '/dashboard'
     | '/documents'
     | '/email-capture'
+    | '/extractions'
     | '/foundations'
     | '/inbox'
     | '/integrations'
@@ -325,9 +347,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_app/buyers'
     | '/_app/catalog'
+    | '/_app/catalog-items'
     | '/_app/dashboard'
     | '/_app/documents'
     | '/_app/email-capture'
+    | '/_app/extractions'
     | '/_app/foundations'
     | '/_app/inbox'
     | '/_app/integrations'
@@ -464,6 +488,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFoundationsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/extractions': {
+      id: '/_app/extractions'
+      path: '/extractions'
+      fullPath: '/extractions'
+      preLoaderRoute: typeof AppExtractionsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/email-capture': {
       id: '/_app/email-capture'
       path: '/email-capture'
@@ -483,6 +514,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/catalog-items': {
+      id: '/_app/catalog-items'
+      path: '/catalog-items'
+      fullPath: '/catalog-items'
+      preLoaderRoute: typeof AppCatalogItemsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/catalog': {
@@ -554,9 +592,11 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppBuyersRoute: typeof AppBuyersRoute
   AppCatalogRoute: typeof AppCatalogRoute
+  AppCatalogItemsRoute: typeof AppCatalogItemsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDocumentsRoute: typeof AppDocumentsRoute
   AppEmailCaptureRoute: typeof AppEmailCaptureRoute
+  AppExtractionsRoute: typeof AppExtractionsRoute
   AppFoundationsRoute: typeof AppFoundationsRoute
   AppInboxRoute: typeof AppInboxRoute
   AppIntegrationsRoute: typeof AppIntegrationsRoute
@@ -576,9 +616,11 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppBuyersRoute: AppBuyersRoute,
   AppCatalogRoute: AppCatalogRoute,
+  AppCatalogItemsRoute: AppCatalogItemsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDocumentsRoute: AppDocumentsRoute,
   AppEmailCaptureRoute: AppEmailCaptureRoute,
+  AppExtractionsRoute: AppExtractionsRoute,
   AppFoundationsRoute: AppFoundationsRoute,
   AppInboxRoute: AppInboxRoute,
   AppIntegrationsRoute: AppIntegrationsRoute,
