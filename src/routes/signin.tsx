@@ -203,7 +203,7 @@ function SignInPanel() {
             ))}
           </div>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Trusted by procurement teams across Africa and beyond.
+            Trusted by procurement teams worldwide.
           </p>
         </div>
       </div>
