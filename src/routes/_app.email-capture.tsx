@@ -26,7 +26,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
-const INBOUND_DOMAIN = "inbox.wekbench.com";
+const INBOUND_DOMAIN = "wekbench.com";
 
 type InboundAddress = {
   id: string;
