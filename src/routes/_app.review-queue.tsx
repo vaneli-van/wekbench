@@ -295,6 +295,15 @@ function ReviewQueuePage() {
           <p className="text-xs text-muted-foreground">
             Documents below this score (or classified as Unclassified) need a human OK.
           </p>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={exportMutation.isPending || !workspaceId}
+            onClick={() => exportMutation.mutate()}
+          >
+            <Download className="size-3.5" />
+            Export audit log
+          </Button>
         </div>
       </Card>
 
