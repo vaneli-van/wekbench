@@ -151,6 +151,18 @@ function docTypeToInboxType(doc?: ExtractedDoc | null): InboxType {
   return "general"
 }
 
+function suggestionFor(type: InboxType, doc: ExtractedDoc | null) {
+  if (type === "pending") return "Email captured. Classification is queued and will appear here once extraction completes."
+  if (type === "rfq") return `Classified as a new RFQ${doc?.buyer_ref ? ` (${doc.buyer_ref})` : ""}. Review the request and create an RFQ record.`
+  if (type === "amendment") return `Detected as an amendment${doc?.buyer_ref ? ` to ${doc.buyer_ref}` : ""}. Link it to the existing record and review the changes.`
+  if (type === "po") return `Detected as a Purchase Order${doc?.buyer_ref ? ` linked to ${doc.buyer_ref}` : ""}. Convert the quote into an order.`
+  return "No RFQ, amendment, or PO detected. You can safely ignore this."
+}
+
+function formatReceived(value: string) {
+  return formatDistanceToNow(new Date(value), { addSuffix: true })
+}
+
 function InboxPage() {
   const { data: workspaceId, isLoading: workspaceLoading } = useWorkspaceId()
   const { data: inboxEmails, isLoading, error } = useInboxEmails(workspaceId)
@@ -194,79 +206,79 @@ function InboxPage() {
       />
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
-        {/* Email list */}
         <section className="rounded-xl border border-border bg-card">
           <div className="flex items-center justify-between border-b border-border px-5 py-3">
             <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Mail className="size-4 text-muted-foreground" />
               Captured Emails
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                {inboxEmails.length}
+                {emails.length}
               </span>
             </div>
-            <span className="text-xs text-muted-foreground">3 need attention</span>
+            <span className="text-xs text-muted-foreground">{needsAttention} need attention</span>
           </div>
-          <ul className="divide-y divide-border">
-            {inboxEmails.map((email) => {
-              const meta = typeMeta[email.type]
-              const active = selected?.id === email.id
-              return (
-                <li key={email.id}>
-                  <button
-                    onClick={() => setSelected(email)}
-                    className={cn(
-                      "flex w-full items-start gap-3 px-5 py-4 text-left transition-colors hover:bg-muted/40",
-                      active && "bg-muted/60",
-                    )}
-                  >
-                    <div className="mt-0.5 shrink-0">
-                      {email.unread ? (
-                        <Mail className="size-4 text-accent" />
-                      ) : (
-                        <MailOpen className="size-4 text-muted-foreground" />
+
+          {loading ? (
+            <div className="space-y-3 p-5">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Skeleton key={index} className="h-24 w-full" />
+              ))}
+            </div>
+          ) : error ? (
+            <EmptyState icon={MailOpen} title="Inbox could not load." description="Refresh the page and try again." />
+          ) : emails.length === 0 ? (
+            <EmptyState icon={MailOpen} title="No emails captured yet." description="Messages sent to your wekbench address will appear here." />
+          ) : (
+            <ul className="divide-y divide-border">
+              {emails.map((email) => {
+                const doc = email.extracted_documents?.[0] ?? null
+                const type = docTypeToInboxType(doc)
+                const meta = typeMeta[type]
+                const attachments = getAttachments(email.attachments)
+                const active = selected?.id === email.id
+                const unread = email.extraction_status !== "done"
+                return (
+                  <li key={email.id}>
+                    <button
+                      onClick={() => setSelectedId(email.id)}
+                      className={cn(
+                        "flex w-full items-start gap-3 px-5 py-4 text-left transition-colors hover:bg-muted/40",
+                        active && "bg-muted/60",
                       )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p
-                          className={cn(
-                            "truncate text-sm text-foreground",
-                            email.unread ? "font-semibold" : "font-medium",
-                          )}
-                        >
-                          {email.sender}
-                        </p>
-                        <span className="shrink-0 text-xs text-muted-foreground">{email.receivedRelative}</span>
+                    >
+                      <div className="mt-0.5 shrink-0">
+                        {unread ? <Mail className="size-4 text-accent" /> : <MailOpen className="size-4 text-muted-foreground" />}
                       </div>
-                      <p className="truncate text-xs text-muted-foreground">{email.buyerCompany}</p>
-                      <p className="mt-1 truncate text-sm text-foreground">{email.subject}</p>
-                      <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{email.preview}</p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span
-                          className={cn(
-                            "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium",
-                            typeToneClass[meta.tone],
-                          )}
-                        >
-                          <Sparkles className="size-3" />
-                          {meta.label}
-                        </span>
-                        {email.detectedRef && (
-                          <span className="font-mono text-[11px] text-muted-foreground">{email.detectedRef}</span>
-                        )}
-                        {email.attachments.length > 0 && (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                            <Paperclip className="size-3" />
-                            {email.attachments.length}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={cn("truncate text-sm text-foreground", unread ? "font-semibold" : "font-medium")}>
+                            {email.from_name ?? email.from_address}
+                          </p>
+                          <span className="shrink-0 text-xs text-muted-foreground">{formatReceived(email.received_at)}</span>
+                        </div>
+                        <p className="truncate text-xs text-muted-foreground">{email.from_address}</p>
+                        <p className="mt-1 truncate text-sm text-foreground">{email.subject ?? "(no subject)"}</p>
+                        <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{doc?.summary ?? previewFor(email)}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className={cn("inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium", typeToneClass[meta.tone])}>
+                            <Sparkles className="size-3" />
+                            {meta.label}
                           </span>
-                        )}
+                          {doc?.buyer_ref && <span className="font-mono text-[11px] text-muted-foreground">{doc.buyer_ref}</span>}
+                          {attachments.length > 0 && (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                              <Paperclip className="size-3" />
+                              {attachments.length}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </section>
 
         {/* Detail / action panel */}
