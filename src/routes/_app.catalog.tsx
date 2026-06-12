@@ -519,19 +519,19 @@ function TableView({
   )
 }
 
-function RowActions() {
+function RowActions({ product, onOpen }: { product: CatalogProduct; onOpen: (p: CatalogProduct) => void }) {
   return (
     <div className="flex items-center justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-      <Button variant="ghost" size="icon" className="size-7" aria-label="View">
+      <Button variant="ghost" size="icon" className="size-7" aria-label="View" onClick={() => onOpen(product)}>
         <Eye className="size-3.5" />
       </Button>
-      <Button variant="ghost" size="icon" className="size-7" aria-label="Edit">
+      <Button variant="ghost" size="icon" className="size-7" aria-label="Edit" onClick={() => onOpen(product)}>
         <Pencil className="size-3.5" />
       </Button>
-      <Button variant="ghost" size="icon" className="size-7" aria-label="Set preferred">
+      <Button variant="ghost" size="icon" className="size-7" aria-label="Set preferred" onClick={() => toast.success(`${product.brand} ${product.model} marked as preferred`)}>
         <Star className="size-3.5" />
       </Button>
-      <Button variant="ghost" size="icon" className="size-7" aria-label="Hide">
+      <Button variant="ghost" size="icon" className="size-7" aria-label="Hide" onClick={() => toast.success(`${product.brand} ${product.model} hidden from catalog`)}>
         <EyeOff className="size-3.5" />
       </Button>
     </div>
