@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Bell,
@@ -14,6 +15,8 @@ import {
   BarChart3,
   Plug,
   Settings,
+  LogOut,
+  User as UserIcon,
   Search as SearchIcon,
 } from "lucide-react";
 
@@ -21,6 +24,16 @@ import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/wordmark";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 
 const mobileNav = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -142,15 +155,68 @@ export function Topbar() {
         <IconButton label="Notifications" badge={5}>
           <Bell className="size-[1.125rem]" />
         </IconButton>
-        <Link
-          to="/signin"
-          className="ml-1 flex size-8 items-center justify-center rounded-md bg-secondary text-secondary-foreground text-xs font-semibold transition-colors hover:bg-secondary/80"
-          aria-label="Account and sign in"
-          title="Sign in screen"
-        >
-          SA
-        </Link>
+        <UserMenu />
       </div>
     </header>
+  );
+}
+
+function UserMenu() {
+  const { user, signOut } = useAuth();
+  const [fullName, setFullName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data?.full_name) setFullName(data.full_name);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const initials = (fullName ?? user?.email ?? "?")
+    .split(/[\s@]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase())
+    .join("") || "?";
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="ml-1 flex size-8 items-center justify-center rounded-md bg-secondary text-secondary-foreground text-xs font-semibold transition-colors hover:bg-secondary/80"
+          aria-label="Account menu"
+        >
+          {initials}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="flex flex-col gap-0.5">
+          <span className="truncate text-sm font-medium">{fullName ?? "Your account"}</span>
+          <span className="truncate text-xs font-normal text-muted-foreground">{user?.email}</span>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/settings" className="cursor-pointer">
+            <UserIcon className="mr-2 size-4" />
+            Profile & settings
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive focus:text-destructive">
+          <LogOut className="mr-2 size-4" />
+          Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

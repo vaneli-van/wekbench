@@ -1,93 +1,168 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react"
-import { useNavigate } from "@tanstack/react-router"
+import { useEffect, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   Check,
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
   PartyPopper,
-  PlayCircle,
+  Loader2,
+  Sparkles,
+  FileText,
   Store,
   ShoppingCart,
-  FileText,
-  Percent,
-  Palette,
   Users,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Wordmark } from "@/components/wordmark"
+  Percent,
+} from "lucide-react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Wordmark } from "@/components/wordmark";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
-type Role = "vendor" | "buyer"
+export const Route = createFileRoute("/onboarding")({
+  ssr: false,
+  head: () => ({ meta: [{ title: "Welcome to wekbench" }] }),
+  component: OnboardingPage,
+});
+
+type AccountType = "vendor" | "buyer";
+type DemoChoice = "demo" | "fresh";
+type RoleOption = "Procurement Manager" | "Finance" | "Operations" | "Founder / Owner" | "Other";
 
 const STEPS = [
   { id: 1, title: "Your role" },
-  { id: 2, title: "Company" },
-]
+  { id: 2, title: "About you" },
+  { id: 3, title: "Starting point" },
+];
 
 function OnboardingPage() {
-  const navigate = useNavigate()
-  const [step, setStep] = useState(1)
-  const [done, setDone] = useState(false)
-  const [role, setRole] = useState<Role | null>(null)
-  const [company, setCompany] = useState("")
-  const [country, setCountry] = useState("GH")
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
+  const [step, setStep] = useState(1);
+  const [done, setDone] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const persist = () => {
+  // Form state
+  const [accountType, setAccountType] = useState<AccountType | null>(null);
+  const [fullName, setFullName] = useState("");
+  const [company, setCompany] = useState("");
+  const [role, setRole] = useState<RoleOption | "">("");
+  const [country, setCountry] = useState("GH");
+  const [demoChoice, setDemoChoice] = useState<DemoChoice | null>(null);
+
+  // Redirect away if not signed in
+  useEffect(() => {
+    if (!loading && !user) navigate({ to: "/signin", replace: true });
+  }, [loading, user, navigate]);
+
+  // Prefill from existing profile if user is mid-onboarding
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, company_name, role")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profile) {
+        if (profile.full_name) setFullName(profile.full_name);
+        if (profile.company_name) setCompany(profile.company_name);
+        if (profile.role) setRole(profile.role as RoleOption);
+      }
+      const { data: ws } = await supabase
+        .from("workspaces")
+        .select("account_type, country, onboarding_completed_at")
+        .eq("owner_id", user.id)
+        .maybeSingle();
+      if (ws) {
+        if (ws.account_type) setAccountType(ws.account_type as AccountType);
+        if (ws.country) setCountry(ws.country);
+        if (ws.onboarding_completed_at) {
+          navigate({ to: "/dashboard", replace: true });
+        }
+      }
+    })();
+  }, [user, navigate]);
+
+  const canContinue =
+    step === 1 ? accountType !== null
+    : step === 2 ? fullName.trim().length > 0 && company.trim().length > 0 && role !== ""
+    : demoChoice !== null;
+
+  const handleNext = async () => {
+    if (step < STEPS.length) {
+      setStep((s) => s + 1);
+      return;
+    }
+    // Final step — persist everything
+    if (!user) return;
+    setSaving(true);
     try {
-      localStorage.setItem(
-        "wekbench:onboarding",
-        JSON.stringify({ role: role ?? "vendor", company: company.trim(), country }),
-      )
-      localStorage.setItem("wekbench:welcome", "pending")
-    } catch {
-      /* ignore storage errors */
+      const [profileResult, workspaceResult] = await Promise.all([
+        supabase
+          .from("profiles")
+          .update({ full_name: fullName.trim(), company_name: company.trim(), role })
+          .eq("id", user.id),
+        supabase
+          .from("workspaces")
+          .update({
+            name: company.trim(),
+            account_type: accountType ?? "vendor",
+            country,
+            seeded_demo: demoChoice === "demo",
+            onboarding_completed_at: new Date().toISOString(),
+          })
+          .eq("owner_id", user.id),
+      ]);
+      if (profileResult.error) throw profileResult.error;
+      if (workspaceResult.error) throw workspaceResult.error;
+      setDone(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save your details.");
+    } finally {
+      setSaving(false);
     }
-  }
+  };
 
-  const next = () => {
-    if (step >= STEPS.length) {
-      persist()
-      setDone(true)
-    } else {
-      setStep((s) => s + 1)
-    }
-  }
-  const back = () => setStep((s) => Math.max(1, s - 1))
-  const skip = () => {
-    persist()
-    navigate({ to: "/dashboard" })
+  if (loading || !user) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   if (done) {
-    return <Confirmation role={role ?? "vendor"} onDashboard={() => navigate({ to: "/dashboard" })} />
+    return (
+      <Confirmation
+        accountType={accountType ?? "vendor"}
+        seeded={demoChoice === "demo"}
+        onDashboard={() => navigate({ to: "/dashboard" })}
+      />
+    );
   }
-
-  const current = STEPS.find((s) => s.id === step)!
-  const canContinue = step === 1 ? role !== null : company.trim().length > 0
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
-      {/* Top bar: brand + progress + skip */}
       <header className="flex shrink-0 items-center gap-6 border-b border-border px-6 py-3.5">
         <div className="flex items-center gap-2.5">
           <Wordmark size="sm" />
         </div>
-
-        {/* Step indicator */}
         <ol className="flex flex-1 items-center justify-center gap-2">
           {STEPS.map((s) => {
-            const status = s.id < step ? "done" : s.id === step ? "current" : "upcoming"
+            const status = s.id < step ? "done" : s.id === step ? "current" : "upcoming";
             return (
               <li key={s.id} className="flex items-center gap-2">
                 <div className="flex items-center gap-2">
@@ -114,65 +189,83 @@ function OnboardingPage() {
                   <span className={cn("h-px w-8", s.id < step ? "bg-primary" : "bg-border")} />
                 )}
               </li>
-            )
+            );
           })}
         </ol>
-
-        <button
-          onClick={skip}
-          className="shrink-0 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Skip for now
-        </button>
+        <span className="w-16 shrink-0" />
       </header>
 
-      {/* Body */}
       <main className="flex flex-1 flex-col overflow-hidden">
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-y-auto px-6 py-10">
-          {step === 1 && <StepRole role={role} onSelect={setRole} />}
+          {step === 1 && <StepRole accountType={accountType} onSelect={setAccountType} />}
           {step === 2 && (
-            <StepCompany
-              role={role ?? "vendor"}
+            <StepProfile
+              fullName={fullName}
               company={company}
+              role={role}
               country={country}
+              onFullName={setFullName}
               onCompany={setCompany}
+              onRole={setRole}
               onCountry={setCountry}
+            />
+          )}
+          {step === 3 && (
+            <StepDemoChoice
+              choice={demoChoice}
+              accountType={accountType ?? "vendor"}
+              onSelect={setDemoChoice}
             />
           )}
         </div>
       </main>
 
-      {/* Bottom bar */}
       <footer className="flex shrink-0 items-center justify-between border-t border-border bg-card px-6 py-3.5">
-        <Button variant="ghost" onClick={back} disabled={step === 1} className="gap-1.5">
+        <Button
+          variant="ghost"
+          onClick={() => setStep((s) => Math.max(1, s - 1))}
+          disabled={step === 1 || saving}
+          className="gap-1.5"
+        >
           <ArrowLeft className="size-4" />
           Back
         </Button>
-        <Button onClick={next} disabled={!canContinue} className="gap-1.5">
-          {step === STEPS.length ? "Enter workspace" : "Continue"}
-          <ArrowRight className="size-4" />
+        <Button onClick={handleNext} disabled={!canContinue || saving} className="gap-1.5">
+          {saving ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : step === STEPS.length ? (
+            "Enter workspace"
+          ) : (
+            "Continue"
+          )}
+          {!saving && <ArrowRight className="size-4" />}
         </Button>
       </footer>
     </div>
-  )
+  );
 }
 
-/* ---------- Step 1: Role ---------- */
-function StepRole({ role, onSelect }: { role: Role | null; onSelect: (r: Role) => void }) {
-  const options: { id: Role; icon: typeof Store; title: string; body: string }[] = [
+function StepRole({
+  accountType,
+  onSelect,
+}: {
+  accountType: AccountType | null;
+  onSelect: (t: AccountType) => void;
+}) {
+  const options: { id: AccountType; icon: typeof Store; title: string; body: string }[] = [
     {
       id: "vendor",
       icon: Store,
-      title: "I'm a vendor",
+      title: "I'm a vendor / supplier",
       body: "I receive RFQs and need to quote fast, win deals, and manage orders.",
     },
     {
       id: "buyer",
       icon: ShoppingCart,
-      title: "I'm a buyer",
+      title: "I'm a buyer / procurement",
       body: "I raise requests and want competitive quotes from a trusted supplier network.",
     },
-  ]
+  ];
 
   return (
     <div className="mx-auto w-full max-w-2xl text-center">
@@ -185,8 +278,8 @@ function StepRole({ role, onSelect }: { role: Role | null; onSelect: (r: Role) =
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         {options.map((opt) => {
-          const Icon = opt.icon
-          const selected = role === opt.id
+          const Icon = opt.icon;
+          const selected = accountType === opt.id;
           return (
             <button
               key={opt.id}
@@ -213,37 +306,52 @@ function StepRole({ role, onSelect }: { role: Role | null; onSelect: (r: Role) =
               </span>
               <span className="text-sm leading-relaxed text-muted-foreground">{opt.body}</span>
             </button>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }
 
-/* ---------- Step 2: Minimal company ---------- */
-function StepCompany({
-  role,
+function StepProfile({
+  fullName,
   company,
+  role,
   country,
+  onFullName,
   onCompany,
+  onRole,
   onCountry,
 }: {
-  role: Role
-  company: string
-  country: string
-  onCompany: (v: string) => void
-  onCountry: (v: string) => void
+  fullName: string;
+  company: string;
+  role: RoleOption | "";
+  country: string;
+  onFullName: (v: string) => void;
+  onCompany: (v: string) => void;
+  onRole: (v: RoleOption) => void;
+  onCountry: (v: string) => void;
 }) {
   return (
     <div className="mx-auto w-full max-w-md">
       <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">
-        Tell us about your company
+        Tell us about you
       </h1>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">
-        Just the essentials to get you started. You can complete the rest anytime.
+        Just the essentials. You can edit everything from Settings later.
       </p>
 
       <div className="mt-8 flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="fullName">Full name</Label>
+          <Input
+            id="fullName"
+            value={fullName}
+            onChange={(e) => onFullName(e.target.value)}
+            placeholder="Ama Mensah"
+            autoFocus
+          />
+        </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="company">Company name</Label>
           <Input
@@ -251,8 +359,22 @@ function StepCompany({
             value={company}
             onChange={(e) => onCompany(e.target.value)}
             placeholder="e.g. Western Premium Ltd"
-            autoFocus
           />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="role">Your role</Label>
+          <Select value={role} onValueChange={(v) => onRole(v as RoleOption)}>
+            <SelectTrigger id="role">
+              <SelectValue placeholder="Pick a role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Procurement Manager">Procurement Manager</SelectItem>
+              <SelectItem value="Finance">Finance</SelectItem>
+              <SelectItem value="Operations">Operations</SelectItem>
+              <SelectItem value="Founder / Owner">Founder / Owner</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="country">Country</Label>
@@ -273,33 +395,132 @@ function StepCompany({
           </Select>
         </div>
       </div>
-
-      <p className="mt-6 rounded-lg border border-border bg-secondary/40 p-3 text-xs leading-relaxed text-muted-foreground">
-        {role === "vendor"
-          ? "We'll set up your vendor workspace with a sample RFQ so you can see a quote come together right away."
-          : "We'll set up your buyer workspace so you can raise your first request and reach our supplier network."}
-      </p>
     </div>
-  )
+  );
 }
 
-/* ---------- Confirmation ---------- */
-function Confirmation({ role, onDashboard }: { role: Role; onDashboard: () => void }) {
-  // What the user can do later, in-context — deferred from the old heavy wizard.
-  const nextUp =
-    role === "vendor"
-      ? [
-          { icon: FileText, label: "Upload your first RFQ" },
-          { icon: Percent, label: "Set margin & FX defaults" },
-          { icon: Palette, label: "Brand your quotes" },
-          { icon: Users, label: "Invite your team" },
-        ]
-      : [
-          { icon: FileText, label: "Raise your first request" },
-          { icon: Store, label: "Browse the supplier network" },
-          { icon: Percent, label: "Set budget preferences" },
-          { icon: Users, label: "Invite your team" },
-        ]
+function StepDemoChoice({
+  choice,
+  accountType,
+  onSelect,
+}: {
+  choice: DemoChoice | null;
+  accountType: AccountType;
+  onSelect: (c: DemoChoice) => void;
+}) {
+  const options: {
+    id: DemoChoice;
+    icon: typeof Sparkles;
+    title: string;
+    body: string;
+    bullets: string[];
+  }[] = [
+    {
+      id: "demo",
+      icon: Sparkles,
+      title: "Start with sample data",
+      body: "Explore every screen instantly with a fully populated workspace.",
+      bullets: [
+        accountType === "vendor"
+          ? "Sample RFQs, quotes, and orders in motion"
+          : "Sample suppliers, requests, and open POs",
+        "Ready-made buyers and supplier profiles",
+        "You can clear it from Settings anytime",
+      ],
+    },
+    {
+      id: "fresh",
+      icon: FileText,
+      title: "Start fresh",
+      body: "An empty workspace, ready for your real data on day one.",
+      bullets: [
+        "Guided empty states on every screen",
+        "Add your own suppliers, buyers, and RFQs",
+        "Load sample data later from Settings",
+      ],
+    },
+  ];
+
+  return (
+    <div className="mx-auto w-full max-w-2xl text-center">
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">
+        How do you want to start?
+      </h1>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground text-pretty">
+        Either way, you'll land on your dashboard next.
+      </p>
+
+      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        {options.map((opt) => {
+          const Icon = opt.icon;
+          const selected = choice === opt.id;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => onSelect(opt.id)}
+              className={cn(
+                "flex flex-col items-start gap-3 rounded-xl border p-5 text-left transition-all",
+                selected
+                  ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+                  : "border-border bg-card hover:border-primary/40 hover:bg-secondary/40",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-10 items-center justify-center rounded-lg transition-colors",
+                  selected ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground",
+                )}
+              >
+                <Icon className="size-5" />
+              </span>
+              <span className="flex items-center gap-2 text-base font-semibold text-foreground">
+                {opt.title}
+                {selected && <Check className="size-4 text-primary" />}
+              </span>
+              <span className="text-sm leading-relaxed text-muted-foreground">{opt.body}</span>
+              <ul className="mt-1 flex flex-col gap-1.5 text-xs text-muted-foreground">
+                {opt.bullets.map((b) => (
+                  <li key={b} className="flex items-start gap-1.5">
+                    <Check className="mt-0.5 size-3 shrink-0 text-primary" />
+                    <span>{b}</span>
+                  </li>
+                ))}
+              </ul>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Confirmation({
+  accountType,
+  seeded,
+  onDashboard,
+}: {
+  accountType: AccountType;
+  seeded: boolean;
+  onDashboard: () => void;
+}) {
+  const nextUp = seeded
+    ? [
+        { icon: FileText, label: "Explore the sample inbox" },
+        { icon: Percent, label: "Set your margin & FX defaults" },
+        { icon: Users, label: "Invite your team" },
+      ]
+    : accountType === "vendor"
+    ? [
+        { icon: FileText, label: "Upload your first RFQ" },
+        { icon: Store, label: "Add your supplier catalog" },
+        { icon: Users, label: "Invite your team" },
+      ]
+    : [
+        { icon: FileText, label: "Raise your first request" },
+        { icon: Store, label: "Browse the supplier network" },
+        { icon: Users, label: "Invite your team" },
+      ];
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background px-6 text-center">
@@ -310,8 +531,9 @@ function Confirmation({ role, onDashboard }: { role: Role; onDashboard: () => vo
         You&apos;re all set.
       </h1>
       <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground text-pretty">
-        Your workspace is ready with sample data so you can explore right away. Finish setting things
-        up whenever you like — we&apos;ll guide you from inside the app.
+        {seeded
+          ? "Your workspace is loaded with sample data so you can explore right away."
+          : "Your workspace is ready. Start adding your own data whenever you like."}
       </p>
 
       <div className="mt-8 w-full max-w-sm rounded-xl border border-border bg-card p-4 text-left">
@@ -320,7 +542,7 @@ function Confirmation({ role, onDashboard }: { role: Role; onDashboard: () => vo
         </p>
         <ul className="flex flex-col gap-2.5">
           {nextUp.map((item) => {
-            const Icon = item.icon
+            const Icon = item.icon;
             return (
               <li key={item.label} className="flex items-center gap-3">
                 <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-secondary text-foreground">
@@ -329,26 +551,15 @@ function Confirmation({ role, onDashboard }: { role: Role; onDashboard: () => vo
                 <span className="flex-1 text-sm text-foreground">{item.label}</span>
                 <ArrowUpRight className="size-4 text-muted-foreground" />
               </li>
-            )
+            );
           })}
         </ul>
       </div>
 
-      <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
-        <Button onClick={onDashboard} size="lg" className="gap-1.5">
-          Go to dashboard
-          <ArrowRight className="size-4" />
-        </Button>
-        <Button variant="outline" size="lg" className="gap-1.5">
-          <PlayCircle className="size-4" />
-          Watch 3-minute tour
-        </Button>
-      </div>
+      <Button onClick={onDashboard} size="lg" className="mt-8 gap-1.5">
+        Go to dashboard
+        <ArrowRight className="size-4" />
+      </Button>
     </div>
-  )
+  );
 }
-
-
-export const Route = createFileRoute("/onboarding")({
-  component: OnboardingPage,
-});
