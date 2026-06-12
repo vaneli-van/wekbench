@@ -168,10 +168,12 @@ function ReviewQueuePage() {
   const [threshold, setThreshold] = useState(0.8);
   const { data: queue, isLoading } = useReviewQueue(workspaceId, threshold);
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [draftType, setDraftType] = useState<DocType | null>(null);
   const [notes, setNotes] = useState("");
   const qc = useQueryClient();
   const reviewFn = useServerFn(reviewExtraction);
+  const bulkReviewFn = useServerFn(bulkReviewExtractions);
 
   const selectedDoc = useMemo(
     () => queue?.find((d) => d.id === selected) ?? null,
@@ -184,6 +186,27 @@ function ReviewQueuePage() {
     setDraftType(selectedDoc?.doc_type ?? null);
     setNotes(selectedDoc?.review_notes ?? "");
   }, [selectedDoc?.id, selectedDoc?.doc_type, selectedDoc?.review_notes]);
+
+  const allSelected = queue && queue.length > 0 && selectedIds.size === queue.length;
+  const someSelected = selectedIds.size > 0 && !allSelected;
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (!queue) return;
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(queue.map((d) => d.id)));
+    }
+  };
 
   const reviewMutation = useMutation({
     mutationFn: async (vars: { action: "approve" | "reject" }) =>
@@ -202,6 +225,26 @@ function ReviewQueuePage() {
       setSelected(null);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not save review"),
+  });
+
+  const bulkReviewMutation = useMutation({
+    mutationFn: async (vars: { action: "approve" | "reject" }) =>
+      bulkReviewFn({
+        data: {
+          documentIds: Array.from(selectedIds),
+          action: vars.action,
+        },
+      }),
+    onSuccess: (_d, vars) => {
+      toast.success(
+        `${vars.action === "approve" ? "Approved" : "Rejected"} ${selectedIds.size} document(s)`,
+      );
+      qc.invalidateQueries({ queryKey: ["review-queue", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["extracted-documents", workspaceId] });
+      setSelectedIds(new Set());
+      setSelected(null);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Bulk review failed"),
   });
 
   return (
