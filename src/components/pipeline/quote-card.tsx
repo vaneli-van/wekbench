@@ -59,10 +59,10 @@ export function QuoteCard({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
             <DropdownMenuItem onClick={onOpenFull}>Open full quote</DropdownMenuItem>
-            <DropdownMenuItem>Duplicate</DropdownMenuItem>
-            <DropdownMenuItem>Reassign</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => toast.success(`Duplicated ${quote.id}`)}>Duplicate</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => toast.info("Reassign — coming soon")}>Reassign</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">Mark as lost</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive" onClick={() => toast.success(`Marked ${quote.id} as lost`)}>Mark as lost</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
