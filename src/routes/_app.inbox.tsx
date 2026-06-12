@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react"
 import { Link } from "@tanstack/react-router"
+import { toast } from "sonner"
 import {
   Paperclip,
   FileText,
@@ -224,10 +225,13 @@ function InboxPage() {
                         Open {selected.detectedRef}
                       </Link>
                     ) : (
-                      <button className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
+                      <Link
+                        to="/quotes"
+                        className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                      >
                         <Plus className="size-4" />
                         Create RFQ
-                      </button>
+                      </Link>
                     ))}
 
                   {selected.type === "amendment" && (
@@ -265,17 +269,17 @@ function InboxPage() {
                     ))}
 
                   {selected.type === "general" && (
-                    <button className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
+                    <button onClick={() => toast.success("Email pulled into a new RFQ draft")} className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
                       <Plus className="size-4" />
                       Pull into RFQ
                     </button>
                   )}
 
-                  <button className="inline-flex items-center justify-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted">
+                  <button onClick={() => toast.info("Record picker — coming soon")} className="inline-flex items-center justify-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted">
                     <Link2 className="size-4" />
                     Link to Existing Record
                   </button>
-                  <button className="inline-flex items-center justify-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted">
+                  <button onClick={() => toast.success("Email ignored")} className="inline-flex items-center justify-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted">
                     <X className="size-4" />
                     Ignore
                   </button>

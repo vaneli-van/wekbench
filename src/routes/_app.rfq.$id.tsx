@@ -284,10 +284,10 @@ function RFQDetail({ rfq }: { rfq: (typeof rfqs)[number] }) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem>Reassign</DropdownMenuItem>
-                <DropdownMenuItem>Archive</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast.info("Reassign — coming soon")}>Reassign</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast.success("RFQ archived")}>Archive</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive focus:text-destructive">
+                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => toast.success("Marked as Lost")}>
                   Mark as Lost
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -571,7 +571,11 @@ function DocumentsTab({ rfq }: { rfq: (typeof rfqs)[number] }) {
                 {d.kind} · {d.size}
               </p>
             </div>
-            <button className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <button
+              type="button"
+              onClick={() => toast.info(`Downloading ${d.name}…`)}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
               <Download className="size-4" />
               <span className="sr-only">Download {d.name}</span>
             </button>
@@ -664,7 +668,11 @@ function AttachmentsList({ rfq }: { rfq: (typeof rfqs)[number] }) {
             <p className="truncate text-xs font-medium text-foreground">{f.name}</p>
             <p className="text-[11px] text-muted-foreground">{f.size}</p>
           </div>
-          <button className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+          <button
+            type="button"
+            onClick={() => toast.info(`Downloading ${f.name}…`)}
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
             <Download className="size-4" />
             <span className="sr-only">Download {f.name}</span>
           </button>

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { toast } from "sonner"
 import { PageHeader } from "@/components/page-header"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -29,11 +30,9 @@ function InvoicesPage() {
         title="Invoices"
         description="Commercial invoices generated from confirmed orders. Track delivery and payment status."
         actions={
-          <Button size="sm" asChild>
-            <Link to="/invoices/new">
-              <Plus className="size-4" />
-              New invoice
-            </Link>
+          <Button size="sm" onClick={() => toast.info("Generate an invoice from a confirmed order in the Orders page.")}>
+            <Plus className="size-4" />
+            New invoice
           </Button>
         }
       />
@@ -101,10 +100,10 @@ function InvoicesPage() {
                           <FileText className="size-4" />
                         </Link>
                       </Button>
-                      <Button variant="ghost" size="icon" className="size-8" aria-label="Download invoice">
+                      <Button variant="ghost" size="icon" className="size-8" aria-label="Download invoice" onClick={() => toast.info(`Downloading INV-${o.id.replace("ORD-", "")}…`)}>
                         <Download className="size-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="size-8" aria-label="Send invoice">
+                      <Button variant="ghost" size="icon" className="size-8" aria-label="Send invoice" onClick={() => toast.success(`Invoice sent to ${o.buyer}`)}>
                         <Send className="size-4" />
                       </Button>
                     </div>

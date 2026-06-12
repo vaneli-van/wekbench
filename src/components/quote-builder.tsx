@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { toast } from "sonner"
 import {
   Save,
   Send,
@@ -475,13 +476,14 @@ export function QuoteBuilder({ quoteId, initialTitle, initialBuyer }: QuoteBuild
                             className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:border-ring"
                           />
                           {line.datasheet && (
-                            <a
-                              href="#"
+                            <button
+                              type="button"
+                              onClick={() => toast.info(`Datasheet "${line.datasheet}" will open in a new tab`)}
                               className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
                             >
                               <FileText className="size-3.5" />
                               {line.datasheet}
-                            </a>
+                            </button>
                           )}
                         </div>
                         <div>
@@ -614,7 +616,7 @@ export function QuoteBuilder({ quoteId, initialTitle, initialBuyer }: QuoteBuild
             <FileDown className="size-4" />
             Preview as PDF
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => toast.success("Draft saved")}>
             <Save className="size-4" />
             Save draft
           </Button>
@@ -630,9 +632,9 @@ export function QuoteBuilder({ quoteId, initialTitle, initialBuyer }: QuoteBuild
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem><Copy className="size-4" />Duplicate</DropdownMenuItem>
-              <DropdownMenuItem><FileDown className="size-4" />Export</DropdownMenuItem>
-              <DropdownMenuItem><Archive className="size-4" />Archive</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toast.success("Quote duplicated")}><Copy className="size-4" />Duplicate</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toast.success("Quote exported as PDF")}><FileDown className="size-4" />Export</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toast.success("Quote archived")}><Archive className="size-4" />Archive</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -681,7 +683,7 @@ export function QuoteBuilder({ quoteId, initialTitle, initialBuyer }: QuoteBuild
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEmailOpen(false)}>Cancel</Button>
-            <Button onClick={() => setEmailOpen(false)}>
+            <Button onClick={() => { setEmailOpen(false); toast.success("Quote sent to buyer"); }}>
               <Send className="size-4" />
               Send email
             </Button>

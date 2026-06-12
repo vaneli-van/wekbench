@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react"
+import { toast } from "sonner"
 
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
@@ -143,8 +144,8 @@ function CatalogPage() {
           description={`${catalogStats.totalSkus.toLocaleString()} SKUs · last updated ${catalogStats.lastUpdated}`}
           actions={
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="bg-transparent">
-                <Users className="size-4" /> Manage suppliers
+              <Button variant="outline" size="sm" className="bg-transparent" asChild>
+                <Link to="/suppliers"><Users className="size-4" /> Manage suppliers</Link>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -311,16 +312,16 @@ function CatalogPage() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-medium text-foreground">{selected.size} selected</span>
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" size="sm" className="bg-transparent">
+              <Button variant="outline" size="sm" className="bg-transparent" onClick={() => toast.success(`Updated pricing for ${selected.size} products`)}>
                 <DollarSign className="size-4" /> Update pricing
               </Button>
-              <Button variant="outline" size="sm" className="bg-transparent">
+              <Button variant="outline" size="sm" className="bg-transparent" onClick={() => toast.success(`Updated availability for ${selected.size} products`)}>
                 <PackageCheck className="size-4" /> Update availability
               </Button>
-              <Button variant="outline" size="sm" className="bg-transparent">
+              <Button variant="outline" size="sm" className="bg-transparent" onClick={() => toast.success(`${selected.size} products tagged as preferred`)}>
                 <Tag className="size-4" /> Tag as preferred
               </Button>
-              <Button variant="outline" size="sm" className="bg-transparent">
+              <Button variant="outline" size="sm" className="bg-transparent" onClick={() => { toast.success(`${selected.size} products hidden`); setSelected(new Set()); }}>
                 <EyeOff className="size-4" /> Hide from catalog
               </Button>
             </div>
@@ -508,7 +509,7 @@ function TableView({
               </td>
               <td className="px-3 py-2.5 text-muted-foreground">{p.updatedAt}</td>
               <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                <RowActions />
+                <RowActions product={p} onOpen={onOpen} />
               </td>
             </tr>
           ))}
@@ -518,19 +519,19 @@ function TableView({
   )
 }
 
-function RowActions() {
+function RowActions({ product, onOpen }: { product: CatalogProduct; onOpen: (p: CatalogProduct) => void }) {
   return (
     <div className="flex items-center justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-      <Button variant="ghost" size="icon" className="size-7" aria-label="View">
+      <Button variant="ghost" size="icon" className="size-7" aria-label="View" onClick={() => onOpen(product)}>
         <Eye className="size-3.5" />
       </Button>
-      <Button variant="ghost" size="icon" className="size-7" aria-label="Edit">
+      <Button variant="ghost" size="icon" className="size-7" aria-label="Edit" onClick={() => onOpen(product)}>
         <Pencil className="size-3.5" />
       </Button>
-      <Button variant="ghost" size="icon" className="size-7" aria-label="Set preferred">
+      <Button variant="ghost" size="icon" className="size-7" aria-label="Set preferred" onClick={() => toast.success(`${product.brand} ${product.model} marked as preferred`)}>
         <Star className="size-3.5" />
       </Button>
-      <Button variant="ghost" size="icon" className="size-7" aria-label="Hide">
+      <Button variant="ghost" size="icon" className="size-7" aria-label="Hide" onClick={() => toast.success(`${product.brand} ${product.model} hidden from catalog`)}>
         <EyeOff className="size-3.5" />
       </Button>
     </div>

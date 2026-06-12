@@ -67,28 +67,41 @@ const titleMap: Record<string, string> = {
   "/settings": "Settings",
 };
 
-function IconButton({
-  children,
-  label,
-  badge,
-}: {
-  children: React.ReactNode;
-  label: string;
-  badge?: number;
-}) {
+function NotificationsButton() {
+  const items = [
+    { title: "New RFQ from Meridian Bank", time: "12m ago", href: "/inbox" },
+    { title: "Quote QT-2026-0418 viewed by buyer", time: "1h ago", href: "/quotes" },
+    { title: "Supplier confirmed stock for ORD-2026-0231", time: "3h ago", href: "/orders" },
+    { title: "Invoice INV-2026-0118 marked paid", time: "Yesterday", href: "/invoices" },
+    { title: "FX rate updated · USD/GHS", time: "Yesterday", href: "/dashboard" },
+  ];
   return (
-    <button
-      type="button"
-      className="relative flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-    >
-      {children}
-      {badge ? (
-        <span className="absolute -right-0.5 -top-0.5 flex min-w-5 h-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground ring-2 ring-background">
-          {badge}
-        </span>
-      ) : null}
-      <span className="sr-only">{label}</span>
-    </button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="relative flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          aria-label="Notifications"
+        >
+          <Bell className="size-[1.125rem]" />
+          <span className="absolute -right-0.5 -top-0.5 flex min-w-5 h-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground ring-2 ring-background">
+            {items.length}
+          </span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-80">
+        <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {items.map((n) => (
+          <DropdownMenuItem key={n.title} asChild>
+            <Link to={n.href} className="cursor-pointer flex-col items-start gap-0.5">
+              <span className="text-sm">{n.title}</span>
+              <span className="text-xs text-muted-foreground">{n.time}</span>
+            </Link>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -152,9 +165,7 @@ export function Topbar() {
       <h1 className="text-base font-semibold tracking-tight text-foreground md:text-lg">{title}</h1>
 
       <div className="ml-auto flex items-center gap-1">
-        <IconButton label="Notifications" badge={5}>
-          <Bell className="size-[1.125rem]" />
-        </IconButton>
+        <NotificationsButton />
         <UserMenu />
       </div>
     </header>
