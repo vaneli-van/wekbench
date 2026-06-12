@@ -208,7 +208,13 @@ export const orderDetails: Record<string, OrderDetail> = {
 export function getOrderDetail(order: Order): OrderDetail {
   const existing = orderDetails[order.id]
   if (existing) return existing
-  const token = `trk_${order.poNumber.replace(/[^a-z0-9]/gi, "").toLowerCase()}`
+  // Use a cryptographically random token so tracking URLs cannot be enumerated
+  // from predictable PO numbers.
+  const randomPart =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID().replace(/-/g, "")
+      : Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
+  const token = `trk_${randomPart}`
   return {
     shareToken: token,
     buyerEmail: `${order.buyerContact.split(" ")[0].toLowerCase()}@example.com`,
