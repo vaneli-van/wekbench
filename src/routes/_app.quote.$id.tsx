@@ -1,4 +1,5 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { FileQuestion, AlertTriangle } from "lucide-react";
 import { QuoteBuilder } from "@/components/quote-builder";
 import { pipelineQuotes } from "@/lib/pipeline";
 import { EmptyState } from "@/components/foundations/empty-state";
