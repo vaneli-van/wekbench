@@ -32,6 +32,7 @@ const navGroups: {
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { name: "My Wekbench", href: "/inbox", icon: Inbox, badge: 3 },
       { name: "AI Extractions", href: "/extractions", icon: Sparkles },
+      { name: "Review Queue", href: "/review-queue", icon: ShieldCheck },
       { name: "Quotes", href: "/quotes", icon: FileText, badge: 1 },
       { name: "Product Search", href: "/product-search", icon: Search },
       { name: "Catalog", href: "/catalog", icon: Library },
