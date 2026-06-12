@@ -41,17 +41,18 @@ export const reviewExtraction = createServerFn({ method: "POST" })
       .maybeSingle();
     if (docErr || !doc) throw new Error("Document not found or access denied");
 
-    const patch: Record<string, unknown> = {
+    const patch = {
       status: data.action === "approve" ? "approved" : "rejected",
       reviewed_by: context.userId,
       reviewed_at: new Date().toISOString(),
+      ...(data.docType ? { doc_type: data.docType } : {}),
+      ...(data.notes !== undefined ? { review_notes: data.notes } : {}),
     };
-    if (data.docType) patch.doc_type = data.docType;
-    if (data.notes !== undefined) patch.review_notes = data.notes;
 
     const { error: updErr } = await context.supabase
       .from("extracted_documents")
-      .update(patch)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update(patch as any)
       .eq("id", data.documentId);
     if (updErr) throw new Error(updErr.message);
     return { ok: true };
