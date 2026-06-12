@@ -308,9 +308,20 @@ function InboxPage() {
                     <p className="text-sm font-semibold text-foreground">{selected.from_name ?? selected.from_address}</p>
                     <p className="text-xs text-muted-foreground">{selected.from_address}</p>
                   </div>
-                  <StatusBadge status={selected.extraction_status === "done" ? "approved" : "new"} />
+                  <div className="flex items-center gap-2">
+                    {selected.extraction_status !== "done" && (
+                      <button
+                        onClick={() => retryMutation.mutate(selected.id)}
+                        disabled={retryMutation.isPending}
+                        className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-foreground hover:bg-accent/10 disabled:opacity-50"
+                      >
+                        <RefreshCcw className={cn("size-3", retryMutation.isPending && "animate-spin")} />
+                        {retryMutation.isPending ? "Extracting…" : "Retry extraction"}
+                      </button>
+                    )}
+                    <StatusBadge status={selected.extraction_status === "done" ? "approved" : "new"} />
+                  </div>
                 </div>
-                <p className="mt-3 text-sm font-medium text-foreground text-pretty">{selected.subject ?? "(no subject)"}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   To {selected.to_address} · Received {formatReceived(selected.received_at)}
                 </p>
