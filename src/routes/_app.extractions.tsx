@@ -329,15 +329,25 @@ function ExtractionsPage() {
                     From {selectedDoc.inbound_emails?.from_name ?? selectedDoc.inbound_emails?.from_address}
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={runMutation.isPending}
-                  onClick={() => runMutation.mutate(selectedDoc.inbound_email_id)}
-                >
-                  <RefreshCcw className="size-4" />
-                  Re-run
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={runMutation.isPending}
+                    onClick={() => runMutation.mutate(selectedDoc.inbound_email_id)}
+                  >
+                    <RefreshCcw className="size-4" />
+                    Re-run
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={openRfqMutation.isPending}
+                    onClick={() => openRfqMutation.mutate(selectedDoc.id)}
+                  >
+                    {selectedDoc.status === "approved" ? "Open RFQ" : "Approve & build quote"}
+                    <ArrowRight className="size-4" />
+                  </Button>
+                </div>
               </div>
 
               {selectedDoc.summary && (
