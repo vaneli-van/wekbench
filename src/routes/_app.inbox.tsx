@@ -247,7 +247,8 @@ function InboxPage() {
                   {selected.type === "po" &&
                     (matchedOrder ? (
                       <Link
-                        to={`/orders/${matchedOrder.id}`}
+                        to="/orders/$id"
+                        params={{ id: matchedOrder.id }}
                         className="inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-foreground hover:opacity-90"
                       >
                         <ShoppingCart className="size-4" />
