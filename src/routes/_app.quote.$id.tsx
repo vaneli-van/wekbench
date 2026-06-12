@@ -2,11 +2,12 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { FileQuestion, AlertTriangle } from "lucide-react";
 import { QuoteBuilder } from "@/components/quote-builder";
 import { pipelineQuotes } from "@/lib/pipeline";
+import { getManualQuote } from "@/lib/manual-quotes";
 import { EmptyState } from "@/components/foundations/empty-state";
 
 function QuoteDetailPage() {
   const { id } = Route.useParams();
-  const quote = pipelineQuotes.find((q) => q.id === id);
+  const quote = pipelineQuotes.find((q) => q.id === id) ?? getManualQuote(id);
 
   if (!quote) {
     return (

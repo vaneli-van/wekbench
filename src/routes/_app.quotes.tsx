@@ -38,6 +38,8 @@ import {
   type PipelineQuote,
   type PipelineStageId,
 } from "@/lib/pipeline"
+import { useManualQuotes } from "@/lib/manual-quotes"
+import { NewQuoteDialog } from "@/components/new-quote-dialog"
 import { cn } from "@/lib/utils"
 
 type ViewMode = "kanban" | "list"
@@ -45,7 +47,10 @@ type SortKey = "value" | "daysInStage" | "buyer" | "updatedAt"
 
 function QuotesPage() {
   const navigate = useNavigate()
-  const [quotes, setQuotes] = useState<PipelineQuote[]>(pipelineQuotes)
+  const manualQuotes = useManualQuotes()
+  const [seededQuotes, setSeededQuotes] = useState<PipelineQuote[]>(pipelineQuotes)
+  const quotes = useMemo(() => [...manualQuotes, ...seededQuotes], [manualQuotes, seededQuotes])
+  const setQuotes = setSeededQuotes
   const [view, setView] = useState<ViewMode>("kanban")
   const [search, setSearch] = useState("")
   const [buyerFilter, setBuyerFilter] = useState<string[]>([])
@@ -56,7 +61,10 @@ function QuotesPage() {
   const [sortKey, setSortKey] = useState<SortKey>("updatedAt")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
 
-  const buyers = useMemo(() => Array.from(new Set(pipelineQuotes.map((q) => q.buyer))), [])
+  const buyers = useMemo(
+    () => Array.from(new Set([...manualQuotes, ...pipelineQuotes].map((q) => q.buyer))),
+    [manualQuotes],
+  )
 
   const filtered = useMemo(() => {
     return quotes.filter((q) => {
@@ -126,10 +134,7 @@ function QuotesPage() {
               {filtered.length} quotes · {formatCedi(filtered.reduce((s, q) => s + q.value, 0))} total value
             </p>
           </div>
-          <Button size="sm" onClick={() => navigate({ to: "/rfq/RFQ-2026-0418" })}>
-            <Plus className="size-4" />
-            New quote
-          </Button>
+          <NewQuoteDialog />
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
