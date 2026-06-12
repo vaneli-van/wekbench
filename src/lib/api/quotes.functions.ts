@@ -308,7 +308,7 @@ export const ensureQuoteForRfq = createServerFn({ method: "POST" })
     if (catalogIds.length > 0) {
       const { data: cats } = await supabase
         .from("catalog_items")
-        .select("id, unit_cost")
+        .select("id, unit_price")
         .in("id", catalogIds);
       for (const c of cats ?? []) catalogCosts[c.id] = c;
     }
@@ -316,6 +316,7 @@ export const ensureQuoteForRfq = createServerFn({ method: "POST" })
     const number = await nextQuoteNumber(supabase, rfq.workspace_id);
     const { data: q, error: qErr } = await supabase
       .from("quotes")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .insert({
         workspace_id: rfq.workspace_id,
         rfq_id: rfq.id,
@@ -325,7 +326,7 @@ export const ensureQuoteForRfq = createServerFn({ method: "POST" })
         margin_pct: data.defaultMarginPct,
         subtotal: 0,
         total: 0,
-      })
+      } as any)
       .select("id")
       .single();
     if (qErr || !q) throw new Error(qErr?.message ?? "Could not create quote");
@@ -333,7 +334,7 @@ export const ensureQuoteForRfq = createServerFn({ method: "POST" })
     if (items && items.length > 0) {
       const rows = items.map((li) => {
         const cat = li.matched_catalog_item_id ? catalogCosts[li.matched_catalog_item_id] : null;
-        const unitCost = cat?.unit_cost != null ? Number(cat.unit_cost) : null;
+        const unitCost = cat?.unit_price != null ? Number(cat.unit_price) : null;
         const unitPrice = computeUnitPrice(unitCost, data.defaultMarginPct);
         return {
           quote_id: q.id,
@@ -352,7 +353,8 @@ export const ensureQuoteForRfq = createServerFn({ method: "POST" })
           source: li.match_status === "matched" ? "catalog" : li.match_status === "sourcing" ? "sourcing" : "manual",
         };
       });
-      await supabase.from("quote_line_items").insert(rows);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await supabase.from("quote_line_items").insert(rows as any);
       await recomputeQuoteTotals(supabase, q.id);
     }
     return { quoteId: q.id };
