@@ -338,6 +338,7 @@ function StepProfile({
   company,
   role,
   country,
+  accountType,
   onFullName,
   onCompany,
   onRole,
@@ -347,11 +348,30 @@ function StepProfile({
   company: string;
   role: RoleOption | "";
   country: string;
+  accountType: AccountType;
   onFullName: (v: string) => void;
   onCompany: (v: string) => void;
   onRole: (v: RoleOption) => void;
   onCountry: (v: string) => void;
 }) {
+  const vendorRoles: RoleOption[] = [
+    "Sales Manager",
+    "Bid/Quotation Officer",
+    "Account Manager",
+    "Finance",
+    "Operations",
+    "Founder / Owner",
+    "Other",
+  ];
+  const buyerRoles: RoleOption[] = [
+    "Procurement Manager",
+    "Finance",
+    "Operations",
+    "Founder / Owner",
+    "Other",
+  ];
+  const roleOptions = accountType === "vendor" ? vendorRoles : buyerRoles;
+
   return (
     <div className="mx-auto w-full max-w-md">
       <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">
@@ -388,11 +408,9 @@ function StepProfile({
               <SelectValue placeholder="Pick a role" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Procurement Manager">Procurement Manager</SelectItem>
-              <SelectItem value="Finance">Finance</SelectItem>
-              <SelectItem value="Operations">Operations</SelectItem>
-              <SelectItem value="Founder / Owner">Founder / Owner</SelectItem>
-              <SelectItem value="Other">Other</SelectItem>
+              {roleOptions.map((r) => (
+                <SelectItem key={r} value={r}>{r}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
