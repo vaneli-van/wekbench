@@ -200,11 +200,18 @@ function safeJson(raw: string | null): unknown {
 /** Parse "Name <email@x.com>" or bare "email@x.com". */
 function parseAddress(input: string): { name: string | null; email: string | null } {
   if (!input) return { name: null, email: null };
-  const match = input.match(/^\s*(?:"?([^"<]*?)"?\s*)?<?([^<>\s]+@[^<>\s]+)>?\s*$/);
-  if (!match) return { name: null, email: input.trim().toLowerCase() || null };
-  const name = (match[1] || "").trim() || null;
-  const email = (match[2] || "").trim().toLowerCase() || null;
-  return { name, email };
+  const trimmed = input.trim();
+  // Prefer the angle-bracket form: "Name <email>"
+  const angle = trimmed.match(/^\s*(?:"?([^"]*?)"?\s*)?<([^<>\s]+@[^<>\s]+)>\s*$/);
+  if (angle) {
+    const name = (angle[1] || "").trim() || null;
+    const email = (angle[2] || "").trim().toLowerCase() || null;
+    return { name, email };
+  }
+  // Otherwise treat the whole string as a bare email address.
+  const bare = trimmed.match(/^([^<>\s]+@[^<>\s]+)$/);
+  if (bare) return { name: null, email: bare[1].toLowerCase() };
+  return { name: null, email: trimmed.toLowerCase() || null };
 }
 
 async function resolveWorkspaceForAddress(
