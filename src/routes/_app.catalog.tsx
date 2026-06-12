@@ -509,7 +509,7 @@ function TableView({
               </td>
               <td className="px-3 py-2.5 text-muted-foreground">{p.updatedAt}</td>
               <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                <RowActions />
+                <RowActions product={p} onOpen={onOpen} />
               </td>
             </tr>
           ))}
