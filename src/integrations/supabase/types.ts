@@ -14,6 +14,223 @@ export type Database = {
   }
   public: {
     Tables: {
+      catalog_items: {
+        Row: {
+          brand: string | null
+          created_at: string
+          currency: string | null
+          description: string
+          external_ref: string | null
+          id: string
+          lead_time_days: number | null
+          model: string | null
+          sku: string | null
+          source: Database["public"]["Enums"]["catalog_source"]
+          spec: Json
+          stock_qty: number | null
+          supplier_id: string | null
+          unit_price: number | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string
+          currency?: string | null
+          description: string
+          external_ref?: string | null
+          id?: string
+          lead_time_days?: number | null
+          model?: string | null
+          sku?: string | null
+          source?: Database["public"]["Enums"]["catalog_source"]
+          spec?: Json
+          stock_qty?: number | null
+          supplier_id?: string | null
+          unit_price?: number | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string
+          external_ref?: string | null
+          id?: string
+          lead_time_days?: number | null
+          model?: string | null
+          sku?: string | null
+          source?: Database["public"]["Enums"]["catalog_source"]
+          spec?: Json
+          stock_qty?: number | null
+          supplier_id?: string | null
+          unit_price?: number | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_items_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extracted_documents: {
+        Row: {
+          buyer_ref: string | null
+          confidence: number | null
+          created_at: string
+          currency: string | null
+          doc_type: Database["public"]["Enums"]["extracted_doc_type"]
+          due_date: string | null
+          error_message: string | null
+          id: string
+          inbound_email_id: string
+          raw_extraction: Json
+          status: Database["public"]["Enums"]["extracted_doc_status"]
+          summary: string | null
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          buyer_ref?: string | null
+          confidence?: number | null
+          created_at?: string
+          currency?: string | null
+          doc_type?: Database["public"]["Enums"]["extracted_doc_type"]
+          due_date?: string | null
+          error_message?: string | null
+          id?: string
+          inbound_email_id: string
+          raw_extraction?: Json
+          status?: Database["public"]["Enums"]["extracted_doc_status"]
+          summary?: string | null
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          buyer_ref?: string | null
+          confidence?: number | null
+          created_at?: string
+          currency?: string | null
+          doc_type?: Database["public"]["Enums"]["extracted_doc_type"]
+          due_date?: string | null
+          error_message?: string | null
+          id?: string
+          inbound_email_id?: string
+          raw_extraction?: Json
+          status?: Database["public"]["Enums"]["extracted_doc_status"]
+          summary?: string | null
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extracted_documents_inbound_email_id_fkey"
+            columns: ["inbound_email_id"]
+            isOneToOne: false
+            referencedRelation: "inbound_emails"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extracted_documents_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extracted_line_items: {
+        Row: {
+          created_at: string
+          document_id: string
+          id: string
+          line_no: number
+          lookup_note: string | null
+          match_confidence: number | null
+          match_status: Database["public"]["Enums"]["line_match_status"]
+          matched_catalog_item_id: string | null
+          requested_brand: string | null
+          requested_description: string
+          requested_model: string | null
+          requested_qty: number | null
+          requested_unit: string | null
+          target_price: number | null
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          id?: string
+          line_no: number
+          lookup_note?: string | null
+          match_confidence?: number | null
+          match_status?: Database["public"]["Enums"]["line_match_status"]
+          matched_catalog_item_id?: string | null
+          requested_brand?: string | null
+          requested_description: string
+          requested_model?: string | null
+          requested_qty?: number | null
+          requested_unit?: string | null
+          target_price?: number | null
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          id?: string
+          line_no?: number
+          lookup_note?: string | null
+          match_confidence?: number | null
+          match_status?: Database["public"]["Enums"]["line_match_status"]
+          matched_catalog_item_id?: string | null
+          requested_brand?: string | null
+          requested_description?: string
+          requested_model?: string | null
+          requested_qty?: number | null
+          requested_unit?: string | null
+          target_price?: number | null
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extracted_line_items_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "extracted_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extracted_line_items_matched_catalog_item_id_fkey"
+            columns: ["matched_catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extracted_line_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inbound_addresses: {
         Row: {
           active: boolean
@@ -64,6 +281,7 @@ export type Database = {
           created_at: string
           envelope: Json | null
           error_message: string | null
+          extraction_status: string
           from_address: string
           from_name: string | null
           headers: Json | null
@@ -83,6 +301,7 @@ export type Database = {
           created_at?: string
           envelope?: Json | null
           error_message?: string | null
+          extraction_status?: string
           from_address: string
           from_name?: string | null
           headers?: Json | null
@@ -102,6 +321,7 @@ export type Database = {
           created_at?: string
           envelope?: Json | null
           error_message?: string | null
+          extraction_status?: string
           from_address?: string
           from_name?: string | null
           headers?: Json | null
@@ -158,6 +378,107 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      supplier_contracts: {
+        Row: {
+          contract_type: Database["public"]["Enums"]["contract_type"]
+          created_at: string
+          ends_at: string | null
+          file_path: string | null
+          id: string
+          starts_at: string | null
+          supplier_id: string
+          terms: Json
+          title: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          contract_type?: Database["public"]["Enums"]["contract_type"]
+          created_at?: string
+          ends_at?: string | null
+          file_path?: string | null
+          id?: string
+          starts_at?: string | null
+          supplier_id: string
+          terms?: Json
+          title: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          contract_type?: Database["public"]["Enums"]["contract_type"]
+          created_at?: string
+          ends_at?: string | null
+          file_path?: string | null
+          id?: string
+          starts_at?: string | null
+          supplier_id?: string
+          terms?: Json
+          title?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_contracts_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_contracts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          contact_email: string | null
+          contact_name: string | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          status: Database["public"]["Enums"]["supplier_status"]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["supplier_status"]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          contact_email?: string | null
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["supplier_status"]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -243,12 +564,23 @@ export type Database = {
     }
     Enums: {
       app_role: "owner" | "admin" | "member"
+      catalog_source: "manual" | "supplier_upload" | "external_api"
+      contract_type: "master" | "sla" | "pricing" | "other"
+      extracted_doc_status: "pending_review" | "approved" | "rejected"
+      extracted_doc_type:
+        | "rfq"
+        | "purchase_order"
+        | "rfq_amendment"
+        | "po_amendment"
+        | "unknown"
       inbound_email_status:
         | "received"
         | "processing"
         | "processed"
         | "failed"
         | "ignored"
+      line_match_status: "matched" | "not_found" | "sourcing" | "manual"
+      supplier_status: "active" | "inactive"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -377,6 +709,16 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["owner", "admin", "member"],
+      catalog_source: ["manual", "supplier_upload", "external_api"],
+      contract_type: ["master", "sla", "pricing", "other"],
+      extracted_doc_status: ["pending_review", "approved", "rejected"],
+      extracted_doc_type: [
+        "rfq",
+        "purchase_order",
+        "rfq_amendment",
+        "po_amendment",
+        "unknown",
+      ],
       inbound_email_status: [
         "received",
         "processing",
@@ -384,6 +726,8 @@ export const Constants = {
         "failed",
         "ignored",
       ],
+      line_match_status: ["matched", "not_found", "sourcing", "manual"],
+      supplier_status: ["active", "inactive"],
     },
   },
 } as const
