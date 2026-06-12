@@ -683,7 +683,7 @@ export function QuoteBuilder({ quoteId, initialTitle, initialBuyer }: QuoteBuild
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEmailOpen(false)}>Cancel</Button>
-            <Button onClick={() => setEmailOpen(false)}>
+            <Button onClick={() => { setEmailOpen(false); toast.success("Quote sent to buyer"); }}>
               <Send className="size-4" />
               Send email
             </Button>
