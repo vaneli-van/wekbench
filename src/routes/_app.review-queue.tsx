@@ -133,8 +133,6 @@ function useReviewQueue(
       if (error) throw error;
       const term = filters.search.trim().toLowerCase();
       return ((data ?? []) as unknown as QueueRow[]).filter((d) => {
-        const passConf = (d.confidence ?? 0) < threshold || d.doc_type === "unknown";
-        if (!passConf) return false;
         if (!term) return true;
         const hay = `${d.inbound_emails?.subject ?? ""} ${d.inbound_emails?.from_address ?? ""} ${d.inbound_emails?.from_name ?? ""} ${d.buyer_ref ?? ""}`.toLowerCase();
         return hay.includes(term);
