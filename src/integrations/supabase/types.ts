@@ -388,6 +388,164 @@ export type Database = {
         }
         Relationships: []
       }
+      quote_line_items: {
+        Row: {
+          brand: string | null
+          catalog_item_id: string | null
+          created_at: string
+          description: string
+          extracted_line_item_id: string | null
+          id: string
+          line_no: number
+          margin_pct: number | null
+          model: string | null
+          notes: string | null
+          qty: number
+          quote_id: string
+          source: Database["public"]["Enums"]["quote_line_source"]
+          unit: string | null
+          unit_cost: number | null
+          unit_price: number | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          brand?: string | null
+          catalog_item_id?: string | null
+          created_at?: string
+          description: string
+          extracted_line_item_id?: string | null
+          id?: string
+          line_no: number
+          margin_pct?: number | null
+          model?: string | null
+          notes?: string | null
+          qty?: number
+          quote_id: string
+          source?: Database["public"]["Enums"]["quote_line_source"]
+          unit?: string | null
+          unit_cost?: number | null
+          unit_price?: number | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          brand?: string | null
+          catalog_item_id?: string | null
+          created_at?: string
+          description?: string
+          extracted_line_item_id?: string | null
+          id?: string
+          line_no?: number
+          margin_pct?: number | null
+          model?: string | null
+          notes?: string | null
+          qty?: number
+          quote_id?: string
+          source?: Database["public"]["Enums"]["quote_line_source"]
+          unit?: string | null
+          unit_cost?: number | null
+          unit_price?: number | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_line_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_extracted_line_item_id_fkey"
+            columns: ["extracted_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "extracted_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotes: {
+        Row: {
+          created_at: string
+          currency: string | null
+          id: string
+          margin_pct: number
+          notes: string | null
+          quote_number: string
+          rfq_id: string
+          sent_at: string | null
+          status: Database["public"]["Enums"]["quote_status"]
+          subtotal: number
+          total: number
+          updated_at: string
+          valid_until: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string | null
+          id?: string
+          margin_pct?: number
+          notes?: string | null
+          quote_number: string
+          rfq_id: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["quote_status"]
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          valid_until?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string | null
+          id?: string
+          margin_pct?: number
+          notes?: string | null
+          quote_number?: string
+          rfq_id?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["quote_status"]
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          valid_until?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_rfq_id_fkey"
+            columns: ["rfq_id"]
+            isOneToOne: false
+            referencedRelation: "rfqs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       review_notifications: {
         Row: {
           created_at: string
@@ -426,6 +584,72 @@ export type Database = {
           },
           {
             foreignKeyName: "review_notifications_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfqs: {
+        Row: {
+          buyer_company: string | null
+          buyer_email: string | null
+          buyer_name: string | null
+          buyer_ref: string | null
+          created_at: string
+          currency: string | null
+          due_date: string | null
+          extracted_document_id: string
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["rfq_status"]
+          summary: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          buyer_company?: string | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_ref?: string | null
+          created_at?: string
+          currency?: string | null
+          due_date?: string | null
+          extracted_document_id: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["rfq_status"]
+          summary?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          buyer_company?: string | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_ref?: string | null
+          created_at?: string
+          currency?: string | null
+          due_date?: string | null
+          extracted_document_id?: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["rfq_status"]
+          summary?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfqs_extracted_document_id_fkey"
+            columns: ["extracted_document_id"]
+            isOneToOne: true
+            referencedRelation: "extracted_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfqs_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -640,6 +864,9 @@ export type Database = {
         | "failed"
         | "ignored"
       line_match_status: "matched" | "not_found" | "sourcing" | "manual"
+      quote_line_source: "catalog" | "sourcing" | "manual"
+      quote_status: "draft" | "sent" | "accepted" | "declined" | "expired"
+      rfq_status: "open" | "quoted" | "won" | "lost"
       supplier_status: "active" | "inactive"
     }
     CompositeTypes: {
@@ -787,6 +1014,9 @@ export const Constants = {
         "ignored",
       ],
       line_match_status: ["matched", "not_found", "sourcing", "manual"],
+      quote_line_source: ["catalog", "sourcing", "manual"],
+      quote_status: ["draft", "sent", "accepted", "declined", "expired"],
+      rfq_status: ["open", "quoted", "won", "lost"],
       supplier_status: ["active", "inactive"],
     },
   },

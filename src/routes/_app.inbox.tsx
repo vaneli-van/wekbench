@@ -319,7 +319,22 @@ function InboxPage() {
                         {retryMutation.isPending ? "Extracting…" : "Retry extraction"}
                       </button>
                     )}
-                    <StatusBadge status={selected.extraction_status === "done" ? "approved" : "new"} />
+                    <span className={cn(
+                      "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium",
+                      selected.extraction_status === "done"
+                        ? "border-success/30 bg-success/10 text-success"
+                        : selected.extraction_status === "failed"
+                          ? "border-destructive/30 bg-destructive/10 text-destructive"
+                          : "border-border bg-muted text-muted-foreground",
+                    )}>
+                      {selected.extraction_status === "done"
+                        ? "Extracted"
+                        : selected.extraction_status === "failed"
+                          ? "Extraction failed"
+                          : selected.extraction_status === "running"
+                            ? "Extracting…"
+                            : "Awaiting extraction"}
+                    </span>
                   </div>
                 </div>
                 <p className="mt-3 text-sm font-medium text-foreground text-pretty">{selected.subject ?? "(no subject)"}</p>

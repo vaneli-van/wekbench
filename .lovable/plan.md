@@ -1,62 +1,55 @@
+# Close the extraction → quote workflow
 
-# AI email pipeline + catalog + supplier onboarding
+## What's actually broken (root causes)
 
-Build the full pipeline in three coordinated layers. All AI runs server-side through Lovable AI Gateway (no user API key needed).
+After walking the flow end-to-end with your latest email (the office-supplies RFQ, MP25-26/18453), here's what's actually wrong — not just symptoms:
 
-## 1. Schema (one migration)
+1. **Review Queue is empty even when docs are pending.** The queue filters out anything with `confidence ≥ threshold` (default 80%). Your two newest RFQs scored 92% and 100%, so they're hidden. The threshold should affect *highlighting/sorting*, not visibility.
+2. **Inbox detail says "Approved" after extraction finishes.** It's reading `extraction_status === "done"` and rendering the green "approved" badge. Extraction done ≠ document approved — those are two different states.
+3. **Extracted document is a dead end.** From the inbox / extractions list you can see the line items, but there's no link to an RFQ record and no "build quote" action. `/rfq/$id` and `/quote/$id` still use **mock seed data** (`src/lib/data.ts`, `pipelineQuotes`) — they are not connected to `extracted_documents` at all.
+4. **"Only shows products" — there are no `quotes` / `rfqs` tables in the DB.** Every list you see on `/quotes`, `/rfq/$id`, `/orders` is hard-coded sample data. That's why your real extraction "only shows up" on AI Extractions — it's the only page actually reading from `extracted_documents`.
+5. **No bridge to a quote.** Even if Review Queue worked, "Approve" today only flips `status='approved'` — it doesn't create a quote you can price.
 
-New tables, all workspace-scoped with RLS:
+## What I'll build
 
-- **`suppliers`** — `name`, `contact_email`, `contact_name`, `notes`, `status` (active/inactive)
-- **`supplier_contracts`** — `supplier_id`, `buyer_workspace_id`, `contract_type` (master/SLA/pricing), `title`, `file_path` (storage), `starts_at`, `ends_at`, `terms` (jsonb: payment terms, lead time, currency)
-- **`catalog_items`** — `workspace_id`, `supplier_id` (nullable), `sku`, `brand`, `model`, `description`, `spec` (jsonb), `unit_price` (numeric), `currency`, `lead_time_days`, `stock_qty`, `source` (manual/supplier_upload/external_api), `external_ref`
-- **`extracted_documents`** — links to an `inbound_email_id`; `doc_type` (rfq/po/rfq_amendment/po_amendment/unknown), `confidence`, `summary`, `buyer_ref`, `due_date`, `currency`, `raw_extraction` (jsonb), `status` (pending_review/approved/rejected)
-- **`extracted_line_items`** — `document_id`, `line_no`, `requested_description`, `requested_brand`, `requested_model`, `requested_qty`, `target_price`, `matched_catalog_item_id` (nullable), `match_confidence`, `match_status` (matched/not_found/sourcing), `lookup_note`
+### 1. Fix the small UX bugs (1 file each)
+- **Inbox badge:** replace `"approved"`/`"new"` with `"Extracted"` / `"Awaiting extraction"` so it stops claiming user approval.
+- **Review Queue:** show every `pending_review` document; keep the threshold slider but use it to *highlight* low-confidence rows and to filter to "needs attention" via a toggle, not to hide everything.
+- **AI Extractions detail:** add a "Convert to Quote" CTA and a link back to the source email.
 
-New storage bucket: `supplier-contracts` (private).
+### 2. Real RFQ & Quote records (DB migration)
+Add two tables that mirror the workflow:
 
-## 2. AI extraction (server)
+- `rfqs` — one row per approved extraction. Columns: `workspace_id`, `extracted_document_id`, `buyer_ref`, `summary`, `currency`, `due_date`, `status` (`open` / `quoted` / `lost` / `won`), buyer contact (from the inbound email).
+- `quotes` — one row per quote built from an RFQ. Columns: `workspace_id`, `rfq_id`, `quote_number`, `status` (`draft` / `sent` / `accepted` / `declined`), `currency`, `subtotal`, `margin_pct`, `total`, `valid_until`, `notes`.
+- `quote_line_items` — `quote_id`, `line_no`, `description`, `brand`, `model`, `qty`, `unit`, `unit_cost`, `unit_price`, `margin_pct`, `catalog_item_id` (nullable), `source` (`catalog` / `sourcing` / `manual`).
 
-New server function `extractInboundEmail(emailId)`:
+Each with GRANTs, RLS scoped to workspace membership, and `updated_at` triggers.
 
-1. Loads the `inbound_emails` row (text body, subject, attachments metadata).
-2. Calls Lovable AI (`google/gemini-3-flash-preview`) with a strict Zod `Output.object` schema:
-   - `doc_type` enum
-   - `confidence` 0–1
-   - `summary`, `buyer_ref`, `due_date`, `currency`
-   - `line_items[]`: `{description, brand?, model?, quantity, unit?, target_price?}`
-3. Inserts an `extracted_documents` row + N `extracted_line_items`.
-4. For each line item, calls `matchLineItem(workspaceId, item)`:
-   - Tries internal `catalog_items` (case-insensitive brand+model, then fuzzy description via `ilike`/trigram if available, otherwise simple normalized match).
-   - If no match → calls `externalCatalogLookup()` stub which today returns `{available: false, note: "Not in catalog — sourcing available within ~1 hour"}`. Interface is set up so a real distributor/OEM API can be dropped in later.
-   - Writes `matched_catalog_item_id`, `match_confidence`, `match_status`, `lookup_note`.
+### 3. Approve → RFQ → Quote pipeline (server fns)
+- **`approveExtraction`** (extend the existing review fn): when an extraction is approved, insert a row into `rfqs`, copy line items into a draft `quotes` + `quote_line_items` (pulling `unit_cost` from matched `catalog_items` where available, leaving sourcing items blank).
+- **`getRfq(id)`** / **`getQuote(id)`** / **`updateQuoteLineItem`** / **`sendQuote`** — real reads/writes for the detail pages.
 
-Triggered two ways:
-- Automatically from the inbound-email webhook right after the row is inserted (fire-and-forget; webhook still returns 200 fast).
-- Manually via a "Re-run extraction" button on the inbox detail.
+### 4. Wire the detail pages to real data
+- Rewrite `/rfq/$id` to fetch the real `rfqs` row + its `extracted_line_items`, with a "Build Quote" button if no quote exists yet, or "Open Quote" if one does.
+- Rewrite `/quote/$id` to load the real `quotes` row, render the existing `QuoteBuilder` against live line items (edit qty / unit cost / margin → live total), and add "Send Quote" (status `draft` → `sent`).
+- Rewrite `/quotes` list to read from `quotes` table (keep the existing UI; just swap the data source).
 
-## 3. UI
+### 5. Navigation
+- Inbox → Review Queue → Approve → lands on `/rfq/<id>`.
+- `/rfq/<id>` → "Build Quote" → creates draft if missing, navigates to `/quote/<id>`.
+- AI Extractions list adds a "View RFQ" link once approved.
 
-**Inbox detail** (`/_app/inbox`):
-- New "AI extraction" panel showing: doc type badge, confidence, summary, key fields, and an editable line-items table with match status per row (✓ matched / ⚠ not in catalog / 🔍 sourcing). Inline "Add to catalog" and "Approve → create RFQ/PO" actions.
+## What I'm intentionally not doing yet
+- Touching `/orders` — same gap exists (mock data) but is the next step; I'll tackle it after Quote works end-to-end so we don't merge too much at once.
+- Email-out of the quote PDF — the "Send Quote" action will mark status only; actual outbound email goes in the next round once you have your sending domain wired.
+- Catalog enrichment for sourcing items — they'll land in the draft quote blank, with a `sourcing` badge, for you to price manually.
 
-**Catalog** (extend existing `/_app/catalog`):
-- Hook the existing add-product UI to the new `catalog_items` table.
-- Show `supplier`, `lead_time`, `unit_price`, `stock_qty` columns.
+## Order of work
+1. DB migration for `rfqs` / `quotes` / `quote_line_items` (needs your approval).
+2. Server functions (`approveExtraction`, `getRfq`, `getQuote`, `updateQuoteLineItem`).
+3. Rewrite `/rfq/$id`, `/quote/$id`, `/quotes` to use real data.
+4. Fix Review Queue filter + inbox badge + add CTAs.
+5. Verify end-to-end with the MP25-26/18453 RFQ already in your DB.
 
-**Suppliers** (extend existing `/_app/suppliers`):
-- New supplier form asks: *Existing contract with buyer? SLA? Inventory list?*
-- Contract upload (PDF) → storage + `supplier_contracts` row with terms fields.
-- Inventory upload (CSV: sku, brand, model, description, unit_price, currency, lead_time_days, stock_qty) → bulk insert into `catalog_items` with `source='supplier_upload'`.
-
-## 4. Out of scope (intentional)
-- Real distributor/OEM API integrations — interface stub only.
-- Auto-creating RFQ/PO records from extractions (one-click action surfaced, but the actual create flow stays manual until you approve).
-- AI parsing of PDF/Excel attachments — v1 reads the email body. Attachment OCR can land next.
-
-## Approval gates
-- DB migration (one approval).
-- Storage bucket (created in same migration).
-- No new third-party secrets — Lovable AI Gateway uses the existing `LOVABLE_API_KEY`.
-
-Reply "go" to start with the migration, or tell me what to trim/add.
+OK to proceed? If yes I'll start with the migration (you'll get an approval prompt for the SQL), then ship the rest in one pass.
