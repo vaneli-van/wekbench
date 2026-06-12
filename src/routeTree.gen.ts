@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as TrackTokenRouteImport } from './routes/track.$token'
 import { Route as AppSuppliersRouteImport } from './routes/_app.suppliers'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppReviewQueueRouteImport } from './routes/_app.review-queue'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppQuotesRouteImport } from './routes/_app.quotes'
 import { Route as AppProductSearchRouteImport } from './routes/_app.product-search'
@@ -81,6 +82,11 @@ const AppSuppliersRoute = AppSuppliersRouteImport.update({
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReviewQueueRoute = AppReviewQueueRouteImport.update({
+  id: '/review-queue',
+  path: '/review-queue',
   getParentRoute: () => AppRoute,
 } as any)
 const AppReportsRoute = AppReportsRouteImport.update({
@@ -203,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/product-search': typeof AppProductSearchRoute
   '/quotes': typeof AppQuotesRoute
   '/reports': typeof AppReportsRoute
+  '/review-queue': typeof AppReviewQueueRoute
   '/settings': typeof AppSettingsRoute
   '/suppliers': typeof AppSuppliersRoute
   '/track/$token': typeof TrackTokenRoute
@@ -233,6 +240,7 @@ export interface FileRoutesByTo {
   '/product-search': typeof AppProductSearchRoute
   '/quotes': typeof AppQuotesRoute
   '/reports': typeof AppReportsRoute
+  '/review-queue': typeof AppReviewQueueRoute
   '/settings': typeof AppSettingsRoute
   '/suppliers': typeof AppSuppliersRoute
   '/track/$token': typeof TrackTokenRoute
@@ -265,6 +273,7 @@ export interface FileRoutesById {
   '/_app/product-search': typeof AppProductSearchRoute
   '/_app/quotes': typeof AppQuotesRoute
   '/_app/reports': typeof AppReportsRoute
+  '/_app/review-queue': typeof AppReviewQueueRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/suppliers': typeof AppSuppliersRoute
   '/track/$token': typeof TrackTokenRoute
@@ -297,6 +306,7 @@ export interface FileRouteTypes {
     | '/product-search'
     | '/quotes'
     | '/reports'
+    | '/review-queue'
     | '/settings'
     | '/suppliers'
     | '/track/$token'
@@ -327,6 +337,7 @@ export interface FileRouteTypes {
     | '/product-search'
     | '/quotes'
     | '/reports'
+    | '/review-queue'
     | '/settings'
     | '/suppliers'
     | '/track/$token'
@@ -358,6 +369,7 @@ export interface FileRouteTypes {
     | '/_app/product-search'
     | '/_app/quotes'
     | '/_app/reports'
+    | '/_app/review-queue'
     | '/_app/settings'
     | '/_app/suppliers'
     | '/track/$token'
@@ -444,6 +456,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/review-queue': {
+      id: '/_app/review-queue'
+      path: '/review-queue'
+      fullPath: '/review-queue'
+      preLoaderRoute: typeof AppReviewQueueRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/reports': {
@@ -603,6 +622,7 @@ interface AppRouteChildren {
   AppProductSearchRoute: typeof AppProductSearchRoute
   AppQuotesRoute: typeof AppQuotesRoute
   AppReportsRoute: typeof AppReportsRoute
+  AppReviewQueueRoute: typeof AppReviewQueueRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppSuppliersRoute: typeof AppSuppliersRoute
   AppInvoicesIdRoute: typeof AppInvoicesIdRoute
@@ -627,6 +647,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppProductSearchRoute: AppProductSearchRoute,
   AppQuotesRoute: AppQuotesRoute,
   AppReportsRoute: AppReportsRoute,
+  AppReviewQueueRoute: AppReviewQueueRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppSuppliersRoute: AppSuppliersRoute,
   AppInvoicesIdRoute: AppInvoicesIdRoute,
@@ -652,3 +673,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
