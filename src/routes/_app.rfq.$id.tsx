@@ -284,10 +284,10 @@ function RFQDetail({ rfq }: { rfq: (typeof rfqs)[number] }) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem>Reassign</DropdownMenuItem>
-                <DropdownMenuItem>Archive</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast.info("Reassign — coming soon")}>Reassign</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast.success("RFQ archived")}>Archive</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive focus:text-destructive">
+                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => toast.success("Marked as Lost")}>
                   Mark as Lost
                 </DropdownMenuItem>
               </DropdownMenuContent>
