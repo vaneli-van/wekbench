@@ -668,7 +668,11 @@ function AttachmentsList({ rfq }: { rfq: (typeof rfqs)[number] }) {
             <p className="truncate text-xs font-medium text-foreground">{f.name}</p>
             <p className="text-[11px] text-muted-foreground">{f.size}</p>
           </div>
-          <button className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+          <button
+            type="button"
+            onClick={() => toast.info(`Downloading ${f.name}…`)}
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
             <Download className="size-4" />
             <span className="sr-only">Download {f.name}</span>
           </button>
