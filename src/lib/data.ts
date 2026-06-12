@@ -729,7 +729,7 @@ export const buyers: Buyer[] = [
     openRfqs: 1,
     activeOrders: 0,
     lifetimeValue: "GH₵210,400,000",
-    rfqEmail: "meridian.rfq@toolbox.westernpremium.com",
+    rfqEmail: "meridian.rfq@inbox.wekbench.app",
   },
   {
     id: "B-2",
@@ -740,7 +740,7 @@ export const buyers: Buyer[] = [
     openRfqs: 1,
     activeOrders: 1,
     lifetimeValue: "GH₵156,800,000",
-    rfqEmail: "sahel.rfq@toolbox.westernpremium.com",
+    rfqEmail: "sahel.rfq@inbox.wekbench.app",
   },
   {
     id: "B-3",
@@ -751,7 +751,7 @@ export const buyers: Buyer[] = [
     openRfqs: 0,
     activeOrders: 1,
     lifetimeValue: "GH₵98,200,000",
-    rfqEmail: "equator.rfq@toolbox.westernpremium.com",
+    rfqEmail: "equator.rfq@inbox.wekbench.app",
   },
   {
     id: "B-4",
@@ -762,7 +762,7 @@ export const buyers: Buyer[] = [
     openRfqs: 1,
     activeOrders: 1,
     lifetimeValue: "GH₵142,600,000",
-    rfqEmail: "atlas.rfq@toolbox.westernpremium.com",
+    rfqEmail: "atlas.rfq@inbox.wekbench.app",
   },
   {
     id: "B-5",
@@ -773,7 +773,7 @@ export const buyers: Buyer[] = [
     openRfqs: 1,
     activeOrders: 0,
     lifetimeValue: "GH₵67,900,000",
-    rfqEmail: "coastal.rfq@toolbox.westernpremium.com",
+    rfqEmail: "coastal.rfq@inbox.wekbench.app",
   },
 ]
 
