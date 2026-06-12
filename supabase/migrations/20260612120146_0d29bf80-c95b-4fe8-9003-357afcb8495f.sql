@@ -1,0 +1,1 @@
+UPDATE public.inbound_addresses SET full_address = REPLACE(full_address, '@inbox.wekbench.com', '@wekbench.com') WHERE full_address LIKE '%@inbox.wekbench.com';
