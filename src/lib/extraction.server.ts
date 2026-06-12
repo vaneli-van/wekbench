@@ -200,6 +200,18 @@ export async function runExtractionForEmail(emailId: string): Promise<{ document
     throw new Error(`Extraction failed: ${msg}`);
   }
 
+  // Look up workspace auto-approve threshold (1.0 = disabled)
+  const { data: ws } = await supabaseAdmin
+    .from("workspaces")
+    .select("auto_approve_threshold, review_notify_email")
+    .eq("id", email.workspace_id)
+    .maybeSingle();
+  const threshold = Number(ws?.auto_approve_threshold ?? 1);
+  const autoApprove =
+    extraction.doc_type !== "unknown" &&
+    threshold < 1 &&
+    extraction.confidence >= threshold;
+
   const { data: doc, error: docErr } = await supabaseAdmin
     .from("extracted_documents")
     .insert({
@@ -212,7 +224,10 @@ export async function runExtractionForEmail(emailId: string): Promise<{ document
       due_date: extraction.due_date ?? null,
       currency: extraction.currency ?? null,
       raw_extraction: extraction as never,
-      status: "pending_review",
+      status: autoApprove ? "approved" : "pending_review",
+      ...(autoApprove
+        ? { reviewed_at: new Date().toISOString(), review_notes: "Auto-approved (high confidence)" }
+        : {}),
     })
     .select("id")
     .single();
@@ -248,6 +263,26 @@ export async function runExtractionForEmail(emailId: string): Promise<{ document
     if (liErr) console.error("[extraction] line items insert failed", liErr);
   }
 
+  // Notification for items that need review
+  if (!autoApprove) {
+    const subject = email.subject ?? "(no subject)";
+    const msg = `${extraction.doc_type === "unknown" ? "Unclassified" : extraction.doc_type.replace("_", " ")} from ${email.from_name ?? email.from_address}: "${subject}" — ${Math.round(extraction.confidence * 100)}% confidence`;
+    await supabaseAdmin.from("review_notifications").insert({
+      workspace_id: email.workspace_id,
+      document_id: doc.id,
+      kind: extraction.doc_type === "unknown" ? "unclassified" : "low_confidence",
+      message: msg,
+    });
+
+    // Email notification stub — surfaces the intent; real send wires up when
+    // the workspace has an email domain configured.
+    if (ws?.review_notify_email) {
+      console.log(
+        `[review-notify] would email ${ws.review_notify_email}: ${msg} (doc ${doc.id})`,
+      );
+    }
+  }
+
   await supabaseAdmin
     .from("inbound_emails")
     .update({ extraction_status: "done" })
@@ -255,3 +290,4 @@ export async function runExtractionForEmail(emailId: string): Promise<{ document
 
   return { documentId: doc.id };
 }
+
