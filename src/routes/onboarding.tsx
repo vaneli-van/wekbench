@@ -104,6 +104,17 @@ function OnboardingPage() {
     })();
   }, [user, navigate]);
 
+  // Clear role when user changes account type mid-flow
+  const initialAccountTypeRef = useRef<AccountType | null>(null);
+  useEffect(() => {
+    if (initialAccountTypeRef.current !== null && initialAccountTypeRef.current !== accountType) {
+      setRole("");
+    }
+    if (accountType !== null) {
+      initialAccountTypeRef.current = accountType;
+    }
+  }, [accountType]);
+
   const canContinue =
     step === 1 ? accountType !== null
     : step === 2 ? fullName.trim().length > 0 && company.trim().length > 0 && role !== "" && country !== ""
