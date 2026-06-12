@@ -165,8 +165,20 @@ function parseAddress(input: string): { name: string | null; email: string | nul
  */
 async function resolveWorkspaceForAddress(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _admin: any,
-  _to: string,
+  admin: any,
+  to: string,
 ): Promise<string | null> {
-  return null;
+  const normalized = to.trim().toLowerCase();
+  if (!normalized) return null;
+  const { data, error } = await admin
+    .from("inbound_addresses")
+    .select("workspace_id, active")
+    .eq("full_address", normalized)
+    .maybeSingle();
+  if (error) {
+    console.error("[inbound-email] address lookup failed", error);
+    return null;
+  }
+  if (!data || data.active === false) return null;
+  return data.workspace_id as string;
 }
