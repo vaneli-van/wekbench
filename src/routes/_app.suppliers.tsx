@@ -441,7 +441,7 @@ function SuppliersPage() {
       />
 
       <div className="mt-2 mb-4 text-xs text-muted-foreground">
-        <Link to="/catalog-items" className="text-primary hover:underline">
+        <Link to="/catalog" className="text-primary hover:underline">
           → View aggregated catalog
         </Link>
       </div>
