@@ -51,6 +51,7 @@ import { CommunicationUpdates } from "@/components/communication-updates"
 import { Timeline } from "@/components/timeline"
 import { rfqs, timeline } from "@/lib/data"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 /* ---------------------------------------------------------------- */
 /* Seeded extraction data — richer than the shared sample so the     */
