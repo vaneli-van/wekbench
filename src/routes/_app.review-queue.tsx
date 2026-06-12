@@ -249,6 +249,24 @@ function ReviewQueuePage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Bulk review failed"),
   });
 
+  const exportMutation = useMutation({
+    mutationFn: async () => {
+      const result = await exportAuditFn({ data: { workspaceId: workspaceId! } });
+      return result.csv;
+    },
+    onSuccess: (csv) => {
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `review-audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Audit log downloaded");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Export failed"),
+  });
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
       <PageHeader
