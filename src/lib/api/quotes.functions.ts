@@ -136,7 +136,7 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
         if (catalogIds.length > 0) {
           const { data: cats } = await supabase
             .from("catalog_items")
-            .select("id, unit_cost, unit_price, currency")
+            .select("id, unit_price, currency")
             .in("id", catalogIds);
           for (const c of cats ?? []) catalogCosts[c.id] = c;
         }
