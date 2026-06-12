@@ -157,34 +157,7 @@ function SettingsPage() {
 
 
         <TabsContent value="team" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Team members</CardTitle>
-              <CardDescription>People with access to this procurement workspace.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              {teamMembers.map((member, i) => (
-                <div key={member.email}>
-                  <div className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarFallback className="bg-muted text-xs">{member.initials}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{member.name}</p>
-                        <p className="text-xs text-muted-foreground">{member.email}</p>
-                      </div>
-                    </div>
-                    <span className="text-sm text-muted-foreground">{member.role}</span>
-                  </div>
-                  {i < teamMembers.length - 1 && <Separator />}
-                </div>
-              ))}
-              <Button variant="outline" className="mt-4">
-                Invite member
-              </Button>
-            </CardContent>
-          </Card>
+          <TeamCard />
         </TabsContent>
 
         <TabsContent value="quoting" className="space-y-6">
