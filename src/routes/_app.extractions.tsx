@@ -158,7 +158,9 @@ function ExtractionsPage() {
   const { data: pending } = usePendingEmails(workspaceId);
   const [selected, setSelected] = useState<string | null>(null);
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const runFn = useServerFn(runExtraction);
+  const approveFn = useServerFn(approveExtractionToRfq);
 
   const selectedDoc = useMemo(() => docs?.find((d) => d.id === selected) ?? null, [docs, selected]);
   const { data: lineItems } = useLineItems(selected);
@@ -181,6 +183,16 @@ function ExtractionsPage() {
       qc.invalidateQueries({ queryKey: ["pending-emails", workspaceId] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Extraction failed"),
+  });
+
+  const openRfqMutation = useMutation({
+    mutationFn: async (documentId: string) =>
+      approveFn({ data: { documentId, createQuote: true, defaultMarginPct: 20 } }),
+    onSuccess: ({ rfqId }) => {
+      qc.invalidateQueries({ queryKey: ["sidebar-counts", workspaceId] });
+      navigate({ to: "/rfq/$id", params: { id: rfqId } });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not open RFQ"),
   });
 
   return (
