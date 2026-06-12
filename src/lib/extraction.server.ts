@@ -176,8 +176,8 @@ export async function runExtractionForEmail(emailId: string): Promise<{ document
     .eq("id", emailId)
     .single();
   if (emailErr || !email) throw new Error(`Email not found: ${emailErr?.message ?? emailId}`);
-  if (!email.workspace_id) throw new Error("Email has no workspace");
-  const workspaceId: string = email.workspace_id;
+  if (!workspaceId) throw new Error("Email has no workspace");
+  const workspaceId: string = workspaceId;
 
 
   await supabaseAdmin
@@ -207,7 +207,7 @@ export async function runExtractionForEmail(emailId: string): Promise<{ document
   const { data: ws } = await supabaseAdmin
     .from("workspaces")
     .select("auto_approve_threshold, review_notify_email")
-    .eq("id", email.workspace_id)
+    .eq("id", workspaceId)
     .maybeSingle();
   const threshold = Number(ws?.auto_approve_threshold ?? 1);
   const autoApprove =
@@ -218,7 +218,7 @@ export async function runExtractionForEmail(emailId: string): Promise<{ document
   const { data: doc, error: docErr } = await supabaseAdmin
     .from("extracted_documents")
     .insert({
-      workspace_id: email.workspace_id,
+      workspace_id: workspaceId,
       inbound_email_id: email.id,
       doc_type: extraction.doc_type,
       confidence: extraction.confidence,
@@ -237,17 +237,17 @@ export async function runExtractionForEmail(emailId: string): Promise<{ document
   if (docErr || !doc) throw new Error(`Could not insert extraction: ${docErr?.message}`);
 
   // line items
-  if (extraction.line_items.length > 0 && email.workspace_id) {
+  if (extraction.line_items.length > 0 && workspaceId) {
     const rows = await Promise.all(
       extraction.line_items.map(async (li, idx) => {
-        const match = await matchLineItem(supabaseAdmin, email.workspace_id!, {
+        const match = await matchLineItem(supabaseAdmin, workspaceId, {
           description: li.description,
           brand: li.brand ?? null,
           model: li.model ?? null,
         });
         return {
           document_id: doc.id,
-          workspace_id: email.workspace_id,
+          workspace_id: workspaceId,
           line_no: idx + 1,
           requested_description: li.description,
           requested_brand: li.brand ?? null,
@@ -271,7 +271,7 @@ export async function runExtractionForEmail(emailId: string): Promise<{ document
     const subject = email.subject ?? "(no subject)";
     const msg = `${extraction.doc_type === "unknown" ? "Unclassified" : extraction.doc_type.replace("_", " ")} from ${email.from_name ?? email.from_address}: "${subject}" — ${Math.round(extraction.confidence * 100)}% confidence`;
     await supabaseAdmin.from("review_notifications").insert({
-      workspace_id: email.workspace_id,
+      workspace_id: workspaceId,
       document_id: doc.id,
       kind: extraction.doc_type === "unknown" ? "unclassified" : "low_confidence",
       message: msg,
