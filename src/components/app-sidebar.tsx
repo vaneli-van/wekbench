@@ -130,15 +130,16 @@ export function AppSidebar() {
       <div className="border-t border-sidebar-border p-2">
         <div className="flex items-center gap-2.5 rounded-md px-2 py-1.5">
           <div className="flex size-8 items-center justify-center rounded-md bg-secondary text-secondary-foreground text-xs font-semibold">
-            SA
+            {profile?.initials ?? "—"}
           </div>
           <div className="leading-tight min-w-0 flex-1">
-            <p className="text-sm font-medium text-sidebar-accent-foreground truncate">Samuel Adeyemi</p>
-            <p className="text-[11px] text-sidebar-foreground/70 truncate">Vendor Sales Lead</p>
+            <p className="text-sm font-medium text-sidebar-accent-foreground truncate">
+              {profile?.fullName ?? "\u00A0"}
+            </p>
+            <p className="text-[11px] text-sidebar-foreground/70 truncate">
+              {profile?.role ?? (profile?.accountType === "buyer" ? "Buyer" : "Vendor")}
+            </p>
           </div>
-          <span className="rounded border border-sidebar-border px-1.5 py-0.5 text-[10px] font-semibold text-sidebar-foreground">
-            Pro
-          </span>
         </div>
       </div>
     </aside>
