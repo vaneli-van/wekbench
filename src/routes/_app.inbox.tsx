@@ -225,10 +225,13 @@ function InboxPage() {
                         Open {selected.detectedRef}
                       </Link>
                     ) : (
-                      <button className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
+                      <Link
+                        to="/quotes"
+                        className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                      >
                         <Plus className="size-4" />
                         Create RFQ
-                      </button>
+                      </Link>
                     ))}
 
                   {selected.type === "amendment" && (
