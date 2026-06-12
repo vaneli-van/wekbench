@@ -307,20 +307,33 @@ function ReviewQueuePage() {
   };
 
   const reviewMutation = useMutation({
-    mutationFn: async (vars: { action: "approve" | "reject" }) =>
-      reviewFn({
-        data: {
-          documentId: selectedDoc!.id,
-          action: vars.action,
-          docType: draftType ?? undefined,
-          notes: notes || undefined,
-        },
-      }),
-    onSuccess: (_d, vars) => {
-      toast.success(vars.action === "approve" ? "Approved — ready to create RFQ/PO" : "Rejected");
+    mutationFn: async (vars: { action: "approve" | "reject" }) => {
+      if (vars.action === "approve") {
+        return approveToRfqFn({
+          data: {
+            documentId: selectedDoc!.id,
+            docType: draftType ?? undefined,
+            notes: notes || undefined,
+            createQuote: true,
+            defaultMarginPct: 20,
+          },
+        });
+      }
+      return reviewFn({
+        data: { documentId: selectedDoc!.id, action: "reject", docType: draftType ?? undefined, notes: notes || undefined },
+      });
+    },
+    onSuccess: (result, vars) => {
       qc.invalidateQueries({ queryKey: ["review-queue", workspaceId] });
       qc.invalidateQueries({ queryKey: ["extracted-documents", workspaceId] });
-      setSelected(null);
+      qc.invalidateQueries({ queryKey: ["sidebar-counts", workspaceId] });
+      if (vars.action === "approve" && result && "rfqId" in result && result.rfqId) {
+        toast.success("Approved — opening RFQ");
+        navigate({ to: "/rfq/$id", params: { id: result.rfqId } });
+      } else {
+        toast.success("Rejected");
+        setSelected(null);
+      }
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not save review"),
   });
