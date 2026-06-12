@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      inbound_addresses: {
+        Row: {
+          active: boolean
+          buyer_label: string | null
+          created_at: string
+          full_address: string
+          id: string
+          label: string | null
+          local_part: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          active?: boolean
+          buyer_label?: string | null
+          created_at?: string
+          full_address: string
+          id?: string
+          label?: string | null
+          local_part: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          active?: boolean
+          buyer_label?: string | null
+          created_at?: string
+          full_address?: string
+          id?: string
+          label?: string | null
+          local_part?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbound_addresses_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inbound_emails: {
         Row: {
           attachments: Json
