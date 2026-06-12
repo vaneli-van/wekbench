@@ -14,8 +14,8 @@ export function PageHeader({
   className?: string
 }) {
   return (
-    <div className={cn("flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between", className)}>
-      <div className="min-w-0">
+    <div className={cn("flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4", className)}>
+      <div className="min-w-0 flex-1">
         {breadcrumb && breadcrumb.length > 0 && (
           <nav className="mb-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             {breadcrumb.map((crumb, i) => (
@@ -32,10 +32,10 @@ export function PageHeader({
             ))}
           </nav>
         )}
-        <h1 className="text-pretty text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
-        {description && <p className="mt-1 text-sm text-muted-foreground text-pretty">{description}</p>}
+        <h1 className="text-pretty text-xl font-semibold leading-tight tracking-tight text-foreground sm:text-2xl">{title}</h1>
+        {description && <p className="mt-1 text-sm leading-relaxed text-muted-foreground text-pretty">{description}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2 shrink-0">{actions}</div>}
+      {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
     </div>
   )
 }
