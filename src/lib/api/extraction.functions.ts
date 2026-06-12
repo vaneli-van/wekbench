@@ -123,3 +123,71 @@ export const updateExtractedLineItem = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const exportReviewAuditLog = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        workspaceId: z.string().uuid(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("extracted_documents")
+      .select(
+        "id, doc_type, status, confidence, buyer_ref, reviewed_at, review_notes, inbound_emails(subject, from_address, from_name), profiles:reviewed_by(full_name, email:raw_user_meta_data->>email)",
+      )
+      .eq("workspace_id", data.workspaceId)
+      .in("status", ["approved", "rejected"])
+      .order("reviewed_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const headers = [
+      "document_id",
+      "doc_type",
+      "decision",
+      "confidence",
+      "buyer_ref",
+      "email_subject",
+      "email_from",
+      "reviewer_name",
+      "reviewer_email",
+      "reviewed_at",
+      "review_notes",
+    ];
+
+    const escape = (v: string | null | undefined) => {
+      if (v == null) return "";
+      const s = String(v);
+      if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    };
+
+    const lines = [headers.join(",")];
+    for (const r of rows ?? []) {
+      const doc = r as Record<string, unknown>;
+      const inboundEmails = (doc.inbound_emails ?? {}) as Record<string, unknown>;
+      const profiles = (doc.profiles ?? {}) as Record<string, unknown>;
+      lines.push(
+        [
+          escape(doc.id as string),
+          escape(doc.doc_type as string),
+          escape(doc.status as string),
+          escape(doc.confidence != null ? String(doc.confidence) : ""),
+          escape(doc.buyer_ref as string | null),
+          escape(inboundEmails.subject as string | null),
+          escape(inboundEmails.from_name as string | null) || escape(inboundEmails.from_address as string | null),
+          escape(profiles.full_name as string | null),
+          escape(profiles.email as string | null),
+          escape(doc.reviewed_at as string | null),
+          escape(doc.review_notes as string | null),
+        ].join(","),
+      );
+    }
+
+    return { csv: lines.join("\r\n") };
+  });
