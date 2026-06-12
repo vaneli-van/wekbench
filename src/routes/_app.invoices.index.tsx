@@ -100,10 +100,10 @@ function InvoicesPage() {
                           <FileText className="size-4" />
                         </Link>
                       </Button>
-                      <Button variant="ghost" size="icon" className="size-8" aria-label="Download invoice">
+                      <Button variant="ghost" size="icon" className="size-8" aria-label="Download invoice" onClick={() => toast.info(`Downloading INV-${o.id.replace("ORD-", "")}…`)}>
                         <Download className="size-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="size-8" aria-label="Send invoice">
+                      <Button variant="ghost" size="icon" className="size-8" aria-label="Send invoice" onClick={() => toast.success(`Invoice sent to ${o.buyer}`)}>
                         <Send className="size-4" />
                       </Button>
                     </div>
