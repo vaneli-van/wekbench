@@ -24,6 +24,7 @@ import { Route as AppProductSearchRouteImport } from './routes/_app.product-sear
 import { Route as AppIntegrationsRouteImport } from './routes/_app.integrations'
 import { Route as AppInboxRouteImport } from './routes/_app.inbox'
 import { Route as AppFoundationsRouteImport } from './routes/_app.foundations'
+import { Route as AppExtractionsRouteImport } from './routes/_app.extractions'
 import { Route as AppEmailCaptureRouteImport } from './routes/_app.email-capture'
 import { Route as AppDocumentsRouteImport } from './routes/_app.documents'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
@@ -111,6 +112,11 @@ const AppFoundationsRoute = AppFoundationsRouteImport.update({
   path: '/foundations',
   getParentRoute: () => AppRoute,
 } as any)
+const AppExtractionsRoute = AppExtractionsRouteImport.update({
+  id: '/extractions',
+  path: '/extractions',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppEmailCaptureRoute = AppEmailCaptureRouteImport.update({
   id: '/email-capture',
   path: '/email-capture',
@@ -183,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
   '/email-capture': typeof AppEmailCaptureRoute
+  '/extractions': typeof AppExtractionsRoute
   '/foundations': typeof AppFoundationsRoute
   '/inbox': typeof AppInboxRoute
   '/integrations': typeof AppIntegrationsRoute
@@ -211,6 +218,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
   '/email-capture': typeof AppEmailCaptureRoute
+  '/extractions': typeof AppExtractionsRoute
   '/foundations': typeof AppFoundationsRoute
   '/inbox': typeof AppInboxRoute
   '/integrations': typeof AppIntegrationsRoute
@@ -241,6 +249,7 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/documents': typeof AppDocumentsRoute
   '/_app/email-capture': typeof AppEmailCaptureRoute
+  '/_app/extractions': typeof AppExtractionsRoute
   '/_app/foundations': typeof AppFoundationsRoute
   '/_app/inbox': typeof AppInboxRoute
   '/_app/integrations': typeof AppIntegrationsRoute
@@ -271,6 +280,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/documents'
     | '/email-capture'
+    | '/extractions'
     | '/foundations'
     | '/inbox'
     | '/integrations'
@@ -299,6 +309,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/documents'
     | '/email-capture'
+    | '/extractions'
     | '/foundations'
     | '/inbox'
     | '/integrations'
@@ -328,6 +339,7 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/documents'
     | '/_app/email-capture'
+    | '/_app/extractions'
     | '/_app/foundations'
     | '/_app/inbox'
     | '/_app/integrations'
@@ -464,6 +476,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFoundationsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/extractions': {
+      id: '/_app/extractions'
+      path: '/extractions'
+      fullPath: '/extractions'
+      preLoaderRoute: typeof AppExtractionsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/email-capture': {
       id: '/_app/email-capture'
       path: '/email-capture'
@@ -557,6 +576,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppDocumentsRoute: typeof AppDocumentsRoute
   AppEmailCaptureRoute: typeof AppEmailCaptureRoute
+  AppExtractionsRoute: typeof AppExtractionsRoute
   AppFoundationsRoute: typeof AppFoundationsRoute
   AppInboxRoute: typeof AppInboxRoute
   AppIntegrationsRoute: typeof AppIntegrationsRoute
@@ -579,6 +599,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppDocumentsRoute: AppDocumentsRoute,
   AppEmailCaptureRoute: AppEmailCaptureRoute,
+  AppExtractionsRoute: AppExtractionsRoute,
   AppFoundationsRoute: AppFoundationsRoute,
   AppInboxRoute: AppInboxRoute,
   AppIntegrationsRoute: AppIntegrationsRoute,
