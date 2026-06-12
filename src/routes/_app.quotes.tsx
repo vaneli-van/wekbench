@@ -340,7 +340,7 @@ function ListView({
             {sorted.map((q) => (
               <tr
                 key={q.id}
-                onClick={onOpen}
+                onClick={() => onOpen(q)}
                 className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/40"
               >
                 <td className="px-3 py-2.5">
