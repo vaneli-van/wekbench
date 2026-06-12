@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useServerFn } from "@tanstack/react-start"
 import { formatDistanceToNow } from "date-fns"
 import { toast } from "sonner"
+import { runExtraction } from "@/lib/api/extraction.functions"
 import {
   Paperclip,
   FileText,
@@ -188,6 +190,21 @@ function InboxPage() {
   const selectedType = docTypeToInboxType(selectedDoc)
   const selectedAttachments = getAttachments(selected?.attachments)
 
+  const queryClient = useQueryClient()
+  const runExtractionFn = useServerFn(runExtraction)
+  const retryMutation = useMutation({
+    mutationFn: (emailId: string) => runExtractionFn({ data: { emailId } }),
+    onSuccess: () => {
+      toast.success("Extraction completed")
+      queryClient.invalidateQueries({ queryKey: ["inbox-emails"] })
+      queryClient.invalidateQueries({ queryKey: ["sidebar-counts"] })
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : "Extraction failed"
+      toast.error(msg)
+    },
+  })
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
       <PageHeader
@@ -291,7 +308,19 @@ function InboxPage() {
                     <p className="text-sm font-semibold text-foreground">{selected.from_name ?? selected.from_address}</p>
                     <p className="text-xs text-muted-foreground">{selected.from_address}</p>
                   </div>
-                  <StatusBadge status={selected.extraction_status === "done" ? "approved" : "new"} />
+                  <div className="flex items-center gap-2">
+                    {selected.extraction_status !== "done" && (
+                      <button
+                        onClick={() => retryMutation.mutate(selected.id)}
+                        disabled={retryMutation.isPending}
+                        className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-foreground hover:bg-accent/10 disabled:opacity-50"
+                      >
+                        <RefreshCcw className={cn("size-3", retryMutation.isPending && "animate-spin")} />
+                        {retryMutation.isPending ? "Extracting…" : "Retry extraction"}
+                      </button>
+                    )}
+                    <StatusBadge status={selected.extraction_status === "done" ? "approved" : "new"} />
+                  </div>
                 </div>
                 <p className="mt-3 text-sm font-medium text-foreground text-pretty">{selected.subject ?? "(no subject)"}</p>
                 <p className="mt-1 text-xs text-muted-foreground">

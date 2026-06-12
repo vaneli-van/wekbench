@@ -21,22 +21,22 @@ import {
 import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/wordmark";
 import { useProfile } from "@/hooks/use-profile";
+import { useSidebarCounts } from "@/hooks/use-sidebar-counts";
 
-const navGroups: {
-  label: string;
-  items: { name: string; href: string; icon: React.ElementType; badge?: number }[];
-}[] = [
+type NavItem = { name: string; href: string; icon: React.ElementType; badgeKey?: "inbox" | "quotes" | "orders" | "reviewQueue" };
+
+const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Workflow",
     items: [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { name: "My Wekbench", href: "/inbox", icon: Inbox, badge: 3 },
+      { name: "My Wekbench", href: "/inbox", icon: Inbox, badgeKey: "inbox" },
       { name: "AI Extractions", href: "/extractions", icon: Sparkles },
-      { name: "Review Queue", href: "/review-queue", icon: ShieldCheck },
-      { name: "Quotes", href: "/quotes", icon: FileText, badge: 1 },
+      { name: "Review Queue", href: "/review-queue", icon: ShieldCheck, badgeKey: "reviewQueue" },
+      { name: "Quotes", href: "/quotes", icon: FileText, badgeKey: "quotes" },
       { name: "Product Search", href: "/product-search", icon: Search },
       { name: "Catalog", href: "/catalog", icon: Library },
-      { name: "Orders", href: "/orders", icon: Package, badge: 2 },
+      { name: "Orders", href: "/orders", icon: Package, badgeKey: "orders" },
       { name: "Invoices", href: "/invoices", icon: ReceiptText },
       { name: "Documents", href: "/documents", icon: FolderArchive },
     ],
@@ -62,6 +62,7 @@ const navGroups: {
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { data: profile } = useProfile();
+  const counts = useSidebarCounts();
   const isActive = (href: string) =>
     href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
 
@@ -110,7 +111,7 @@ export function AppSidebar() {
                         )}
                       />
                       <span className="flex-1">{item.name}</span>
-                      {item.badge ? (
+                      {item.badgeKey && counts[item.badgeKey] > 0 ? (
                         <span
                           className={cn(
                             "flex items-center justify-center min-w-5 h-5 px-1.5 rounded text-[10px] font-semibold tabular-nums",
@@ -119,7 +120,7 @@ export function AppSidebar() {
                               : "bg-sidebar-accent text-sidebar-foreground",
                           )}
                         >
-                          {item.badge}
+                          {counts[item.badgeKey]}
                         </span>
                       ) : null}
                     </Link>
