@@ -120,6 +120,36 @@ function DeltaIcon({ dir }: { dir: "up" | "down" | "flat" }) {
   return <span className="block h-px w-3 bg-muted-foreground" />
 }
 
+function CreateQuoteButton() {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" className="gap-1">
+            <Plus className="size-4" />
+            New quote
+            <ChevronDown className="size-3 opacity-60" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => setOpen(true)}>
+            <PenLine className="size-4" />
+            Create manually
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/email-capture" className="gap-2">
+              <Mail className="size-4" />
+              Upload via email
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <NewQuoteDialog open={open} onOpenChange={setOpen} />
+    </>
+  )
+}
+
 function DashboardPage() {
   const { data: profile } = useProfile();
   const hour = new Date().getHours();
