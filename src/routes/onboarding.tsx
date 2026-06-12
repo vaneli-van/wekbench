@@ -98,7 +98,7 @@ function OnboardingPage() {
 
   const canContinue =
     step === 1 ? accountType !== null
-    : step === 2 ? fullName.trim().length > 0 && company.trim().length > 0 && role !== ""
+    : step === 2 ? fullName.trim().length > 0 && company.trim().length > 0 && role !== "" && country !== ""
     : demoChoice !== null;
 
   const handleNext = async () => {
