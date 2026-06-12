@@ -280,12 +280,47 @@ function ReviewQueuePage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[420px_1fr]">
         <Card className="overflow-hidden p-0">
-          <div className="border-b border-border px-4 py-3 text-sm font-medium">
-            Awaiting review
-            {queue && (
-              <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                {queue.length}
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                className="size-4 accent-primary"
+                checked={allSelected}
+                ref={(el) => { if (el) el.indeterminate = someSelected; }}
+                onChange={toggleSelectAll}
+                disabled={!queue?.length}
+                aria-label="Select all"
+              />
+              <span className="text-sm font-medium">
+                Awaiting review
+                {queue && (
+                  <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                    {queue.length}
+                  </span>
+                )}
               </span>
+            </div>
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{selectedIds.size} selected</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={bulkReviewMutation.isPending}
+                  onClick={() => bulkReviewMutation.mutate({ action: "reject" })}
+                >
+                  <XCircle className="size-3.5" />
+                  Reject
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={bulkReviewMutation.isPending}
+                  onClick={() => bulkReviewMutation.mutate({ action: "approve" })}
+                >
+                  <CheckCircle2 className="size-3.5" />
+                  Approve
+                </Button>
+              </div>
             )}
           </div>
           {wsLoading || isLoading ? (
@@ -304,14 +339,20 @@ function ReviewQueuePage() {
               {queue.map((d) => {
                 const meta = docMeta[d.doc_type];
                 const active = selected === d.id;
+                const checked = selectedIds.has(d.id);
                 return (
-                  <li key={d.id}>
+                  <li key={d.id} className={cn("flex items-start gap-2 px-4 py-3", active && "bg-muted/60")}>
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 size-4 accent-primary"
+                      checked={checked}
+                      onChange={() => toggleSelect(d.id)}
+                      aria-label={`Select ${d.inbound_emails?.subject ?? "document"}`}
+                      onClick={(e) => e.stopPropagation()}
+                    />
                     <button
                       onClick={() => setSelected(d.id)}
-                      className={cn(
-                        "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40",
-                        active && "bg-muted/60",
-                      )}
+                      className="flex flex-1 items-start gap-3 text-left transition-colors hover:bg-muted/40"
                     >
                       <FileText className="mt-0.5 size-4 text-muted-foreground" />
                       <div className="min-w-0 flex-1">
