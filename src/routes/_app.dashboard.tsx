@@ -14,7 +14,19 @@ import {
   ReceiptText,
   Mailbox,
   ArrowRight,
+  Plus,
+  ChevronDown,
+  Mail,
+  PenLine,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { NewQuoteDialog } from "@/components/new-quote-dialog"
 
 import { StatusBadge } from "@/components/status-badge"
 import { FxRatesCard } from "@/components/fx-rates-card"
