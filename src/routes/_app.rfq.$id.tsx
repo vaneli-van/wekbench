@@ -571,7 +571,11 @@ function DocumentsTab({ rfq }: { rfq: (typeof rfqs)[number] }) {
                 {d.kind} · {d.size}
               </p>
             </div>
-            <button className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <button
+              type="button"
+              onClick={() => toast.info(`Downloading ${d.name}…`)}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
               <Download className="size-4" />
               <span className="sr-only">Download {d.name}</span>
             </button>
