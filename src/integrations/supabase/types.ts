@@ -388,6 +388,51 @@ export type Database = {
         }
         Relationships: []
       }
+      review_notifications: {
+        Row: {
+          created_at: string
+          document_id: string
+          id: string
+          kind: string
+          message: string
+          read_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          id?: string
+          kind?: string
+          message: string
+          read_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          id?: string
+          kind?: string
+          message?: string
+          read_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_notifications_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "extracted_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_notifications_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_contracts: {
         Row: {
           contract_type: Database["public"]["Enums"]["contract_type"]
@@ -524,34 +569,40 @@ export type Database = {
       workspaces: {
         Row: {
           account_type: string
+          auto_approve_threshold: number
           country: string | null
           created_at: string
           id: string
           name: string
           onboarding_completed_at: string | null
           owner_id: string
+          review_notify_email: string | null
           seeded_demo: boolean
           updated_at: string
         }
         Insert: {
           account_type?: string
+          auto_approve_threshold?: number
           country?: string | null
           created_at?: string
           id?: string
           name?: string
           onboarding_completed_at?: string | null
           owner_id: string
+          review_notify_email?: string | null
           seeded_demo?: boolean
           updated_at?: string
         }
         Update: {
           account_type?: string
+          auto_approve_threshold?: number
           country?: string | null
           created_at?: string
           id?: string
           name?: string
           onboarding_completed_at?: string | null
           owner_id?: string
+          review_notify_email?: string | null
           seeded_demo?: boolean
           updated_at?: string
         }

@@ -200,3 +200,51 @@ export const exportReviewAuditLog = createServerFn({ method: "POST" })
 
     return { csv: lines.join("\r\n") };
   });
+
+export const updateReviewSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        workspaceId: z.string().uuid(),
+        autoApproveThreshold: z.number().min(0).max(1),
+        notifyEmail: z.string().email().max(255).nullable(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("workspaces")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update({
+        auto_approve_threshold: data.autoApproveThreshold,
+        review_notify_email: data.notifyEmail,
+      } as any)
+      .eq("id", data.workspaceId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const markNotificationsRead = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        workspaceId: z.string().uuid(),
+        ids: z.array(z.string().uuid()).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    let q = context.supabase
+      .from("review_notifications")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update({ read_at: new Date().toISOString() } as any)
+      .eq("workspace_id", data.workspaceId)
+      .is("read_at", null);
+    if (data.ids && data.ids.length > 0) q = q.in("id", data.ids);
+    const { error } = await q;
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+

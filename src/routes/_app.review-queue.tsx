@@ -34,7 +34,21 @@ import { EmptyState } from "@/components/foundations/empty-state";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspaceId } from "@/hooks/use-workspace";
-import { reviewExtraction, bulkReviewExtractions, exportReviewAuditLog } from "@/lib/api/extraction.functions";
+import {
+  reviewExtraction,
+  bulkReviewExtractions,
+  exportReviewAuditLog,
+  updateReviewSettings,
+  markNotificationsRead,
+} from "@/lib/api/extraction.functions";
+import { Input } from "@/components/ui/input";
+import { Bell, Mail, Settings as SettingsIcon } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
 
 type DocType = "rfq" | "purchase_order" | "rfq_amendment" | "po_amendment" | "unknown";
 type LineMatch = "matched" | "not_found" | "sourcing" | "manual";
@@ -88,24 +102,43 @@ const docMeta: Record<DocType, { label: string; tone: string }> = {
   unknown: { label: "Unclassified", tone: "bg-muted text-muted-foreground border-border" },
 };
 
-function useReviewQueue(workspaceId: string | null | undefined, threshold: number) {
+type Filters = {
+  docType: DocType | "all";
+  search: string;
+  from: string; // YYYY-MM-DD
+  to: string;
+};
+
+function useReviewQueue(
+  workspaceId: string | null | undefined,
+  threshold: number,
+  filters: Filters,
+) {
   return useQuery({
-    queryKey: ["review-queue", workspaceId, threshold],
+    queryKey: ["review-queue", workspaceId, threshold, filters],
     enabled: !!workspaceId,
     queryFn: async (): Promise<QueueRow[]> => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("extracted_documents")
         .select(
           "id, inbound_email_id, doc_type, confidence, summary, buyer_ref, due_date, currency, status, created_at, review_notes, inbound_emails(subject, from_address, from_name)",
         )
         .eq("workspace_id", workspaceId!)
-        .eq("status", "pending_review")
-        .order("confidence", { ascending: true, nullsFirst: true })
-        .order("created_at", { ascending: false });
+        .eq("status", "pending_review");
+      if (filters.docType !== "all") q = q.eq("doc_type", filters.docType);
+      if (filters.from) q = q.gte("created_at", `${filters.from}T00:00:00Z`);
+      if (filters.to) q = q.lte("created_at", `${filters.to}T23:59:59Z`);
+      q = q.order("confidence", { ascending: true, nullsFirst: true }).order("created_at", { ascending: false });
+      const { data, error } = await q;
       if (error) throw error;
-      return ((data ?? []) as unknown as QueueRow[]).filter(
-        (d) => (d.confidence ?? 0) < threshold || d.doc_type === "unknown",
-      );
+      const term = filters.search.trim().toLowerCase();
+      return ((data ?? []) as unknown as QueueRow[]).filter((d) => {
+        const passConf = (d.confidence ?? 0) < threshold || d.doc_type === "unknown";
+        if (!passConf) return false;
+        if (!term) return true;
+        const hay = `${d.inbound_emails?.subject ?? ""} ${d.inbound_emails?.from_address ?? ""} ${d.inbound_emails?.from_name ?? ""} ${d.buyer_ref ?? ""}`.toLowerCase();
+        return hay.includes(term);
+      });
     },
   });
 }
@@ -125,6 +158,55 @@ function useLineItems(docId: string | null) {
     },
   });
 }
+
+type NotificationRow = {
+  id: string;
+  document_id: string;
+  message: string;
+  kind: string;
+  read_at: string | null;
+  created_at: string;
+};
+
+function useNotifications(workspaceId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["review-notifications", workspaceId],
+    enabled: !!workspaceId,
+    refetchInterval: 30_000,
+    queryFn: async (): Promise<NotificationRow[]> => {
+      const { data, error } = await supabase
+        .from("review_notifications")
+        .select("id, document_id, message, kind, read_at, created_at")
+        .eq("workspace_id", workspaceId!)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []) as NotificationRow[];
+    },
+  });
+}
+
+type WorkspaceSettings = {
+  auto_approve_threshold: number;
+  review_notify_email: string | null;
+};
+
+function useWorkspaceSettings(workspaceId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["workspace-settings", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: async (): Promise<WorkspaceSettings | null> => {
+      const { data, error } = await supabase
+        .from("workspaces")
+        .select("auto_approve_threshold, review_notify_email")
+        .eq("id", workspaceId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data ? { auto_approve_threshold: Number(data.auto_approve_threshold ?? 1), review_notify_email: data.review_notify_email } : null;
+    },
+  });
+}
+
 
 function ConfidencePill({ score }: { score: number | null }) {
   const pct = Math.round((score ?? 0) * 100);
@@ -167,15 +249,31 @@ function MatchBadge({ status }: { status: LineMatch }) {
 function ReviewQueuePage() {
   const { data: workspaceId, isLoading: wsLoading } = useWorkspaceId();
   const [threshold, setThreshold] = useState(0.8);
-  const { data: queue, isLoading } = useReviewQueue(workspaceId, threshold);
+  const [filters, setFilters] = useState<Filters>({ docType: "all", search: "", from: "", to: "" });
+  const { data: queue, isLoading } = useReviewQueue(workspaceId, threshold, filters);
+  const { data: notifications } = useNotifications(workspaceId);
+  const { data: settings } = useWorkspaceSettings(workspaceId);
   const [selected, setSelected] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [draftType, setDraftType] = useState<DocType | null>(null);
   const [notes, setNotes] = useState("");
+
+  // Settings draft state
+  const [autoApproveDraft, setAutoApproveDraft] = useState(1);
+  const [notifyEmailDraft, setNotifyEmailDraft] = useState("");
+  useEffect(() => {
+    if (settings) {
+      setAutoApproveDraft(settings.auto_approve_threshold);
+      setNotifyEmailDraft(settings.review_notify_email ?? "");
+    }
+  }, [settings?.auto_approve_threshold, settings?.review_notify_email]);
+
   const qc = useQueryClient();
   const reviewFn = useServerFn(reviewExtraction);
   const bulkReviewFn = useServerFn(bulkReviewExtractions);
   const exportAuditFn = useServerFn(exportReviewAuditLog);
+  const updateSettingsFn = useServerFn(updateReviewSettings);
+  const markReadFn = useServerFn(markNotificationsRead);
 
   const selectedDoc = useMemo(
     () => queue?.find((d) => d.id === selected) ?? null,
@@ -183,7 +281,6 @@ function ReviewQueuePage() {
   );
   const { data: lineItems } = useLineItems(selected);
 
-  // reset draft when switching docs
   useEffect(() => {
     setDraftType(selectedDoc?.doc_type ?? null);
     setNotes(selectedDoc?.review_notes ?? "");
@@ -191,6 +288,7 @@ function ReviewQueuePage() {
 
   const allSelected = queue && queue.length > 0 && selectedIds.size === queue.length;
   const someSelected = selectedIds.size > 0 && !allSelected;
+  const unreadCount = (notifications ?? []).filter((n) => !n.read_at).length;
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -203,11 +301,8 @@ function ReviewQueuePage() {
 
   const toggleSelectAll = () => {
     if (!queue) return;
-    if (allSelected) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(queue.map((d) => d.id)));
-    }
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(queue.map((d) => d.id)));
   };
 
   const reviewMutation = useMutation({
@@ -231,16 +326,9 @@ function ReviewQueuePage() {
 
   const bulkReviewMutation = useMutation({
     mutationFn: async (vars: { action: "approve" | "reject" }) =>
-      bulkReviewFn({
-        data: {
-          documentIds: Array.from(selectedIds),
-          action: vars.action,
-        },
-      }),
+      bulkReviewFn({ data: { documentIds: Array.from(selectedIds), action: vars.action } }),
     onSuccess: (_d, vars) => {
-      toast.success(
-        `${vars.action === "approve" ? "Approved" : "Rejected"} ${selectedIds.size} document(s)`,
-      );
+      toast.success(`${vars.action === "approve" ? "Approved" : "Rejected"} ${selectedIds.size} document(s)`);
       qc.invalidateQueries({ queryKey: ["review-queue", workspaceId] });
       qc.invalidateQueries({ queryKey: ["extracted-documents", workspaceId] });
       setSelectedIds(new Set());
@@ -265,6 +353,28 @@ function ReviewQueuePage() {
       toast.success("Audit log downloaded");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Export failed"),
+  });
+
+  const settingsMutation = useMutation({
+    mutationFn: async () =>
+      updateSettingsFn({
+        data: {
+          workspaceId: workspaceId!,
+          autoApproveThreshold: autoApproveDraft,
+          notifyEmail: notifyEmailDraft.trim() ? notifyEmailDraft.trim() : null,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Automation settings saved");
+      qc.invalidateQueries({ queryKey: ["workspace-settings", workspaceId] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Save failed"),
+  });
+
+  const markReadMutation = useMutation({
+    mutationFn: async (ids?: string[]) =>
+      markReadFn({ data: { workspaceId: workspaceId!, ids } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["review-notifications", workspaceId] }),
   });
 
   return (
@@ -295,17 +405,180 @@ function ReviewQueuePage() {
           <p className="text-xs text-muted-foreground">
             Documents below this score (or classified as Unclassified) need a human OK.
           </p>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={exportMutation.isPending || !workspaceId}
-            onClick={() => exportMutation.mutate()}
+
+          <div className="ml-auto flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button size="sm" variant="outline" className="relative">
+                  <Bell className="size-3.5" />
+                  Notifications
+                  {unreadCount > 0 && (
+                    <span className="ml-1 rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-semibold text-destructive-foreground">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-96 p-0">
+                <div className="flex items-center justify-between border-b border-border px-3 py-2">
+                  <span className="text-sm font-medium">Notifications</span>
+                  {unreadCount > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => markReadMutation.mutate(undefined)}
+                    >
+                      Mark all read
+                    </Button>
+                  )}
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {!notifications?.length ? (
+                    <p className="p-4 text-center text-sm text-muted-foreground">No notifications</p>
+                  ) : (
+                    <ul className="divide-y divide-border">
+                      {notifications.map((n) => (
+                        <li
+                          key={n.id}
+                          className={cn(
+                            "cursor-pointer px-3 py-2 hover:bg-muted/50",
+                            !n.read_at && "bg-accent/5",
+                          )}
+                          onClick={() => {
+                            setSelected(n.document_id);
+                            if (!n.read_at) markReadMutation.mutate([n.id]);
+                          }}
+                        >
+                          <p className="text-sm">{n.message}</p>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <SettingsIcon className="size-3.5" />
+                  Automation
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-96 space-y-4">
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Auto-approve at or above
+                    </label>
+                    <span className="rounded bg-muted px-1.5 py-0.5 text-xs tabular-nums">
+                      {autoApproveDraft >= 1 ? "off" : `${Math.round(autoApproveDraft * 100)}%`}
+                    </span>
+                  </div>
+                  <Slider
+                    value={[Math.round(autoApproveDraft * 100)]}
+                    onValueChange={(v) => setAutoApproveDraft((v[0] ?? 100) / 100)}
+                    min={50}
+                    max={100}
+                    step={5}
+                  />
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Set to 100% to disable. Extractions at or above this confidence skip the queue.
+                  </p>
+                </div>
+                <div>
+                  <label className="mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <Mail className="size-3" /> Notify by email
+                  </label>
+                  <Input
+                    type="email"
+                    placeholder="reviewer@company.com"
+                    value={notifyEmailDraft}
+                    onChange={(e) => setNotifyEmailDraft(e.target.value)}
+                  />
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    In-app notifications are always on. Email alerts activate once your sending domain is verified.
+                  </p>
+                </div>
+                <Button
+                  className="w-full"
+                  size="sm"
+                  disabled={settingsMutation.isPending}
+                  onClick={() => settingsMutation.mutate()}
+                >
+                  Save settings
+                </Button>
+              </PopoverContent>
+            </Popover>
+
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={exportMutation.isPending || !workspaceId}
+              onClick={() => exportMutation.mutate()}
+            >
+              <Download className="size-3.5" />
+              Export audit log
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+          <div className="relative flex-1 min-w-48 max-w-xs">
+            <Search className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-7"
+              placeholder="Search subject, sender, buyer ref…"
+              value={filters.search}
+              onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+            />
+          </div>
+          <Select
+            value={filters.docType}
+            onValueChange={(v) => setFilters((f) => ({ ...f, docType: v as Filters["docType"] }))}
           >
-            <Download className="size-3.5" />
-            Export audit log
-          </Button>
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All document types</SelectItem>
+              {docTypeOptions.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            type="date"
+            className="w-40"
+            value={filters.from}
+            onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))}
+            aria-label="From date"
+          />
+          <Input
+            type="date"
+            className="w-40"
+            value={filters.to}
+            onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))}
+            aria-label="To date"
+          />
+          {(filters.search || filters.docType !== "all" || filters.from || filters.to) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFilters({ docType: "all", search: "", from: "", to: "" })}
+            >
+              Clear
+            </Button>
+          )}
         </div>
       </Card>
+
+
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[420px_1fr]">
         <Card className="overflow-hidden p-0">
