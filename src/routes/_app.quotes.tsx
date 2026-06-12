@@ -307,7 +307,7 @@ function ListView({
   sortKey: SortKey
   sortDir: "asc" | "desc"
   onSort: (k: SortKey) => void
-  onOpen: () => void
+  onOpen: (q: PipelineQuote) => void
 }) {
   const sorted = useMemo(() => {
     const arr = [...quotes]
