@@ -59,7 +59,7 @@ function OnboardingPage() {
   const [fullName, setFullName] = useState("");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState<RoleOption | "">("");
-  const [country, setCountry] = useState("GH");
+  const [country, setCountry] = useState("");
   const [demoChoice, setDemoChoice] = useState<DemoChoice | null>(null);
 
   // Redirect away if not signed in
@@ -98,7 +98,7 @@ function OnboardingPage() {
 
   const canContinue =
     step === 1 ? accountType !== null
-    : step === 2 ? fullName.trim().length > 0 && company.trim().length > 0 && role !== ""
+    : step === 2 ? fullName.trim().length > 0 && company.trim().length > 0 && role !== "" && country !== ""
     : demoChoice !== null;
 
   const handleNext = async () => {
@@ -380,7 +380,7 @@ function StepProfile({
           <Label htmlFor="country">Country</Label>
           <Select value={country} onValueChange={onCountry}>
             <SelectTrigger id="country">
-              <SelectValue />
+              <SelectValue placeholder="Select country" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="GH">Ghana</SelectItem>
