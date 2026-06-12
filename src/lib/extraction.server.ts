@@ -82,14 +82,37 @@ export async function extractEmailContent(input: {
     });
   }
 
-  const { experimental_output } = await generateText({
-    model,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content }],
-    experimental_output: Output.object({ schema: ExtractionSchema }),
-  });
-
-  return experimental_output;
+  try {
+    const { experimental_output } = await generateText({
+      model,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content }],
+      experimental_output: Output.object({ schema: ExtractionSchema }),
+    });
+    return experimental_output;
+  } catch (err) {
+    // Fallback: constrained decoding intermittently fails on PDF-only emails
+    // with "No object generated: response did not match schema". Re-ask in
+    // plain JSON mode and parse manually.
+    console.warn(
+      "[extraction] structured output failed, falling back to JSON prompt:",
+      err instanceof Error ? err.message : err,
+    );
+    const { text } = await generateText({
+      model,
+      system:
+        SYSTEM_PROMPT +
+        "\n\nRespond ONLY with a single JSON object matching this TypeScript type — no prose, no markdown fences:\n" +
+        "{ doc_type: 'rfq'|'purchase_order'|'rfq_amendment'|'po_amendment'|'unknown', confidence: number, summary: string, buyer_ref: string|null, due_date: string|null, currency: string|null, line_items: Array<{ description: string, brand: string|null, model: string|null, quantity: number|null, unit: string|null, target_price: number|null }> }",
+      messages: [{ role: "user", content }],
+    });
+    const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start === -1 || end === -1) throw new Error("Model returned no JSON object");
+    const parsed = JSON.parse(cleaned.slice(start, end + 1));
+    return ExtractionSchema.parse(parsed);
+  }
 }
 
 function stripHtml(s: string) {
