@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
