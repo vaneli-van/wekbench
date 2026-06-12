@@ -73,7 +73,7 @@ export const Route = createFileRoute("/api/public/inbound-email")({
               subject,
               text_body: textBody,
               html_body: htmlBody,
-              envelope,
+              envelope: envelope as never,
               headers,
               spam_score: spamScore,
               attachments: [],
