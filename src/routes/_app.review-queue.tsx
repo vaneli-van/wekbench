@@ -102,27 +102,111 @@ const docMeta: Record<DocType, { label: string; tone: string }> = {
   unknown: { label: "Unclassified", tone: "bg-muted text-muted-foreground border-border" },
 };
 
-function useReviewQueue(workspaceId: string | null | undefined, threshold: number) {
+type Filters = {
+  docType: DocType | "all";
+  search: string;
+  from: string; // YYYY-MM-DD
+  to: string;
+};
+
+function useReviewQueue(
+  workspaceId: string | null | undefined,
+  threshold: number,
+  filters: Filters,
+) {
   return useQuery({
-    queryKey: ["review-queue", workspaceId, threshold],
+    queryKey: ["review-queue", workspaceId, threshold, filters],
     enabled: !!workspaceId,
     queryFn: async (): Promise<QueueRow[]> => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("extracted_documents")
         .select(
           "id, inbound_email_id, doc_type, confidence, summary, buyer_ref, due_date, currency, status, created_at, review_notes, inbound_emails(subject, from_address, from_name)",
         )
         .eq("workspace_id", workspaceId!)
-        .eq("status", "pending_review")
-        .order("confidence", { ascending: true, nullsFirst: true })
-        .order("created_at", { ascending: false });
+        .eq("status", "pending_review");
+      if (filters.docType !== "all") q = q.eq("doc_type", filters.docType);
+      if (filters.from) q = q.gte("created_at", `${filters.from}T00:00:00Z`);
+      if (filters.to) q = q.lte("created_at", `${filters.to}T23:59:59Z`);
+      q = q.order("confidence", { ascending: true, nullsFirst: true }).order("created_at", { ascending: false });
+      const { data, error } = await q;
       if (error) throw error;
-      return ((data ?? []) as unknown as QueueRow[]).filter(
-        (d) => (d.confidence ?? 0) < threshold || d.doc_type === "unknown",
-      );
+      const term = filters.search.trim().toLowerCase();
+      return ((data ?? []) as unknown as QueueRow[]).filter((d) => {
+        const passConf = (d.confidence ?? 0) < threshold || d.doc_type === "unknown";
+        if (!passConf) return false;
+        if (!term) return true;
+        const hay = `${d.inbound_emails?.subject ?? ""} ${d.inbound_emails?.from_address ?? ""} ${d.inbound_emails?.from_name ?? ""} ${d.buyer_ref ?? ""}`.toLowerCase();
+        return hay.includes(term);
+      });
     },
   });
 }
+
+function useLineItems(docId: string | null) {
+  return useQuery({
+    queryKey: ["extracted-line-items", docId],
+    enabled: !!docId,
+    queryFn: async (): Promise<LineRow[]> => {
+      const { data, error } = await supabase
+        .from("extracted_line_items")
+        .select("*")
+        .eq("document_id", docId!)
+        .order("line_no");
+      if (error) throw error;
+      return (data ?? []) as LineRow[];
+    },
+  });
+}
+
+type NotificationRow = {
+  id: string;
+  document_id: string;
+  message: string;
+  kind: string;
+  read_at: string | null;
+  created_at: string;
+};
+
+function useNotifications(workspaceId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["review-notifications", workspaceId],
+    enabled: !!workspaceId,
+    refetchInterval: 30_000,
+    queryFn: async (): Promise<NotificationRow[]> => {
+      const { data, error } = await supabase
+        .from("review_notifications")
+        .select("id, document_id, message, kind, read_at, created_at")
+        .eq("workspace_id", workspaceId!)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []) as NotificationRow[];
+    },
+  });
+}
+
+type WorkspaceSettings = {
+  auto_approve_threshold: number;
+  review_notify_email: string | null;
+};
+
+function useWorkspaceSettings(workspaceId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["workspace-settings", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: async (): Promise<WorkspaceSettings | null> => {
+      const { data, error } = await supabase
+        .from("workspaces")
+        .select("auto_approve_threshold, review_notify_email")
+        .eq("id", workspaceId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data ? { auto_approve_threshold: Number(data.auto_approve_threshold ?? 1), review_notify_email: data.review_notify_email } : null;
+    },
+  });
+}
+
 
 function useLineItems(docId: string | null) {
   return useQuery({
