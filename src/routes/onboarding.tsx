@@ -380,7 +380,7 @@ function StepProfile({
           <Label htmlFor="country">Country</Label>
           <Select value={country} onValueChange={onCountry}>
             <SelectTrigger id="country">
-              <SelectValue />
+              <SelectValue placeholder="Select country" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="GH">Ghana</SelectItem>
