@@ -120,6 +120,6 @@ function InvoicesPage() {
 }
 
 
-export const Route = createFileRoute("/_app/invoices")({
+export const Route = createFileRoute("/_app/invoices/")({
   component: InvoicesPage,
 });
