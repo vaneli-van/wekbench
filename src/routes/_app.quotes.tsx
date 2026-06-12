@@ -125,6 +125,8 @@ function QuotesPage() {
     <div className="flex h-full flex-col">
       <Toaster position="bottom-right" />
 
+      <LiveQuotesPanel />
+
       {/* Header + controls */}
       <div className="shrink-0 border-b border-border bg-background px-4 py-4 md:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
