@@ -141,7 +141,7 @@ function CreateQuoteButton() {
           <DropdownMenuItem asChild>
             <Link to="/email-capture" className="gap-2">
               <Mail className="size-4" />
-              Upload via email
+              Upload PDF or Excel or CSV file
             </Link>
           </DropdownMenuItem>
         </DropdownMenuContent>
