@@ -18,6 +18,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/wordmark";
+import { useProfile } from "@/hooks/use-profile";
 
 const navGroups: {
   label: string;
