@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   Check,
@@ -39,7 +39,15 @@ export const Route = createFileRoute("/onboarding")({
 
 type AccountType = "vendor" | "buyer";
 type DemoChoice = "demo" | "fresh";
-type RoleOption = "Procurement Manager" | "Finance" | "Operations" | "Founder / Owner" | "Other";
+type RoleOption =
+  | "Procurement Manager"
+  | "Sales Manager"
+  | "Bid/Quotation Officer"
+  | "Account Manager"
+  | "Finance"
+  | "Operations"
+  | "Founder / Owner"
+  | "Other";
 
 const STEPS = [
   { id: 1, title: "Your role" },
@@ -95,6 +103,17 @@ function OnboardingPage() {
       }
     })();
   }, [user, navigate]);
+
+  // Clear role when user changes account type mid-flow
+  const initialAccountTypeRef = useRef<AccountType | null>(null);
+  useEffect(() => {
+    if (initialAccountTypeRef.current !== null && initialAccountTypeRef.current !== accountType) {
+      setRole("");
+    }
+    if (accountType !== null) {
+      initialAccountTypeRef.current = accountType;
+    }
+  }, [accountType]);
 
   const canContinue =
     step === 1 ? accountType !== null
@@ -204,6 +223,7 @@ function OnboardingPage() {
               company={company}
               role={role}
               country={country}
+              accountType={accountType ?? "vendor"}
               onFullName={setFullName}
               onCompany={setCompany}
               onRole={setRole}
@@ -318,6 +338,7 @@ function StepProfile({
   company,
   role,
   country,
+  accountType,
   onFullName,
   onCompany,
   onRole,
@@ -327,11 +348,30 @@ function StepProfile({
   company: string;
   role: RoleOption | "";
   country: string;
+  accountType: AccountType;
   onFullName: (v: string) => void;
   onCompany: (v: string) => void;
   onRole: (v: RoleOption) => void;
   onCountry: (v: string) => void;
 }) {
+  const vendorRoles: RoleOption[] = [
+    "Sales Manager",
+    "Bid/Quotation Officer",
+    "Account Manager",
+    "Finance",
+    "Operations",
+    "Founder / Owner",
+    "Other",
+  ];
+  const buyerRoles: RoleOption[] = [
+    "Procurement Manager",
+    "Finance",
+    "Operations",
+    "Founder / Owner",
+    "Other",
+  ];
+  const roleOptions = accountType === "vendor" ? vendorRoles : buyerRoles;
+
   return (
     <div className="mx-auto w-full max-w-md">
       <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">
@@ -368,11 +408,9 @@ function StepProfile({
               <SelectValue placeholder="Pick a role" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Procurement Manager">Procurement Manager</SelectItem>
-              <SelectItem value="Finance">Finance</SelectItem>
-              <SelectItem value="Operations">Operations</SelectItem>
-              <SelectItem value="Founder / Owner">Founder / Owner</SelectItem>
-              <SelectItem value="Other">Other</SelectItem>
+              {roleOptions.map((r) => (
+                <SelectItem key={r} value={r}>{r}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
