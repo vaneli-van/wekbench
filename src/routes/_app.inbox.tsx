@@ -190,6 +190,21 @@ function InboxPage() {
   const selectedType = docTypeToInboxType(selectedDoc)
   const selectedAttachments = getAttachments(selected?.attachments)
 
+  const queryClient = useQueryClient()
+  const runExtractionFn = useServerFn(runExtraction)
+  const retryMutation = useMutation({
+    mutationFn: (emailId: string) => runExtractionFn({ data: { emailId } }),
+    onSuccess: () => {
+      toast.success("Extraction completed")
+      queryClient.invalidateQueries({ queryKey: ["inbox-emails"] })
+      queryClient.invalidateQueries({ queryKey: ["sidebar-counts"] })
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : "Extraction failed"
+      toast.error(msg)
+    },
+  })
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
       <PageHeader
