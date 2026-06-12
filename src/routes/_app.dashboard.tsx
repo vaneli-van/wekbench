@@ -8,7 +8,6 @@ import {
   Truck,
   ArrowUpRight,
   ArrowDownRight,
-  Sparkles,
   AlertTriangle,
   FileText,
   PackageCheck,
