@@ -175,6 +175,7 @@ function ReviewQueuePage() {
   const qc = useQueryClient();
   const reviewFn = useServerFn(reviewExtraction);
   const bulkReviewFn = useServerFn(bulkReviewExtractions);
+  const exportAuditFn = useServerFn(exportReviewAuditLog);
 
   const selectedDoc = useMemo(
     () => queue?.find((d) => d.id === selected) ?? null,
