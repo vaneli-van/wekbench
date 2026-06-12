@@ -57,6 +57,7 @@ const navGroups: {
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { data: profile } = useProfile();
   const isActive = (href: string) =>
     href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
 
