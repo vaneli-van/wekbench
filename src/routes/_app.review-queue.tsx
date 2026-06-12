@@ -208,22 +208,6 @@ function useWorkspaceSettings(workspaceId: string | null | undefined) {
 }
 
 
-function useLineItems(docId: string | null) {
-  return useQuery({
-    queryKey: ["extracted-line-items", docId],
-    enabled: !!docId,
-    queryFn: async (): Promise<LineRow[]> => {
-      const { data, error } = await supabase
-        .from("extracted_line_items")
-        .select("*")
-        .eq("document_id", docId!)
-        .order("line_no");
-      if (error) throw error;
-      return (data ?? []) as LineRow[];
-    },
-  });
-}
-
 function ConfidencePill({ score }: { score: number | null }) {
   const pct = Math.round((score ?? 0) * 100);
   const tone =
