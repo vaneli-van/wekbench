@@ -130,7 +130,7 @@ function TeamCard() {
           </div>
           <span className="text-sm text-muted-foreground">Owner</span>
         </div>
-        <Button variant="outline" className="mt-4">
+        <Button variant="outline" className="mt-4" onClick={() => toast.info("Member invitations — coming soon")}>
           Invite member
         </Button>
       </CardContent>
