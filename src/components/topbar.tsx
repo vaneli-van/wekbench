@@ -165,9 +165,7 @@ export function Topbar() {
       <h1 className="text-base font-semibold tracking-tight text-foreground md:text-lg">{title}</h1>
 
       <div className="ml-auto flex items-center gap-1">
-        <IconButton label="Notifications" badge={5}>
-          <Bell className="size-[1.125rem]" />
-        </IconButton>
+        <NotificationsButton />
         <UserMenu />
       </div>
     </header>
