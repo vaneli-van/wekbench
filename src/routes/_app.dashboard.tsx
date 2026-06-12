@@ -164,21 +164,21 @@ function DashboardPage() {
       <DashboardWelcome />
 
       {/* Row 1: greeting + actions */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-semibold tracking-tight text-foreground">
             {greeting}{profile?.firstName ? `, ${profile.firstName}` : ""}
           </h1>
-          <p className="text-sm text-muted-foreground">{today}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{today}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <CreateQuoteButton />
           <Link
             to="/inbox"
-            className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
+            className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
           >
-            <Sparkles className="size-3.5" />
-            What&apos;s new · 3 RFQs arrived overnight
+            <Sparkles className="size-3.5 shrink-0" />
+            <span className="truncate">What&apos;s new · 3 RFQs arrived overnight</span>
           </Link>
         </div>
       </div>
