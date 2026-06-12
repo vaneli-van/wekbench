@@ -15,6 +15,7 @@ import {
   Plug,
   Settings,
   Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
