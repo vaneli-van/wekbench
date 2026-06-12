@@ -223,6 +223,7 @@ function OnboardingPage() {
               company={company}
               role={role}
               country={country}
+              accountType={accountType ?? "vendor"}
               onFullName={setFullName}
               onCompany={setCompany}
               onRole={setRole}
