@@ -398,7 +398,7 @@ function ExtractionsPage() {
                 )}
                 <div className="mt-3 flex items-center gap-2">
                   <Link
-                    to="/catalog-items"
+                    to="/catalog"
                     className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                   >
                     <Plus className="size-3" /> Add missing items to catalog
