@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,13 +12,131 @@ import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useProfile } from "@/hooks/use-profile"
+import { useAuth } from "@/hooks/use-auth"
+import { supabase } from "@/integrations/supabase/client"
+import { useQueryClient } from "@tanstack/react-query"
 
-const teamMembers = [
-  { name: "Dana Whitfield", email: "dana@westernpremium.com", role: "Admin", initials: "DW" },
-  { name: "Marcus Lee", email: "marcus@westernpremium.com", role: "Sourcing Lead", initials: "ML" },
-  { name: "Priya Anand", email: "priya@westernpremium.com", role: "Quote Analyst", initials: "PA" },
-  { name: "Tomás Rivera", email: "tomas@westernpremium.com", role: "Logistics", initials: "TR" },
-]
+function deriveDomain(company: string | null | undefined, email: string | null | undefined): string {
+  if (email && email.includes("@")) return email.split("@")[1];
+  if (!company) return "";
+  return company.toLowerCase().replace(/[^a-z0-9]+/g, "") + ".com";
+}
+
+function WorkspaceCard() {
+  const { user } = useAuth();
+  const { data: profile, isLoading } = useProfile();
+  const queryClient = useQueryClient();
+  const [org, setOrg] = useState("");
+  const [domain, setDomain] = useState("");
+  const [currency, setCurrency] = useState("usd");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setOrg(profile.companyName ?? "");
+      setDomain(deriveDomain(profile.companyName, user?.email));
+    }
+  }, [profile, user?.email]);
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      const [wsRes, profRes] = await Promise.all([
+        supabase.from("workspaces").update({ name: org.trim() }).eq("owner_id", user.id),
+        supabase.from("profiles").update({ company_name: org.trim() }).eq("id", user.id),
+      ]);
+      if (wsRes.error) throw wsRes.error;
+      if (profRes.error) throw profRes.error;
+      await queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("Workspace updated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save changes.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Workspace</CardTitle>
+        <CardDescription>Basic information about your organization.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-2">
+          <Label htmlFor="org">Organization name</Label>
+          <Input
+            id="org"
+            value={org}
+            onChange={(e) => setOrg(e.target.value)}
+            disabled={isLoading}
+            placeholder="Your company"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="domain">Primary domain</Label>
+          <Input
+            id="domain"
+            value={domain}
+            onChange={(e) => setDomain(e.target.value)}
+            disabled={isLoading}
+            placeholder="example.com"
+          />
+        </div>
+        <div className="grid gap-2 sm:max-w-xs">
+          <Label htmlFor="currency">Base currency</Label>
+          <Select value={currency} onValueChange={setCurrency}>
+            <SelectTrigger id="currency">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="usd">USD — US Dollar</SelectItem>
+              <SelectItem value="eur">EUR — Euro</SelectItem>
+              <SelectItem value="gbp">GBP — British Pound</SelectItem>
+              <SelectItem value="cad">CAD — Canadian Dollar</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button onClick={handleSave} disabled={saving || isLoading || !org.trim()}>
+          {saving ? <Loader2 className="size-4 animate-spin" /> : "Save changes"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TeamCard() {
+  const { user } = useAuth();
+  const { data: profile } = useProfile();
+  if (!profile || !user) return null;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Team members</CardTitle>
+        <CardDescription>People with access to this procurement workspace.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-1">
+        <div className="flex items-center justify-between py-3">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-9 w-9">
+              <AvatarFallback className="bg-muted text-xs">{profile.initials}</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="text-sm font-medium text-foreground">{profile.fullName}</p>
+              <p className="text-xs text-muted-foreground">{user.email}</p>
+            </div>
+          </div>
+          <span className="text-sm text-muted-foreground">Owner</span>
+        </div>
+        <Button variant="outline" className="mt-4">
+          Invite member
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
 
 function SettingsPage() {
   return (
@@ -31,68 +152,12 @@ function SettingsPage() {
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Workspace</CardTitle>
-              <CardDescription>Basic information about your organization.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="org">Organization name</Label>
-                <Input id="org" defaultValue="Western Premium" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="domain">Primary domain</Label>
-                <Input id="domain" defaultValue="westernpremium.com" />
-              </div>
-              <div className="grid gap-2 sm:max-w-xs">
-                <Label htmlFor="currency">Base currency</Label>
-                <Select defaultValue="usd">
-                  <SelectTrigger id="currency">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="usd">USD — US Dollar</SelectItem>
-                    <SelectItem value="eur">EUR — Euro</SelectItem>
-                    <SelectItem value="gbp">GBP — British Pound</SelectItem>
-                    <SelectItem value="cad">CAD — Canadian Dollar</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button>Save changes</Button>
-            </CardContent>
-          </Card>
+          <WorkspaceCard />
         </TabsContent>
 
+
         <TabsContent value="team" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Team members</CardTitle>
-              <CardDescription>People with access to this procurement workspace.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              {teamMembers.map((member, i) => (
-                <div key={member.email}>
-                  <div className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarFallback className="bg-muted text-xs">{member.initials}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{member.name}</p>
-                        <p className="text-xs text-muted-foreground">{member.email}</p>
-                      </div>
-                    </div>
-                    <span className="text-sm text-muted-foreground">{member.role}</span>
-                  </div>
-                  {i < teamMembers.length - 1 && <Separator />}
-                </div>
-              ))}
-              <Button variant="outline" className="mt-4">
-                Invite member
-              </Button>
-            </CardContent>
-          </Card>
+          <TeamCard />
         </TabsContent>
 
         <TabsContent value="quoting" className="space-y-6">
