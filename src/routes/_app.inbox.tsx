@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react"
-import { Link } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { formatDistanceToNow } from "date-fns"
 import { toast } from "sonner"
 import {
   Paperclip,
@@ -22,14 +23,54 @@ import {
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { EmptyState } from "@/components/foundations/empty-state"
-import { inboxEmails, orders, type InboxEmail } from "@/lib/data"
+import { Skeleton } from "@/components/ui/skeleton"
+import { supabase } from "@/integrations/supabase/client"
+import { useWorkspaceId } from "@/hooks/use-workspace"
 import { cn } from "@/lib/utils"
 
-const typeMeta: Record<string, { label: string; tone: string }> = {
+type DocType = "rfq" | "purchase_order" | "rfq_amendment" | "po_amendment" | "unknown"
+type InboxType = "rfq" | "amendment" | "po" | "general" | "pending"
+
+type AttachmentMeta = {
+  filename?: string
+  name?: string
+  contentType?: string
+  size?: number
+  path?: string
+  type?: string
+}
+
+type ExtractedDoc = {
+  id: string
+  doc_type: DocType
+  confidence: number | null
+  summary: string | null
+  buyer_ref: string | null
+  status: string | null
+}
+
+type InboxRow = {
+  id: string
+  to_address: string
+  from_address: string
+  from_name: string | null
+  subject: string | null
+  text_body: string | null
+  html_body: string | null
+  attachments: unknown
+  status: string
+  extraction_status: string | null
+  received_at: string
+  created_at: string
+  extracted_documents: ExtractedDoc[] | null
+}
+
+const typeMeta: Record<InboxType, { label: string; tone: string }> = {
   rfq: { label: "RFQ Detected", tone: "info" },
   amendment: { label: "Amendment Detected", tone: "warning" },
   po: { label: "PO Detected", tone: "accent" },
   general: { label: "No Action Detected", tone: "neutral" },
+  pending: { label: "Awaiting Extraction", tone: "neutral" },
 }
 
 const typeToneClass: Record<string, string> = {
@@ -40,14 +81,88 @@ const typeToneClass: Record<string, string> = {
 }
 
 function AttachmentIcon({ type }: { type: string }) {
-  if (type === "xlsx") return <FileSpreadsheet className="size-4 text-success" />
+  if (type.includes("spreadsheet") || type.includes("excel") || type === "xlsx") return <FileSpreadsheet className="size-4 text-success" />
   return <FileText className="size-4 text-destructive" />
 }
 
+function useInboxEmails(workspaceId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["inbox-emails", workspaceId],
+    enabled: !!workspaceId,
+    refetchInterval: 15_000,
+    queryFn: async (): Promise<InboxRow[]> => {
+      const { data, error } = await supabase
+        .from("inbound_emails")
+        .select(
+          "id, to_address, from_address, from_name, subject, text_body, html_body, attachments, status, extraction_status, received_at, created_at, extracted_documents(id, doc_type, confidence, summary, buyer_ref, status)",
+        )
+        .eq("workspace_id", workspaceId!)
+        .order("received_at", { ascending: false })
+        .limit(50)
+      if (error) throw error
+      return (data ?? []) as unknown as InboxRow[]
+    },
+  })
+}
+
+function useInboundAddress(workspaceId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["inbound-address", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inbound_addresses")
+        .select("full_address")
+        .eq("workspace_id", workspaceId!)
+        .eq("active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (error) throw error
+      return data?.full_address as string | undefined
+    },
+  })
+}
+
+function getAttachments(value: unknown): AttachmentMeta[] {
+  return Array.isArray(value) ? (value as AttachmentMeta[]) : []
+}
+
+function stripHtml(value: string) {
+  return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+}
+
+function previewFor(email: InboxRow) {
+  return (email.text_body ?? stripHtml(email.html_body ?? "") ?? "").trim() || "No message body captured."
+}
+
+function formatBytes(value?: number) {
+  if (!value) return "—"
+  if (value < 1024) return `${value} B`
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function docTypeToInboxType(doc?: ExtractedDoc | null): InboxType {
+  if (!doc) return "pending"
+  if (doc.doc_type === "rfq") return "rfq"
+  if (doc.doc_type === "purchase_order") return "po"
+  if (doc.doc_type === "rfq_amendment" || doc.doc_type === "po_amendment") return "amendment"
+  return "general"
+}
+
 function InboxPage() {
-  const [selected, setSelected] = useState<InboxEmail | null>(inboxEmails[1])
+  const { data: workspaceId, isLoading: workspaceLoading } = useWorkspaceId()
+  const { data: inboxEmails, isLoading, error } = useInboxEmails(workspaceId)
+  const { data: inboundAddress } = useInboundAddress(workspaceId)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const toolboxEmail = "meridian.rfq@inbox.wekbench.com"
+  const emails = inboxEmails ?? []
+  const selected = useMemo(
+    () => emails.find((email) => email.id === selectedId) ?? emails[0] ?? null,
+    [emails, selectedId],
+  )
+  const toolboxEmail = inboundAddress ?? "modec.rfq@inbox.wekbench.com"
 
   const copyEmail = () => {
     navigator.clipboard?.writeText(toolboxEmail)
@@ -55,11 +170,11 @@ function InboxPage() {
     setTimeout(() => setCopied(false), 1500)
   }
 
-  // Resolve a detected PO/quote reference to the real order it created.
-  const matchedOrder =
-    selected?.type === "po"
-      ? orders.find((o) => o.quoteRef === selected.detectedRef || o.poNumber === selected.detectedRef)
-      : null
+  const loading = workspaceLoading || isLoading
+  const needsAttention = emails.filter((email) => email.extraction_status !== "done").length
+  const selectedDoc = selected?.extracted_documents?.[0] ?? null
+  const selectedType = docTypeToInboxType(selectedDoc)
+  const selectedAttachments = getAttachments(selected?.attachments)
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
