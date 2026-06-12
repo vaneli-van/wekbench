@@ -184,8 +184,8 @@ function QuotesPage() {
           onDragEndCard={() => setDragId(null)}
           onDragOverStage={setOverStage}
           onDrop={handleDrop}
-          onOpen={(q) => navigate({ to: `/rfq/RFQ-2026-0418` })}
-          onOpenFull={(q) => navigate({ to: `/rfq/RFQ-2026-0418` })}
+          onOpen={(q) => navigate({ to: "/quote/$id", params: { id: q.id } })}
+          onOpenFull={(q) => navigate({ to: "/quote/$id", params: { id: q.id } })}
         />
       ) : (
         <ListView
@@ -199,7 +199,7 @@ function QuotesPage() {
               setSortDir("desc")
             }
           }}
-          onOpen={() => navigate({ to: "/rfq/RFQ-2026-0418" })}
+          onOpen={(q) => navigate({ to: "/quote/$id", params: { id: q.id } })}
         />
       )}
     </div>
