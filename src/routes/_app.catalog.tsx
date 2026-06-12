@@ -144,8 +144,8 @@ function CatalogPage() {
           description={`${catalogStats.totalSkus.toLocaleString()} SKUs · last updated ${catalogStats.lastUpdated}`}
           actions={
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="bg-transparent">
-                <Users className="size-4" /> Manage suppliers
+              <Button variant="outline" size="sm" className="bg-transparent" asChild>
+                <Link to="/suppliers"><Users className="size-4" /> Manage suppliers</Link>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
