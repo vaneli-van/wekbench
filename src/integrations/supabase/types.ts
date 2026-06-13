@@ -469,14 +469,18 @@ export type Database = {
           catalog_item_id: string | null
           created_at: string
           description: string
+          discount_pct: number
           extracted_line_item_id: string | null
           id: string
           line_no: number
+          line_type: Database["public"]["Enums"]["quote_line_type"]
           margin_pct: number | null
           model: string | null
           notes: string | null
           qty: number
           quote_id: string
+          section: string | null
+          section_order: number
           source: Database["public"]["Enums"]["quote_line_source"]
           unit: string | null
           unit_cost: number | null
@@ -489,14 +493,18 @@ export type Database = {
           catalog_item_id?: string | null
           created_at?: string
           description: string
+          discount_pct?: number
           extracted_line_item_id?: string | null
           id?: string
           line_no: number
+          line_type?: Database["public"]["Enums"]["quote_line_type"]
           margin_pct?: number | null
           model?: string | null
           notes?: string | null
           qty?: number
           quote_id: string
+          section?: string | null
+          section_order?: number
           source?: Database["public"]["Enums"]["quote_line_source"]
           unit?: string | null
           unit_cost?: number | null
@@ -509,14 +517,18 @@ export type Database = {
           catalog_item_id?: string | null
           created_at?: string
           description?: string
+          discount_pct?: number
           extracted_line_item_id?: string | null
           id?: string
           line_no?: number
+          line_type?: Database["public"]["Enums"]["quote_line_type"]
           margin_pct?: number | null
           model?: string | null
           notes?: string | null
           qty?: number
           quote_id?: string
+          section?: string | null
+          section_order?: number
           source?: Database["public"]["Enums"]["quote_line_source"]
           unit?: string | null
           unit_cost?: number | null
@@ -562,12 +574,16 @@ export type Database = {
           delivery_location: string | null
           id: string
           incoterm: string | null
+          install_window: string | null
           lead_time_days: number | null
           margin_pct: number
           notes: string | null
           quote_number: string
           rfq_id: string
           sent_at: string | null
+          site_address: string | null
+          site_contact_name: string | null
+          site_contact_phone: string | null
           status: Database["public"]["Enums"]["quote_status"]
           subtotal: number
           tax_amount: number
@@ -583,12 +599,16 @@ export type Database = {
           delivery_location?: string | null
           id?: string
           incoterm?: string | null
+          install_window?: string | null
           lead_time_days?: number | null
           margin_pct?: number
           notes?: string | null
           quote_number: string
           rfq_id: string
           sent_at?: string | null
+          site_address?: string | null
+          site_contact_name?: string | null
+          site_contact_phone?: string | null
           status?: Database["public"]["Enums"]["quote_status"]
           subtotal?: number
           tax_amount?: number
@@ -604,12 +624,16 @@ export type Database = {
           delivery_location?: string | null
           id?: string
           incoterm?: string | null
+          install_window?: string | null
           lead_time_days?: number | null
           margin_pct?: number
           notes?: string | null
           quote_number?: string
           rfq_id?: string
           sent_at?: string | null
+          site_address?: string | null
+          site_contact_name?: string | null
+          site_contact_phone?: string | null
           status?: Database["public"]["Enums"]["quote_status"]
           subtotal?: number
           tax_amount?: number
@@ -893,6 +917,7 @@ export type Database = {
           review_notify_email: string | null
           seeded_demo: boolean
           updated_at: string
+          vendor_types: Database["public"]["Enums"]["vendor_type"][]
         }
         Insert: {
           account_type?: string
@@ -906,6 +931,7 @@ export type Database = {
           review_notify_email?: string | null
           seeded_demo?: boolean
           updated_at?: string
+          vendor_types?: Database["public"]["Enums"]["vendor_type"][]
         }
         Update: {
           account_type?: string
@@ -919,6 +945,7 @@ export type Database = {
           review_notify_email?: string | null
           seeded_demo?: boolean
           updated_at?: string
+          vendor_types?: Database["public"]["Enums"]["vendor_type"][]
         }
         Relationships: []
       }
@@ -956,9 +983,18 @@ export type Database = {
         | "ignored"
       line_match_status: "matched" | "not_found" | "sourcing" | "manual"
       quote_line_source: "catalog" | "sourcing" | "manual"
+      quote_line_type:
+        | "hardware"
+        | "software"
+        | "service"
+        | "labour"
+        | "travel"
+        | "training"
+        | "subscription"
       quote_status: "draft" | "sent" | "accepted" | "declined" | "expired"
       rfq_status: "open" | "quoted" | "won" | "lost"
       supplier_status: "active" | "inactive"
+      vendor_type: "distributor" | "system_integrator" | "vendor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1107,9 +1143,19 @@ export const Constants = {
       ],
       line_match_status: ["matched", "not_found", "sourcing", "manual"],
       quote_line_source: ["catalog", "sourcing", "manual"],
+      quote_line_type: [
+        "hardware",
+        "software",
+        "service",
+        "labour",
+        "travel",
+        "training",
+        "subscription",
+      ],
       quote_status: ["draft", "sent", "accepted", "declined", "expired"],
       rfq_status: ["open", "quoted", "won", "lost"],
       supplier_status: ["active", "inactive"],
+      vendor_type: ["distributor", "system_integrator", "vendor"],
     },
   },
 } as const
