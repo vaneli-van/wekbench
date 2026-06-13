@@ -628,3 +628,79 @@ function Confirmation({
     </div>
   );
 }
+
+function StepVendorType({
+  selected,
+  onToggle,
+}: {
+  selected: VendorType[];
+  onToggle: (t: VendorType) => void;
+}) {
+  const options: { id: VendorType; icon: typeof Package; title: string; body: string }[] = [
+    {
+      id: "distributor",
+      icon: Package,
+      title: "Authorised Distributor",
+      body: "OEM-authorised reseller. You hold stock, sell at margin, and ship from local inventory (Cisco, HP, Dell, etc.).",
+    },
+    {
+      id: "system_integrator",
+      icon: Wrench,
+      title: "System Integrator",
+      body: "You bundle hardware + services into projects: installation, configuration, training. Multi-OEM BOMs and longer cycles.",
+    },
+    {
+      id: "vendor",
+      icon: Briefcase,
+      title: "General Vendor",
+      body: "General supplier or trader. Mixed sourcing, varied product mix, no formal OEM authorisation.",
+    },
+  ];
+
+  return (
+    <div className="mx-auto w-full max-w-2xl text-center">
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">
+        What kind of vendor are you?
+      </h1>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground text-pretty">
+        Pick all that apply. We'll tailor your workspace — pricing fields, quote layout, and reports differ for each.
+      </p>
+
+      <div className="mt-8 grid gap-3">
+        {options.map((opt) => {
+          const Icon = opt.icon;
+          const isOn = selected.includes(opt.id);
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => onToggle(opt.id)}
+              className={cn(
+                "flex items-start gap-4 rounded-xl border p-4 text-left transition-all",
+                isOn
+                  ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+                  : "border-border bg-card hover:border-primary/40 hover:bg-secondary/40",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors",
+                  isOn ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground",
+                )}
+              >
+                <Icon className="size-5" />
+              </span>
+              <span className="flex-1">
+                <span className="flex items-center gap-2 text-base font-semibold text-foreground">
+                  {opt.title}
+                  {isOn && <Check className="size-4 text-primary" />}
+                </span>
+                <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">{opt.body}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
