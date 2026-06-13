@@ -79,6 +79,16 @@ type LI = {
   } | null;
 };
 
+function groupBySection(items: LI[]): { key: string; section: string | null; items: LI[] }[] {
+  const map = new Map<string, { key: string; section: string | null; items: LI[] }>();
+  for (const li of items) {
+    const key = li.section ?? "__ungrouped__";
+    if (!map.has(key)) map.set(key, { key, section: li.section, items: [] });
+    map.get(key)!.items.push(li);
+  }
+  return Array.from(map.values());
+}
+
 function EditableCell({
   value,
   onCommit,
