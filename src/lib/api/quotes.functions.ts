@@ -165,7 +165,7 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
         if (items && items.length > 0) {
           const rows = items.map((li) => {
             const cat = li.matched_catalog_item_id ? catalogCosts[li.matched_catalog_item_id] : null;
-            const unitCost = cat?.unit_cost != null ? Number(cat.unit_cost) : null;
+            const unitCost = cat?.unit_price != null ? Number(cat.unit_price) : null;
             const unitPrice = computeUnitPrice(unitCost, data.defaultMarginPct);
             return {
               quote_id: quoteId!,
