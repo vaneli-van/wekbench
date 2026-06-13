@@ -201,7 +201,7 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
 async function recomputeQuoteTotals(supabase: any, quoteId: string) {
   const { data: lines } = await supabase
     .from("quote_line_items")
-    .select("qty, unit_price, unit_cost")
+    .select("qty, unit_price, unit_cost, discount_pct")
     .eq("quote_id", quoteId);
   const { data: q } = await supabase
     .from("quotes")
@@ -214,7 +214,10 @@ async function recomputeQuoteTotals(supabase: any, quoteId: string) {
     const price = Number(l.unit_price ?? 0);
     const cost = Number(l.unit_cost ?? 0);
     const qty = Number(l.qty ?? 0);
-    subtotal += price * qty;
+    const disc = Number(l.discount_pct ?? 0);
+    const gross = price * qty;
+    const net = gross * (1 - disc / 100);
+    subtotal += net;
     costTotal += cost * qty;
   }
   const taxPct = Number(q?.tax_pct ?? 0);
@@ -379,7 +382,7 @@ export const getQuote = createServerFn({ method: "POST" })
     const { data: quote, error } = await context.supabase
       .from("quotes")
       .select(
-        "id, workspace_id, quote_number, status, currency, subtotal, tax_pct, tax_amount, total, margin_pct, valid_until, notes, sent_at, created_at, incoterm, delivery_location, lead_time_days, rfq_id, rfqs(buyer_ref, buyer_name, buyer_email, buyer_company, summary, due_date)",
+        "id, workspace_id, quote_number, status, currency, subtotal, tax_pct, tax_amount, total, margin_pct, valid_until, notes, sent_at, created_at, incoterm, delivery_location, lead_time_days, site_address, site_contact_name, site_contact_phone, install_window, rfq_id, rfqs(buyer_ref, buyer_name, buyer_email, buyer_company, summary, due_date)",
       )
       .eq("id", data.id)
       .maybeSingle();
@@ -408,6 +411,10 @@ export const updateQuoteHeader = createServerFn({ method: "POST" })
             tax_pct: z.number().min(0).max(100).optional(),
             valid_until: z.string().nullable().optional(),
             notes: z.string().max(4000).nullable().optional(),
+            site_address: z.string().max(1000).nullable().optional(),
+            site_contact_name: z.string().max(255).nullable().optional(),
+            site_contact_phone: z.string().max(64).nullable().optional(),
+            install_window: z.string().max(255).nullable().optional(),
           })
           .strict(),
       })
@@ -440,6 +447,19 @@ export const updateQuoteLineItem = createServerFn({ method: "POST" })
             unit_price: z.number().nullable().optional(),
             margin_pct: z.number().nullable().optional(),
             notes: z.string().max(2000).nullable().optional(),
+            line_type: z
+              .enum([
+                "hardware",
+                "software",
+                "service",
+                "labour",
+                "travel",
+                "training",
+                "subscription",
+              ])
+              .optional(),
+            section: z.string().max(255).nullable().optional(),
+            discount_pct: z.number().min(0).max(100).optional(),
           })
           .strict(),
       })

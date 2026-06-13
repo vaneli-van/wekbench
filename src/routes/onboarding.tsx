@@ -13,6 +13,9 @@ import {
   ShoppingCart,
   Users,
   Percent,
+  Package,
+  Wrench,
+  Briefcase,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -39,6 +42,7 @@ export const Route = createFileRoute("/onboarding")({
 
 type AccountType = "vendor" | "buyer";
 type DemoChoice = "demo" | "fresh";
+type VendorType = "distributor" | "system_integrator" | "vendor";
 type RoleOption =
   | "Procurement Manager"
   | "Sales Manager"
@@ -49,11 +53,7 @@ type RoleOption =
   | "Founder / Owner"
   | "Other";
 
-const STEPS = [
-  { id: 1, title: "Your role" },
-  { id: 2, title: "About you" },
-  { id: 3, title: "Starting point" },
-];
+// Step list is computed at render time based on accountType; vendors get an extra step.
 
 function OnboardingPage() {
   const navigate = useNavigate();
@@ -64,11 +64,31 @@ function OnboardingPage() {
 
   // Form state
   const [accountType, setAccountType] = useState<AccountType | null>(null);
+  const [vendorTypes, setVendorTypes] = useState<VendorType[]>([]);
   const [fullName, setFullName] = useState("");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState<RoleOption | "">("");
   const [country, setCountry] = useState("");
   const [demoChoice, setDemoChoice] = useState<DemoChoice | null>(null);
+
+  // Dynamic step list — vendors get a "What kind of vendor?" step
+  const STEPS = accountType === "vendor"
+    ? [
+        { id: 1, title: "Your role" },
+        { id: 2, title: "Vendor type" },
+        { id: 3, title: "About you" },
+        { id: 4, title: "Starting point" },
+      ]
+    : [
+        { id: 1, title: "Your role" },
+        { id: 2, title: "About you" },
+        { id: 3, title: "Starting point" },
+      ];
+  const isVendorFlow = accountType === "vendor";
+  const STEP_ROLE = 1;
+  const STEP_VENDOR_TYPE = isVendorFlow ? 2 : -1;
+  const STEP_PROFILE = isVendorFlow ? 3 : 2;
+  const STEP_DEMO = isVendorFlow ? 4 : 3;
 
   // Redirect away if not signed in
   useEffect(() => {
@@ -116,8 +136,9 @@ function OnboardingPage() {
   }, [accountType]);
 
   const canContinue =
-    step === 1 ? accountType !== null
-    : step === 2 ? fullName.trim().length > 0 && company.trim().length > 0 && role !== "" && country !== ""
+    step === STEP_ROLE ? accountType !== null
+    : step === STEP_VENDOR_TYPE ? vendorTypes.length > 0
+    : step === STEP_PROFILE ? fullName.trim().length > 0 && company.trim().length > 0 && role !== "" && country !== ""
     : demoChoice !== null;
 
   const handleNext = async () => {
@@ -140,6 +161,7 @@ function OnboardingPage() {
             name: company.trim(),
             account_type: accountType ?? "vendor",
             country,
+            vendor_types: isVendorFlow && vendorTypes.length > 0 ? vendorTypes : [],
             seeded_demo: demoChoice === "demo",
             onboarding_completed_at: new Date().toISOString(),
           })
@@ -216,8 +238,13 @@ function OnboardingPage() {
 
       <main className="flex flex-1 flex-col overflow-hidden">
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-y-auto px-6 py-10">
-          {step === 1 && <StepRole accountType={accountType} onSelect={setAccountType} />}
-          {step === 2 && (
+          {step === STEP_ROLE && <StepRole accountType={accountType} onSelect={setAccountType} />}
+          {step === STEP_VENDOR_TYPE && (
+            <StepVendorType selected={vendorTypes} onToggle={(t) => {
+              setVendorTypes((cur) => cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]);
+            }} />
+          )}
+          {step === STEP_PROFILE && (
             <StepProfile
               fullName={fullName}
               company={company}
@@ -230,7 +257,7 @@ function OnboardingPage() {
               onCountry={setCountry}
             />
           )}
-          {step === 3 && (
+          {step === STEP_DEMO && (
             <StepDemoChoice
               choice={demoChoice}
               accountType={accountType ?? "vendor"}
@@ -598,6 +625,82 @@ function Confirmation({
         Go to dashboard
         <ArrowRight className="size-4" />
       </Button>
+    </div>
+  );
+}
+
+function StepVendorType({
+  selected,
+  onToggle,
+}: {
+  selected: VendorType[];
+  onToggle: (t: VendorType) => void;
+}) {
+  const options: { id: VendorType; icon: typeof Package; title: string; body: string }[] = [
+    {
+      id: "distributor",
+      icon: Package,
+      title: "Authorised Distributor",
+      body: "OEM-authorised reseller. You hold stock, sell at margin, and ship from local inventory (Cisco, HP, Dell, etc.).",
+    },
+    {
+      id: "system_integrator",
+      icon: Wrench,
+      title: "System Integrator",
+      body: "You bundle hardware + services into projects: installation, configuration, training. Multi-OEM BOMs and longer cycles.",
+    },
+    {
+      id: "vendor",
+      icon: Briefcase,
+      title: "General Vendor",
+      body: "General supplier or trader. Mixed sourcing, varied product mix, no formal OEM authorisation.",
+    },
+  ];
+
+  return (
+    <div className="mx-auto w-full max-w-2xl text-center">
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">
+        What kind of vendor are you?
+      </h1>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground text-pretty">
+        Pick all that apply. We'll tailor your workspace — pricing fields, quote layout, and reports differ for each.
+      </p>
+
+      <div className="mt-8 grid gap-3">
+        {options.map((opt) => {
+          const Icon = opt.icon;
+          const isOn = selected.includes(opt.id);
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => onToggle(opt.id)}
+              className={cn(
+                "flex items-start gap-4 rounded-xl border p-4 text-left transition-all",
+                isOn
+                  ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+                  : "border-border bg-card hover:border-primary/40 hover:bg-secondary/40",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors",
+                  isOn ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground",
+                )}
+              >
+                <Icon className="size-5" />
+              </span>
+              <span className="flex-1">
+                <span className="flex items-center gap-2 text-base font-semibold text-foreground">
+                  {opt.title}
+                  {isOn && <Check className="size-4 text-primary" />}
+                </span>
+                <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">{opt.body}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
