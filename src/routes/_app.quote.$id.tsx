@@ -27,6 +27,7 @@ import {
   addQuoteLineItem,
   deleteQuoteLineItem,
   updateQuoteStatus,
+  updateQuoteHeader,
 } from "@/lib/api/quotes.functions";
 
 function fmt(n: number | null | undefined, currency: string | null | undefined) {
@@ -45,6 +46,14 @@ type LI = {
   unit_cost: number | null;
   unit_price: number | null;
   margin_pct: number | null;
+  catalog_items?: {
+    stock_qty: number | null;
+    reserved_qty: number | null;
+    warehouse_location: string | null;
+    oem: string | null;
+    is_authorised: boolean | null;
+    lead_time_days: number | null;
+  } | null;
 };
 
 function EditableCell({
@@ -76,6 +85,47 @@ function EditableCell({
   );
 }
 
+function TermsField({
+  label,
+  value,
+  editable,
+  type = "text",
+  placeholder,
+  onCommit,
+}: {
+  label: string;
+  value: string | number | null | undefined;
+  editable: boolean;
+  type?: "text" | "number" | "date";
+  placeholder?: string;
+  onCommit: (v: string) => void;
+}) {
+  const [v, setV] = useState(value == null ? "" : String(value));
+  useEffect(() => setV(value == null ? "" : String(value)), [value]);
+  return (
+    <div>
+      <label className="mb-1 block text-xs uppercase tracking-wide text-muted-foreground">{label}</label>
+      {editable ? (
+        <Input
+          value={v}
+          type={type}
+          placeholder={placeholder}
+          onChange={(e) => setV(e.target.value)}
+          onBlur={() => {
+            if (v !== (value == null ? "" : String(value))) onCommit(v);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          }}
+          className="h-9 text-sm"
+        />
+      ) : (
+        <p className="text-sm">{value == null || value === "" ? "—" : String(value)}</p>
+      )}
+    </div>
+  );
+}
+
 function QuoteDetailPage() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
@@ -84,6 +134,7 @@ function QuoteDetailPage() {
   const addLI = useServerFn(addQuoteLineItem);
   const delLI = useServerFn(deleteQuoteLineItem);
   const updateStatus = useServerFn(updateQuoteStatus);
+  const updateHeader = useServerFn(updateQuoteHeader);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["quote", id],
@@ -113,6 +164,11 @@ function QuoteDetailPage() {
       toast.success(`Quote ${status}`);
       invalidate();
     },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const headerMut = useMutation({
+    mutationFn: (patch: Record<string, unknown>) => updateHeader({ data: { quoteId: id, patch } }),
+    onSuccess: invalidate,
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
@@ -192,11 +248,27 @@ function QuoteDetailPage() {
         <Card className="p-4">
           <div className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">Totals</div>
           <p className="text-2xl font-semibold tabular-nums">{fmt(q.total, q.currency)}</p>
-          <p className="text-xs text-muted-foreground">
-            Margin: {q.margin_pct != null ? `${Number(q.margin_pct).toFixed(1)}%` : "—"}
-          </p>
+          <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+            <p>Subtotal: <span className="tabular-nums">{fmt(q.subtotal, q.currency)}</span></p>
+            <p>Tax ({Number(q.tax_pct ?? 0).toFixed(1)}%): <span className="tabular-nums">{fmt(q.tax_amount, q.currency)}</span></p>
+            <p>Margin: {q.margin_pct != null ? `${Number(q.margin_pct).toFixed(1)}%` : "—"}</p>
+          </div>
         </Card>
       </div>
+
+      <Card className="mt-4 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Delivery & terms</h3>
+          {!editable && <span className="text-xs text-muted-foreground">Locked once sent</span>}
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
+          <TermsField label="Incoterm" value={q.incoterm} editable={editable} placeholder="DAP / EXW / CIF" onCommit={(v) => headerMut.mutate({ incoterm: v || null })} />
+          <TermsField label="Delivery location" value={q.delivery_location} editable={editable} placeholder="Accra warehouse" onCommit={(v) => headerMut.mutate({ delivery_location: v || null })} />
+          <TermsField label="Lead time (days)" value={q.lead_time_days} type="number" editable={editable} onCommit={(v) => headerMut.mutate({ lead_time_days: v === "" ? null : Number(v) })} />
+          <TermsField label="Tax %" value={q.tax_pct} type="number" editable={editable} onCommit={(v) => headerMut.mutate({ tax_pct: Number(v) || 0 })} />
+          <TermsField label="Valid until" value={q.valid_until} type="date" editable={editable} onCommit={(v) => headerMut.mutate({ valid_until: v || null })} />
+        </div>
+      </Card>
 
       <Card className="mt-6 p-0 overflow-hidden">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -245,6 +317,7 @@ function QuoteDetailPage() {
                           {[li.brand, li.model].filter(Boolean).join(" · ")}
                         </div>
                       )}
+                      <StockBadge li={li} />
                     </td>
                     <td className="px-2 py-2 text-right tabular-nums">
                       {editable ? (
@@ -324,10 +397,20 @@ function QuoteDetailPage() {
               })}
             </tbody>
             <tfoot>
-              <tr className="border-t border-border bg-muted/30">
-                <td colSpan={6} className="px-3 py-3 text-right text-sm font-medium">
-                  Total
+              <tr className="border-t border-border bg-muted/20 text-sm">
+                <td colSpan={6} className="px-3 py-2 text-right text-muted-foreground">Subtotal</td>
+                <td className="px-2 py-2 text-right tabular-nums">{fmt(q.subtotal, q.currency)}</td>
+                {editable && <td />}
+              </tr>
+              <tr className="bg-muted/20 text-sm">
+                <td colSpan={6} className="px-3 py-2 text-right text-muted-foreground">
+                  Tax ({Number(q.tax_pct ?? 0).toFixed(1)}%)
                 </td>
+                <td className="px-2 py-2 text-right tabular-nums">{fmt(q.tax_amount, q.currency)}</td>
+                {editable && <td />}
+              </tr>
+              <tr className="border-t border-border bg-muted/40">
+                <td colSpan={6} className="px-3 py-3 text-right text-sm font-medium">Total</td>
                 <td className="px-2 py-3 text-right text-base font-semibold tabular-nums">
                   {fmt(q.total, q.currency)}
                 </td>
@@ -337,6 +420,39 @@ function QuoteDetailPage() {
           </table>
         )}
       </Card>
+    </div>
+  );
+}
+
+function StockBadge({ li }: { li: LI }) {
+  const c = li.catalog_items;
+  if (!c) {
+    return (
+      <div className="mt-1 px-2">
+        <Badge variant="outline" className="text-[10px]">No catalog match</Badge>
+      </div>
+    );
+  }
+  const available = (c.stock_qty ?? 0) - (c.reserved_qty ?? 0);
+  const need = li.qty ?? 0;
+  const inStock = available >= need;
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1 px-2">
+      <Badge
+        variant={inStock ? "default" : "outline"}
+        className={`text-[10px] ${inStock ? "" : "border-destructive text-destructive"}`}
+      >
+        {inStock ? `In stock · ${available}` : `Short · ${available}/${need}`}
+      </Badge>
+      {c.warehouse_location && (
+        <Badge variant="outline" className="text-[10px]">{c.warehouse_location}</Badge>
+      )}
+      {c.is_authorised && c.oem && (
+        <Badge variant="outline" className="text-[10px]">Authorised · {c.oem}</Badge>
+      )}
+      {!inStock && c.lead_time_days != null && (
+        <span className="text-[10px] text-muted-foreground">Lead {c.lead_time_days}d</span>
+      )}
     </div>
   );
 }
