@@ -203,6 +203,11 @@ async function recomputeQuoteTotals(supabase: any, quoteId: string) {
     .from("quote_line_items")
     .select("qty, unit_price, unit_cost")
     .eq("quote_id", quoteId);
+  const { data: q } = await supabase
+    .from("quotes")
+    .select("tax_pct")
+    .eq("id", quoteId)
+    .single();
   let subtotal = 0;
   let costTotal = 0;
   for (const l of lines ?? []) {
@@ -212,11 +217,18 @@ async function recomputeQuoteTotals(supabase: any, quoteId: string) {
     subtotal += price * qty;
     costTotal += cost * qty;
   }
-  const total = Number(subtotal.toFixed(2));
+  const taxPct = Number(q?.tax_pct ?? 0);
+  const taxAmount = Number((subtotal * (taxPct / 100)).toFixed(2));
+  const total = Number((subtotal + taxAmount).toFixed(2));
   const margin = subtotal > 0 ? Number((((subtotal - costTotal) / subtotal) * 100).toFixed(3)) : 0;
   await supabase
     .from("quotes")
-    .update({ subtotal: Number(subtotal.toFixed(2)), total, margin_pct: margin })
+    .update({
+      subtotal: Number(subtotal.toFixed(2)),
+      tax_amount: taxAmount,
+      total,
+      margin_pct: margin,
+    })
     .eq("id", quoteId);
 }
 
