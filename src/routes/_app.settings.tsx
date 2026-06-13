@@ -238,3 +238,98 @@ function SettingsPage() {
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
 });
+
+import { useMutation, useQuery, useQueryClient as useQC } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Check } from "lucide-react";
+import { getMyWorkspace, updateWorkspaceVendorTypes, type VendorType } from "@/lib/api/workspace.functions";
+import { VENDOR_TYPE_LABEL, VENDOR_TYPE_DESCRIPTION } from "@/hooks/use-vendor-types";
+import { cn } from "@/lib/utils";
+
+function VendorTypeCard() {
+  const qc = useQC();
+  const getWs = useServerFn(getMyWorkspace);
+  const updateFn = useServerFn(updateWorkspaceVendorTypes);
+  const { data, isLoading } = useQuery({ queryKey: ["my-workspace"], queryFn: () => getWs() });
+  const ws = data?.workspace;
+  const isBuyer = ws?.account_type === "buyer";
+  const initial: VendorType[] = (ws?.vendor_types ?? []) as VendorType[];
+  const [selected, setSelected] = useState<VendorType[]>([]);
+  useEffect(() => setSelected(initial), [ws?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const mut = useMutation({
+    mutationFn: () => updateFn({ data: { vendorTypes: selected } }),
+    onSuccess: () => {
+      toast.success("Vendor types updated");
+      qc.invalidateQueries({ queryKey: ["my-workspace"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
+  if (isBuyer) return null;
+
+  const toggle = (t: VendorType) =>
+    setSelected((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]));
+
+  const options: VendorType[] = ["distributor", "system_integrator", "vendor"];
+  const dirty = JSON.stringify([...selected].sort()) !== JSON.stringify([...initial].sort());
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Vendor type</CardTitle>
+        <CardDescription>
+          Determines which fields and workflows appear across the app. Pick all that apply.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" /> Loading…
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-2">
+              {options.map((t) => {
+                const on = selected.includes(t);
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => toggle(t)}
+                    className={cn(
+                      "flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
+                      on
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-card hover:border-primary/40",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded border",
+                        on ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                      )}
+                    >
+                      {on && <Check className="size-3.5" />}
+                    </span>
+                    <span>
+                      <span className="block text-sm font-medium text-foreground">
+                        {VENDOR_TYPE_LABEL[t]}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {VENDOR_TYPE_DESCRIPTION[t]}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <Button onClick={() => mut.mutate()} disabled={!dirty || selected.length === 0 || mut.isPending}>
+              {mut.isPending ? <Loader2 className="size-4 animate-spin" /> : "Save vendor types"}
+            </Button>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
