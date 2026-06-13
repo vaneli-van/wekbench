@@ -443,6 +443,19 @@ export const updateQuoteLineItem = createServerFn({ method: "POST" })
             unit_price: z.number().nullable().optional(),
             margin_pct: z.number().nullable().optional(),
             notes: z.string().max(2000).nullable().optional(),
+            line_type: z
+              .enum([
+                "hardware",
+                "software",
+                "service",
+                "labour",
+                "travel",
+                "training",
+                "subscription",
+              ])
+              .optional(),
+            section: z.string().max(255).nullable().optional(),
+            discount_pct: z.number().min(0).max(100).optional(),
           })
           .strict(),
       })
