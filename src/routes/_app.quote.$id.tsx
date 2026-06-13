@@ -367,7 +367,7 @@ function QuoteDetailPage() {
                               <>
                                 <select
                                   value={li.line_type}
-                                  onChange={(e) => commit({ line_type: e.target.value })}
+                                  onChange={(e) => commit({ line_type: e.target.value as LineType })}
                                   className="h-6 rounded border border-border bg-transparent px-1.5 text-[11px]"
                                 >
                                   {(Object.keys(LINE_TYPE_LABEL) as LineType[]).map((k) => (
