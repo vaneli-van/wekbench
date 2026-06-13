@@ -424,6 +424,39 @@ function QuoteDetailPage() {
   );
 }
 
+function StockBadge({ li }: { li: LI }) {
+  const c = li.catalog_items;
+  if (!c) {
+    return (
+      <div className="mt-1 px-2">
+        <Badge variant="outline" className="text-[10px]">No catalog match</Badge>
+      </div>
+    );
+  }
+  const available = (c.stock_qty ?? 0) - (c.reserved_qty ?? 0);
+  const need = li.qty ?? 0;
+  const inStock = available >= need;
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1 px-2">
+      <Badge
+        variant={inStock ? "default" : "outline"}
+        className={`text-[10px] ${inStock ? "" : "border-destructive text-destructive"}`}
+      >
+        {inStock ? `In stock · ${available}` : `Short · ${available}/${need}`}
+      </Badge>
+      {c.warehouse_location && (
+        <Badge variant="outline" className="text-[10px]">{c.warehouse_location}</Badge>
+      )}
+      {c.is_authorised && c.oem && (
+        <Badge variant="outline" className="text-[10px]">Authorised · {c.oem}</Badge>
+      )}
+      {!inStock && c.lead_time_days != null && (
+        <span className="text-[10px] text-muted-foreground">Lead {c.lead_time_days}d</span>
+      )}
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/_app/quote/$id")({
   head: ({ params }) => ({ meta: [{ title: `Quote ${params.id} — wekbench` }] }),
   errorComponent: ({ error, reset }) => {
