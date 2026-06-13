@@ -235,8 +235,13 @@ function OnboardingPage() {
 
       <main className="flex flex-1 flex-col overflow-hidden">
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-y-auto px-6 py-10">
-          {step === 1 && <StepRole accountType={accountType} onSelect={setAccountType} />}
-          {step === 2 && (
+          {step === STEP_ROLE && <StepRole accountType={accountType} onSelect={setAccountType} />}
+          {step === STEP_VENDOR_TYPE && (
+            <StepVendorType selected={vendorTypes} onToggle={(t) => {
+              setVendorTypes((cur) => cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]);
+            }} />
+          )}
+          {step === STEP_PROFILE && (
             <StepProfile
               fullName={fullName}
               company={company}
@@ -249,7 +254,7 @@ function OnboardingPage() {
               onCountry={setCountry}
             />
           )}
-          {step === 3 && (
+          {step === STEP_DEMO && (
             <StepDemoChoice
               choice={demoChoice}
               accountType={accountType ?? "vendor"}
