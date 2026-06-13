@@ -379,17 +379,48 @@ export const getQuote = createServerFn({ method: "POST" })
     const { data: quote, error } = await context.supabase
       .from("quotes")
       .select(
-        "id, workspace_id, quote_number, status, currency, subtotal, total, margin_pct, valid_until, notes, sent_at, created_at, rfq_id, rfqs(buyer_ref, buyer_name, buyer_email, buyer_company, summary, due_date)",
+        "id, workspace_id, quote_number, status, currency, subtotal, tax_pct, tax_amount, total, margin_pct, valid_until, notes, sent_at, created_at, incoterm, delivery_location, lead_time_days, rfq_id, rfqs(buyer_ref, buyer_name, buyer_email, buyer_company, summary, due_date)",
       )
       .eq("id", data.id)
       .maybeSingle();
     if (error || !quote) throw new Error("Quote not found");
     const { data: items } = await context.supabase
       .from("quote_line_items")
-      .select("*")
+      .select(
+        "*, catalog_items(stock_qty, reserved_qty, warehouse_location, oem, is_authorised, lead_time_days)",
+      )
       .eq("quote_id", data.id)
       .order("line_no");
     return { quote, items: items ?? [] };
+  });
+
+export const updateQuoteHeader = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        quoteId: z.string().uuid(),
+        patch: z
+          .object({
+            incoterm: z.string().max(32).nullable().optional(),
+            delivery_location: z.string().max(255).nullable().optional(),
+            lead_time_days: z.number().int().min(0).max(3650).nullable().optional(),
+            tax_pct: z.number().min(0).max(100).optional(),
+            valid_until: z.string().nullable().optional(),
+            notes: z.string().max(4000).nullable().optional(),
+          })
+          .strict(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await context.supabase.from("quotes").update(data.patch as any).eq("id", data.quoteId);
+    if (error) throw new Error(error.message);
+    if (data.patch.tax_pct !== undefined) {
+      await recomputeQuoteTotals(context.supabase, data.quoteId);
+    }
+    return { ok: true };
   });
 
 export const updateQuoteLineItem = createServerFn({ method: "POST" })
