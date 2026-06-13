@@ -125,6 +125,11 @@ function QuoteDetailPage() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
+  const headerMut = useMutation({
+    mutationFn: (patch: Record<string, unknown>) => updateHeader({ data: { quoteId: id, patch } }),
+    onSuccess: invalidate,
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
 
   if (isLoading) {
     return (
