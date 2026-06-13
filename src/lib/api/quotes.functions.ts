@@ -411,6 +411,10 @@ export const updateQuoteHeader = createServerFn({ method: "POST" })
             tax_pct: z.number().min(0).max(100).optional(),
             valid_until: z.string().nullable().optional(),
             notes: z.string().max(4000).nullable().optional(),
+            site_address: z.string().max(1000).nullable().optional(),
+            site_contact_name: z.string().max(255).nullable().optional(),
+            site_contact_phone: z.string().max(64).nullable().optional(),
+            install_window: z.string().max(255).nullable().optional(),
           })
           .strict(),
       })
