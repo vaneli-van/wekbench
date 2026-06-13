@@ -201,7 +201,7 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
 async function recomputeQuoteTotals(supabase: any, quoteId: string) {
   const { data: lines } = await supabase
     .from("quote_line_items")
-    .select("qty, unit_price, unit_cost")
+    .select("qty, unit_price, unit_cost, discount_pct")
     .eq("quote_id", quoteId);
   const { data: q } = await supabase
     .from("quotes")
@@ -214,7 +214,10 @@ async function recomputeQuoteTotals(supabase: any, quoteId: string) {
     const price = Number(l.unit_price ?? 0);
     const cost = Number(l.unit_cost ?? 0);
     const qty = Number(l.qty ?? 0);
-    subtotal += price * qty;
+    const disc = Number(l.discount_pct ?? 0);
+    const gross = price * qty;
+    const net = gross * (1 - disc / 100);
+    subtotal += net;
     costTotal += cost * qty;
   }
   const taxPct = Number(q?.tax_pct ?? 0);
