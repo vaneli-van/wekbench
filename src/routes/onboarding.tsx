@@ -133,8 +133,9 @@ function OnboardingPage() {
   }, [accountType]);
 
   const canContinue =
-    step === 1 ? accountType !== null
-    : step === 2 ? fullName.trim().length > 0 && company.trim().length > 0 && role !== "" && country !== ""
+    step === STEP_ROLE ? accountType !== null
+    : step === STEP_VENDOR_TYPE ? vendorTypes.length > 0
+    : step === STEP_PROFILE ? fullName.trim().length > 0 && company.trim().length > 0 && role !== "" && country !== ""
     : demoChoice !== null;
 
   const handleNext = async () => {
@@ -157,6 +158,7 @@ function OnboardingPage() {
             name: company.trim(),
             account_type: accountType ?? "vendor",
             country,
+            vendor_types: isVendorFlow && vendorTypes.length > 0 ? vendorTypes : [],
             seeded_demo: demoChoice === "demo",
             onboarding_completed_at: new Date().toISOString(),
           })
