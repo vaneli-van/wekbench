@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/foundations/empty-state";
 import { PageHeader } from "@/components/page-header";
+import { QuoteAttachmentsCard } from "@/components/quote-attachments-card";
 import {
   getQuote,
   updateQuoteLineItem,
@@ -420,6 +421,8 @@ function QuoteDetailPage() {
           </table>
         )}
       </Card>
+
+      <QuoteAttachmentsCard quoteId={q.id} workspaceId={q.workspace_id} editable={editable} />
     </div>
   );
 }

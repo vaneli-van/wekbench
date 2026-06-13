@@ -406,6 +406,63 @@ export type Database = {
         }
         Relationships: []
       }
+      quote_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          id: string
+          kind: Database["public"]["Enums"]["attachment_kind"]
+          mime_type: string | null
+          quote_id: string
+          size_bytes: number | null
+          updated_at: string
+          uploaded_by: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          id?: string
+          kind?: Database["public"]["Enums"]["attachment_kind"]
+          mime_type?: string | null
+          quote_id: string
+          size_bytes?: number | null
+          updated_at?: string
+          uploaded_by?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["attachment_kind"]
+          mime_type?: string | null
+          quote_id?: string
+          size_bytes?: number | null
+          updated_at?: string
+          uploaded_by?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_attachments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_attachments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_line_items: {
         Row: {
           brand: string | null
@@ -881,6 +938,7 @@ export type Database = {
     }
     Enums: {
       app_role: "owner" | "admin" | "member"
+      attachment_kind: "datasheet" | "warranty" | "compliance" | "other"
       catalog_source: "manual" | "supplier_upload" | "external_api"
       contract_type: "master" | "sla" | "pricing" | "other"
       extracted_doc_status: "pending_review" | "approved" | "rejected"
@@ -1029,6 +1087,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["owner", "admin", "member"],
+      attachment_kind: ["datasheet", "warranty", "compliance", "other"],
       catalog_source: ["manual", "supplier_upload", "external_api"],
       contract_type: ["master", "sla", "pricing", "other"],
       extracted_doc_status: ["pending_review", "approved", "rejected"],
