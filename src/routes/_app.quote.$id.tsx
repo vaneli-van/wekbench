@@ -317,6 +317,7 @@ function QuoteDetailPage() {
                           {[li.brand, li.model].filter(Boolean).join(" · ")}
                         </div>
                       )}
+                      <StockBadge li={li} />
                     </td>
                     <td className="px-2 py-2 text-right tabular-nums">
                       {editable ? (
