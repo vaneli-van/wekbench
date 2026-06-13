@@ -36,6 +36,25 @@ function fmt(n: number | null | undefined, currency: string | null | undefined) 
   return `${currency ?? ""} ${Number(n).toFixed(2)}`;
 }
 
+type LineType =
+  | "hardware"
+  | "software"
+  | "service"
+  | "labour"
+  | "travel"
+  | "training"
+  | "subscription";
+
+const LINE_TYPE_LABEL: Record<LineType, string> = {
+  hardware: "Hardware",
+  software: "Software",
+  service: "Service",
+  labour: "Labour",
+  travel: "Travel",
+  training: "Training",
+  subscription: "Subscription",
+};
+
 type LI = {
   id: string;
   line_no: number;
@@ -47,6 +66,9 @@ type LI = {
   unit_cost: number | null;
   unit_price: number | null;
   margin_pct: number | null;
+  line_type: LineType;
+  section: string | null;
+  discount_pct: number | null;
   catalog_items?: {
     stock_qty: number | null;
     reserved_qty: number | null;
