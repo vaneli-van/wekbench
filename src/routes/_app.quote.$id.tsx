@@ -93,6 +93,7 @@ function QuoteDetailPage() {
   const addLI = useServerFn(addQuoteLineItem);
   const delLI = useServerFn(deleteQuoteLineItem);
   const updateStatus = useServerFn(updateQuoteStatus);
+  const updateHeader = useServerFn(updateQuoteHeader);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["quote", id],
