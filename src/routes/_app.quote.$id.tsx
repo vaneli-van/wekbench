@@ -397,10 +397,20 @@ function QuoteDetailPage() {
               })}
             </tbody>
             <tfoot>
-              <tr className="border-t border-border bg-muted/30">
-                <td colSpan={6} className="px-3 py-3 text-right text-sm font-medium">
-                  Total
+              <tr className="border-t border-border bg-muted/20 text-sm">
+                <td colSpan={6} className="px-3 py-2 text-right text-muted-foreground">Subtotal</td>
+                <td className="px-2 py-2 text-right tabular-nums">{fmt(q.subtotal, q.currency)}</td>
+                {editable && <td />}
+              </tr>
+              <tr className="bg-muted/20 text-sm">
+                <td colSpan={6} className="px-3 py-2 text-right text-muted-foreground">
+                  Tax ({Number(q.tax_pct ?? 0).toFixed(1)}%)
                 </td>
+                <td className="px-2 py-2 text-right tabular-nums">{fmt(q.tax_amount, q.currency)}</td>
+                {editable && <td />}
+              </tr>
+              <tr className="border-t border-border bg-muted/40">
+                <td colSpan={6} className="px-3 py-3 text-right text-sm font-medium">Total</td>
                 <td className="px-2 py-3 text-right text-base font-semibold tabular-nums">
                   {fmt(q.total, q.currency)}
                 </td>
