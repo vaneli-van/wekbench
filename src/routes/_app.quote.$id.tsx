@@ -207,11 +207,27 @@ function QuoteDetailPage() {
         <Card className="p-4">
           <div className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">Totals</div>
           <p className="text-2xl font-semibold tabular-nums">{fmt(q.total, q.currency)}</p>
-          <p className="text-xs text-muted-foreground">
-            Margin: {q.margin_pct != null ? `${Number(q.margin_pct).toFixed(1)}%` : "—"}
-          </p>
+          <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+            <p>Subtotal: <span className="tabular-nums">{fmt(q.subtotal, q.currency)}</span></p>
+            <p>Tax ({Number(q.tax_pct ?? 0).toFixed(1)}%): <span className="tabular-nums">{fmt(q.tax_amount, q.currency)}</span></p>
+            <p>Margin: {q.margin_pct != null ? `${Number(q.margin_pct).toFixed(1)}%` : "—"}</p>
+          </div>
         </Card>
       </div>
+
+      <Card className="mt-4 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Delivery & terms</h3>
+          {!editable && <span className="text-xs text-muted-foreground">Locked once sent</span>}
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
+          <TermsField label="Incoterm" value={q.incoterm} editable={editable} placeholder="DAP / EXW / CIF" onCommit={(v) => headerMut.mutate({ incoterm: v || null })} />
+          <TermsField label="Delivery location" value={q.delivery_location} editable={editable} placeholder="Accra warehouse" onCommit={(v) => headerMut.mutate({ delivery_location: v || null })} />
+          <TermsField label="Lead time (days)" value={q.lead_time_days} type="number" editable={editable} onCommit={(v) => headerMut.mutate({ lead_time_days: v === "" ? null : Number(v) })} />
+          <TermsField label="Tax %" value={q.tax_pct} type="number" editable={editable} onCommit={(v) => headerMut.mutate({ tax_pct: Number(v) || 0 })} />
+          <TermsField label="Valid until" value={q.valid_until} type="date" editable={editable} onCommit={(v) => headerMut.mutate({ valid_until: v || null })} />
+        </div>
+      </Card>
 
       <Card className="mt-6 p-0 overflow-hidden">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
