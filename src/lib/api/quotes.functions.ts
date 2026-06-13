@@ -382,7 +382,7 @@ export const getQuote = createServerFn({ method: "POST" })
     const { data: quote, error } = await context.supabase
       .from("quotes")
       .select(
-        "id, workspace_id, quote_number, status, currency, subtotal, tax_pct, tax_amount, total, margin_pct, valid_until, notes, sent_at, created_at, incoterm, delivery_location, lead_time_days, rfq_id, rfqs(buyer_ref, buyer_name, buyer_email, buyer_company, summary, due_date)",
+        "id, workspace_id, quote_number, status, currency, subtotal, tax_pct, tax_amount, total, margin_pct, valid_until, notes, sent_at, created_at, incoterm, delivery_location, lead_time_days, site_address, site_contact_name, site_contact_phone, install_window, rfq_id, rfqs(buyer_ref, buyer_name, buyer_email, buyer_company, summary, due_date)",
       )
       .eq("id", data.id)
       .maybeSingle();
