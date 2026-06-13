@@ -13,6 +13,9 @@ import {
   ShoppingCart,
   Users,
   Percent,
+  Package,
+  Wrench,
+  Briefcase,
 } from "lucide-react";
 import { toast } from "sonner";
 
