@@ -61,11 +61,31 @@ function OnboardingPage() {
 
   // Form state
   const [accountType, setAccountType] = useState<AccountType | null>(null);
+  const [vendorTypes, setVendorTypes] = useState<VendorType[]>([]);
   const [fullName, setFullName] = useState("");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState<RoleOption | "">("");
   const [country, setCountry] = useState("");
   const [demoChoice, setDemoChoice] = useState<DemoChoice | null>(null);
+
+  // Dynamic step list — vendors get a "What kind of vendor?" step
+  const STEPS = accountType === "vendor"
+    ? [
+        { id: 1, title: "Your role" },
+        { id: 2, title: "Vendor type" },
+        { id: 3, title: "About you" },
+        { id: 4, title: "Starting point" },
+      ]
+    : [
+        { id: 1, title: "Your role" },
+        { id: 2, title: "About you" },
+        { id: 3, title: "Starting point" },
+      ];
+  const isVendorFlow = accountType === "vendor";
+  const STEP_ROLE = 1;
+  const STEP_VENDOR_TYPE = isVendorFlow ? 2 : -1;
+  const STEP_PROFILE = isVendorFlow ? 3 : 2;
+  const STEP_DEMO = isVendorFlow ? 4 : 3;
 
   // Redirect away if not signed in
   useEffect(() => {
