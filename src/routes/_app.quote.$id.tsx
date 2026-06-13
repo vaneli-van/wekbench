@@ -27,6 +27,7 @@ import {
   addQuoteLineItem,
   deleteQuoteLineItem,
   updateQuoteStatus,
+  updateQuoteHeader,
 } from "@/lib/api/quotes.functions";
 
 function fmt(n: number | null | undefined, currency: string | null | undefined) {
@@ -45,6 +46,14 @@ type LI = {
   unit_cost: number | null;
   unit_price: number | null;
   margin_pct: number | null;
+  catalog_items?: {
+    stock_qty: number | null;
+    reserved_qty: number | null;
+    warehouse_location: string | null;
+    oem: string | null;
+    is_authorised: boolean | null;
+    lead_time_days: number | null;
+  } | null;
 };
 
 function EditableCell({
