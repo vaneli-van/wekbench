@@ -16,14 +16,19 @@ export type Database = {
     Tables: {
       catalog_items: {
         Row: {
+          authorisation_ref: string | null
           brand: string | null
           created_at: string
           currency: string | null
           description: string
           external_ref: string | null
           id: string
+          is_authorised: boolean
           lead_time_days: number | null
           model: string | null
+          oem: string | null
+          reorder_point: number | null
+          reserved_qty: number
           sku: string | null
           source: Database["public"]["Enums"]["catalog_source"]
           spec: Json
@@ -31,17 +36,23 @@ export type Database = {
           supplier_id: string | null
           unit_price: number | null
           updated_at: string
+          warehouse_location: string | null
           workspace_id: string
         }
         Insert: {
+          authorisation_ref?: string | null
           brand?: string | null
           created_at?: string
           currency?: string | null
           description: string
           external_ref?: string | null
           id?: string
+          is_authorised?: boolean
           lead_time_days?: number | null
           model?: string | null
+          oem?: string | null
+          reorder_point?: number | null
+          reserved_qty?: number
           sku?: string | null
           source?: Database["public"]["Enums"]["catalog_source"]
           spec?: Json
@@ -49,17 +60,23 @@ export type Database = {
           supplier_id?: string | null
           unit_price?: number | null
           updated_at?: string
+          warehouse_location?: string | null
           workspace_id: string
         }
         Update: {
+          authorisation_ref?: string | null
           brand?: string | null
           created_at?: string
           currency?: string | null
           description?: string
           external_ref?: string | null
           id?: string
+          is_authorised?: boolean
           lead_time_days?: number | null
           model?: string | null
+          oem?: string | null
+          reorder_point?: number | null
+          reserved_qty?: number
           sku?: string | null
           source?: Database["public"]["Enums"]["catalog_source"]
           spec?: Json
@@ -67,6 +84,7 @@ export type Database = {
           supplier_id?: string | null
           unit_price?: number | null
           updated_at?: string
+          warehouse_location?: string | null
           workspace_id?: string
         }
         Relationships: [
@@ -484,7 +502,10 @@ export type Database = {
         Row: {
           created_at: string
           currency: string | null
+          delivery_location: string | null
           id: string
+          incoterm: string | null
+          lead_time_days: number | null
           margin_pct: number
           notes: string | null
           quote_number: string
@@ -492,6 +513,8 @@ export type Database = {
           sent_at: string | null
           status: Database["public"]["Enums"]["quote_status"]
           subtotal: number
+          tax_amount: number
+          tax_pct: number
           total: number
           updated_at: string
           valid_until: string | null
@@ -500,7 +523,10 @@ export type Database = {
         Insert: {
           created_at?: string
           currency?: string | null
+          delivery_location?: string | null
           id?: string
+          incoterm?: string | null
+          lead_time_days?: number | null
           margin_pct?: number
           notes?: string | null
           quote_number: string
@@ -508,6 +534,8 @@ export type Database = {
           sent_at?: string | null
           status?: Database["public"]["Enums"]["quote_status"]
           subtotal?: number
+          tax_amount?: number
+          tax_pct?: number
           total?: number
           updated_at?: string
           valid_until?: string | null
@@ -516,7 +544,10 @@ export type Database = {
         Update: {
           created_at?: string
           currency?: string | null
+          delivery_location?: string | null
           id?: string
+          incoterm?: string | null
+          lead_time_days?: number | null
           margin_pct?: number
           notes?: string | null
           quote_number?: string
@@ -524,6 +555,8 @@ export type Database = {
           sent_at?: string | null
           status?: Database["public"]["Enums"]["quote_status"]
           subtotal?: number
+          tax_amount?: number
+          tax_pct?: number
           total?: number
           updated_at?: string
           valid_until?: string | null
