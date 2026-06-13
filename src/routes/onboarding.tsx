@@ -39,6 +39,7 @@ export const Route = createFileRoute("/onboarding")({
 
 type AccountType = "vendor" | "buyer";
 type DemoChoice = "demo" | "fresh";
+type VendorType = "distributor" | "system_integrator" | "vendor";
 type RoleOption =
   | "Procurement Manager"
   | "Sales Manager"
@@ -49,11 +50,7 @@ type RoleOption =
   | "Founder / Owner"
   | "Other";
 
-const STEPS = [
-  { id: 1, title: "Your role" },
-  { id: 2, title: "About you" },
-  { id: 3, title: "Starting point" },
-];
+// Step list is computed at render time based on accountType; vendors get an extra step.
 
 function OnboardingPage() {
   const navigate = useNavigate();
