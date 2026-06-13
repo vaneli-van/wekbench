@@ -421,6 +421,8 @@ function QuoteDetailPage() {
           </table>
         )}
       </Card>
+
+      <QuoteAttachmentsCard quoteId={q.id} workspaceId={q.workspace_id} editable={editable} />
     </div>
   );
 }
