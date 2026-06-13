@@ -385,7 +385,7 @@ function QuoteDetailPage() {
                                 />
                               </>
                             ) : (
-                              <Badge variant="outline" className="text-[10px]">{LINE_TYPE_LABEL[li.line_type]}</Badge>
+                              <Badge variant="outline" className="text-[10px]">{LINE_TYPE_LABEL[li.line_type as LineType]}</Badge>
                             )}
                           </div>
                           <StockBadge li={li} />
