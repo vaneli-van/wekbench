@@ -293,6 +293,19 @@ function QuoteDetailPage() {
         </div>
       </Card>
 
+      <Card className="mt-4 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Site & installation</h3>
+          <span className="text-xs text-muted-foreground">For on-site delivery, install, or training</span>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <TermsField label="Site address" value={q.site_address} editable={editable} placeholder="Street, city, country" onCommit={(v) => headerMut.mutate({ site_address: v || null })} />
+          <TermsField label="Install window" value={q.install_window} editable={editable} placeholder="e.g. Q1 2027, weekends only" onCommit={(v) => headerMut.mutate({ install_window: v || null })} />
+          <TermsField label="Site contact" value={q.site_contact_name} editable={editable} placeholder="Name" onCommit={(v) => headerMut.mutate({ site_contact_name: v || null })} />
+          <TermsField label="Site contact phone" value={q.site_contact_phone} editable={editable} placeholder="+233…" onCommit={(v) => headerMut.mutate({ site_contact_phone: v || null })} />
+        </div>
+      </Card>
+
       <Card className="mt-6 p-0 overflow-hidden">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h3 className="text-sm font-semibold">Line items</h3>
