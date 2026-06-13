@@ -197,8 +197,8 @@ function QuotesPage() {
           onDragEndCard={() => setDragId(null)}
           onDragOverStage={setOverStage}
           onDrop={handleDrop}
-          onOpen={(q) => navigate({ to: "/quote/$id", params: { id: q.id } })}
-          onOpenFull={(q) => navigate({ to: "/quote/$id", params: { id: q.id } })}
+          onOpen={(q) => openQuote(q, navigate)}
+          onOpenFull={(q) => openQuote(q, navigate)}
         />
       ) : (
         <ListView
@@ -212,11 +212,24 @@ function QuotesPage() {
               setSortDir("desc")
             }
           }}
-          onOpen={(q) => navigate({ to: "/quote/$id", params: { id: q.id } })}
+          onOpen={(q) => openQuote(q, navigate)}
         />
       )}
     </div>
   )
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function openQuote(q: PipelineQuote, navigate: ReturnType<typeof useNavigate>) {
+  if (UUID_RE.test(q.id)) {
+    navigate({ to: "/quote/$id", params: { id: q.id } })
+    return
+  }
+  toast.info("Sample pipeline quote", {
+    description: "This card is demo data. Approve an RFQ from the inbox to open a real, editable quote.",
+    action: { label: "Go to inbox", onClick: () => navigate({ to: "/inbox" }) },
+  })
 }
 
 /* ---------- Kanban board ---------- */
