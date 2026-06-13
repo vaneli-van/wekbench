@@ -327,126 +327,175 @@ function QuoteDetailPage() {
                 <th className="px-2 py-2 text-right w-28">Unit cost</th>
                 <th className="px-2 py-2 text-right w-24">Margin %</th>
                 <th className="px-2 py-2 text-right w-28">Unit price</th>
+                <th className="px-2 py-2 text-right w-20">Disc %</th>
                 <th className="px-2 py-2 text-right w-28">Line total</th>
                 {editable && <th className="w-10" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {items.map((li) => {
-                const lineTotal = (li.unit_price ?? 0) * (li.qty ?? 0);
-                const commit = (patch: Record<string, unknown>) =>
-                  updateMut.mutate({ lineItemId: li.id, patch });
-                return (
-                  <tr key={li.id}>
-                    <td className="px-2 py-2 text-muted-foreground tabular-nums">{li.line_no}</td>
-                    <td className="px-2 py-2">
-                      {editable ? (
-                        <EditableCell
-                          value={li.description}
-                          onCommit={(v) => commit({ description: v })}
-                        />
-                      ) : (
-                        <div className="font-medium">{li.description}</div>
-                      )}
-                      {(li.brand || li.model) && (
-                        <div className="px-2 text-xs text-muted-foreground">
-                          {[li.brand, li.model].filter(Boolean).join(" · ")}
-                        </div>
-                      )}
-                      <StockBadge li={li} />
+              {groupBySection(items).map((group) => (
+                <>
+                  <tr key={`sec-${group.key}`} className="bg-muted/20">
+                    <td colSpan={editable ? 9 : 8} className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {group.section ?? "Ungrouped"}
                     </td>
-                    <td className="px-2 py-2 text-right tabular-nums">
-                      {editable ? (
-                        <EditableCell
-                          type="number"
-                          value={li.qty}
-                          onCommit={(v) => commit({ qty: Number(v) || 0 })}
-                          className="text-right"
-                        />
-                      ) : (
-                        li.qty
-                      )}
-                    </td>
-                    <td className="px-2 py-2 text-right tabular-nums">
-                      {editable ? (
-                        <EditableCell
-                          type="number"
-                          value={li.unit_cost}
-                          onCommit={(v) =>
-                            commit({
-                              unit_cost: v === "" ? null : Number(v),
-                              margin_pct: li.margin_pct,
-                            })
-                          }
-                          className="text-right"
-                        />
-                      ) : (
-                        fmt(li.unit_cost, q.currency)
-                      )}
-                    </td>
-                    <td className="px-2 py-2 text-right tabular-nums">
-                      {editable ? (
-                        <EditableCell
-                          type="number"
-                          value={li.margin_pct}
-                          onCommit={(v) =>
-                            commit({
-                              margin_pct: v === "" ? null : Number(v),
-                              unit_cost: li.unit_cost,
-                            })
-                          }
-                          className="text-right"
-                        />
-                      ) : (
-                        li.margin_pct != null ? `${li.margin_pct}%` : "—"
-                      )}
-                    </td>
-                    <td className="px-2 py-2 text-right tabular-nums">
-                      {editable ? (
-                        <EditableCell
-                          type="number"
-                          value={li.unit_price}
-                          onCommit={(v) => commit({ unit_price: v === "" ? null : Number(v) })}
-                          className="text-right"
-                        />
-                      ) : (
-                        fmt(li.unit_price, q.currency)
-                      )}
-                    </td>
-                    <td className="px-2 py-2 text-right tabular-nums font-medium">
-                      {fmt(lineTotal, q.currency)}
-                    </td>
-                    {editable && (
-                      <td className="px-1 py-2">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="size-7"
-                          onClick={() => delMut.mutate(li.id)}
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </td>
-                    )}
                   </tr>
-                );
-              })}
+                  {group.items.map((li) => {
+                    const disc = Number(li.discount_pct ?? 0);
+                    const lineTotal = (li.unit_price ?? 0) * (li.qty ?? 0) * (1 - disc / 100);
+                    const commit = (patch: Record<string, unknown>) =>
+                      updateMut.mutate({ lineItemId: li.id, patch });
+                    return (
+                      <tr key={li.id}>
+                        <td className="px-2 py-2 text-muted-foreground tabular-nums align-top">{li.line_no}</td>
+                        <td className="px-2 py-2">
+                          {editable ? (
+                            <EditableCell
+                              value={li.description}
+                              onCommit={(v) => commit({ description: v })}
+                            />
+                          ) : (
+                            <div className="font-medium">{li.description}</div>
+                          )}
+                          {(li.brand || li.model) && (
+                            <div className="px-2 text-xs text-muted-foreground">
+                              {[li.brand, li.model].filter(Boolean).join(" · ")}
+                            </div>
+                          )}
+                          <div className="mt-1 flex flex-wrap items-center gap-2 px-2">
+                            {editable ? (
+                              <>
+                                <select
+                                  value={li.line_type}
+                                  onChange={(e) => commit({ line_type: e.target.value })}
+                                  className="h-6 rounded border border-border bg-transparent px-1.5 text-[11px]"
+                                >
+                                  {(Object.keys(LINE_TYPE_LABEL) as LineType[]).map((k) => (
+                                    <option key={k} value={k}>{LINE_TYPE_LABEL[k]}</option>
+                                  ))}
+                                </select>
+                                <input
+                                  defaultValue={li.section ?? ""}
+                                  placeholder="Section (e.g. Core switches)"
+                                  onBlur={(e) => {
+                                    const v = e.target.value.trim();
+                                    if ((li.section ?? "") !== v) commit({ section: v || null });
+                                  }}
+                                  className="h-6 w-48 rounded border border-transparent bg-transparent px-1.5 text-[11px] hover:border-border focus:border-primary"
+                                />
+                              </>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px]">{LINE_TYPE_LABEL[li.line_type]}</Badge>
+                            )}
+                          </div>
+                          <StockBadge li={li} />
+                        </td>
+                        <td className="px-2 py-2 text-right tabular-nums align-top">
+                          {editable ? (
+                            <EditableCell
+                              type="number"
+                              value={li.qty}
+                              onCommit={(v) => commit({ qty: Number(v) || 0 })}
+                              className="text-right"
+                            />
+                          ) : (
+                            li.qty
+                          )}
+                        </td>
+                        <td className="px-2 py-2 text-right tabular-nums align-top">
+                          {editable ? (
+                            <EditableCell
+                              type="number"
+                              value={li.unit_cost}
+                              onCommit={(v) =>
+                                commit({
+                                  unit_cost: v === "" ? null : Number(v),
+                                  margin_pct: li.margin_pct,
+                                })
+                              }
+                              className="text-right"
+                            />
+                          ) : (
+                            fmt(li.unit_cost, q.currency)
+                          )}
+                        </td>
+                        <td className="px-2 py-2 text-right tabular-nums align-top">
+                          {editable ? (
+                            <EditableCell
+                              type="number"
+                              value={li.margin_pct}
+                              onCommit={(v) =>
+                                commit({
+                                  margin_pct: v === "" ? null : Number(v),
+                                  unit_cost: li.unit_cost,
+                                })
+                              }
+                              className="text-right"
+                            />
+                          ) : (
+                            li.margin_pct != null ? `${li.margin_pct}%` : "—"
+                          )}
+                        </td>
+                        <td className="px-2 py-2 text-right tabular-nums align-top">
+                          {editable ? (
+                            <EditableCell
+                              type="number"
+                              value={li.unit_price}
+                              onCommit={(v) => commit({ unit_price: v === "" ? null : Number(v) })}
+                              className="text-right"
+                            />
+                          ) : (
+                            fmt(li.unit_price, q.currency)
+                          )}
+                        </td>
+                        <td className="px-2 py-2 text-right tabular-nums align-top">
+                          {editable ? (
+                            <EditableCell
+                              type="number"
+                              value={li.discount_pct}
+                              onCommit={(v) => commit({ discount_pct: v === "" ? 0 : Number(v) })}
+                              className="text-right"
+                            />
+                          ) : (
+                            disc ? `${disc}%` : "—"
+                          )}
+                        </td>
+                        <td className="px-2 py-2 text-right tabular-nums font-medium align-top">
+                          {fmt(lineTotal, q.currency)}
+                        </td>
+                        {editable && (
+                          <td className="px-1 py-2 align-top">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-7"
+                              onClick={() => delMut.mutate(li.id)}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </>
+              ))}
             </tbody>
             <tfoot>
               <tr className="border-t border-border bg-muted/20 text-sm">
-                <td colSpan={6} className="px-3 py-2 text-right text-muted-foreground">Subtotal</td>
+                <td colSpan={7} className="px-3 py-2 text-right text-muted-foreground">Subtotal</td>
                 <td className="px-2 py-2 text-right tabular-nums">{fmt(q.subtotal, q.currency)}</td>
                 {editable && <td />}
               </tr>
               <tr className="bg-muted/20 text-sm">
-                <td colSpan={6} className="px-3 py-2 text-right text-muted-foreground">
+                <td colSpan={7} className="px-3 py-2 text-right text-muted-foreground">
                   Tax ({Number(q.tax_pct ?? 0).toFixed(1)}%)
                 </td>
                 <td className="px-2 py-2 text-right tabular-nums">{fmt(q.tax_amount, q.currency)}</td>
                 {editable && <td />}
               </tr>
               <tr className="border-t border-border bg-muted/40">
-                <td colSpan={6} className="px-3 py-3 text-right text-sm font-medium">Total</td>
+                <td colSpan={7} className="px-3 py-3 text-right text-sm font-medium">Total</td>
                 <td className="px-2 py-3 text-right text-base font-semibold tabular-nums">
                   {fmt(q.total, q.currency)}
                 </td>
