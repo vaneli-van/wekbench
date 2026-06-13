@@ -85,6 +85,47 @@ function EditableCell({
   );
 }
 
+function TermsField({
+  label,
+  value,
+  editable,
+  type = "text",
+  placeholder,
+  onCommit,
+}: {
+  label: string;
+  value: string | number | null | undefined;
+  editable: boolean;
+  type?: "text" | "number" | "date";
+  placeholder?: string;
+  onCommit: (v: string) => void;
+}) {
+  const [v, setV] = useState(value == null ? "" : String(value));
+  useEffect(() => setV(value == null ? "" : String(value)), [value]);
+  return (
+    <div>
+      <label className="mb-1 block text-xs uppercase tracking-wide text-muted-foreground">{label}</label>
+      {editable ? (
+        <Input
+          value={v}
+          type={type}
+          placeholder={placeholder}
+          onChange={(e) => setV(e.target.value)}
+          onBlur={() => {
+            if (v !== (value == null ? "" : String(value))) onCommit(v);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          }}
+          className="h-9 text-sm"
+        />
+      ) : (
+        <p className="text-sm">{value == null || value === "" ? "—" : String(value)}</p>
+      )}
+    </div>
+  );
+}
+
 function QuoteDetailPage() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
