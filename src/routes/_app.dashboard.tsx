@@ -37,6 +37,8 @@ import { DashboardWelcome } from "@/components/dashboard-welcome"
 import { rfqs, buyers } from "@/lib/data"
 import { cn } from "@/lib/utils"
 import { useProfile } from "@/hooks/use-profile"
+import { useWorkspaceId } from "@/hooks/use-workspace"
+import { listActivity } from "@/lib/api/quotes.functions"
 
 /* ---- KPI strip ---- */
 const kpis = [
