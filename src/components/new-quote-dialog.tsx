@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -22,7 +22,11 @@ import {
 } from "@/components/ui/select"
 import { addManualQuote } from "@/lib/manual-quotes"
 import { ASSIGNEES, SECTORS } from "@/lib/pipeline"
+import { buyers } from "@/lib/data"
+import { addSessionBuyer, useSessionBuyers } from "@/lib/session-buyers"
 import { toast } from "sonner"
+
+const CREATE_NEW_BUYER = "__create_new_buyer__"
 
 export function NewQuoteDialog({
   open: controlledOpen,
@@ -42,12 +46,40 @@ export function NewQuoteDialog({
   const [buyer, setBuyer] = useState("")
   const [sector, setSector] = useState<string>(SECTORS[0])
   const [assignee, setAssignee] = useState<string>(ASSIGNEES[0])
+  const [showNewBuyer, setShowNewBuyer] = useState(false)
+  const [newBuyerName, setNewBuyerName] = useState("")
+
+  const sessionBuyers = useSessionBuyers()
+  const buyerOptions = useMemo(() => {
+    const all = [...sessionBuyers, ...buyers.map((b) => b.company)]
+    return Array.from(new Set(all))
+  }, [sessionBuyers])
 
   function reset() {
     setTitle("")
     setBuyer("")
     setSector(SECTORS[0])
     setAssignee(ASSIGNEES[0])
+    setShowNewBuyer(false)
+    setNewBuyerName("")
+  }
+
+  function handleBuyerChange(value: string) {
+    if (value === CREATE_NEW_BUYER) {
+      setShowNewBuyer(true)
+      setNewBuyerName("")
+      return
+    }
+    setBuyer(value)
+    setShowNewBuyer(false)
+  }
+
+  function handleAddNewBuyer() {
+    const added = addSessionBuyer(newBuyerName)
+    if (!added) return
+    setBuyer(added)
+    setShowNewBuyer(false)
+    setNewBuyerName("")
   }
 
   function handleCreate() {
@@ -102,13 +134,51 @@ export function NewQuoteDialog({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="nq-buyer">Buyer</Label>
-            <Input
-              id="nq-buyer"
-              value={buyer}
-              onChange={(e) => setBuyer(e.target.value)}
-              placeholder="Company or contact name"
-            />
+            <Label>Buyer</Label>
+            <Select
+              value={buyer || undefined}
+              onValueChange={handleBuyerChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a buyer" />
+              </SelectTrigger>
+              <SelectContent>
+                {buyerOptions.map((name) => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+                <SelectItem value={CREATE_NEW_BUYER}>➕ Create new buyer</SelectItem>
+              </SelectContent>
+            </Select>
+            {showNewBuyer && (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={newBuyerName}
+                  onChange={(e) => setNewBuyerName(e.target.value)}
+                  placeholder="New buyer company name"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      handleAddNewBuyer()
+                    }
+                  }}
+                  autoFocus
+                />
+                <Button type="button" size="sm" onClick={handleAddNewBuyer}>
+                  Add
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowNewBuyer(false)
+                    setNewBuyerName("")
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
