@@ -157,6 +157,14 @@ function CreateQuoteButton() {
 
 function DashboardPage() {
   const { data: profile } = useProfile();
+  const { data: workspaceId } = useWorkspaceId();
+  const listActivityFn = useServerFn(listActivity);
+  const { data: activityData, isLoading: activityLoading } = useQuery({
+    queryKey: ["dashboard-activity", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: () => listActivityFn(),
+  });
+  const activity = activityData?.events ?? [];
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const today = new Date().toLocaleDateString(undefined, {
