@@ -13,8 +13,6 @@ import {
   AlertTriangle,
   Sparkles,
   FileText,
-  PackageCheck,
-  ReceiptText,
   Mailbox,
   ArrowRight,
   Plus,
