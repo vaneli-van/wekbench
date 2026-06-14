@@ -71,25 +71,29 @@ const kpis = [
 ]
 
 /* ---- Activity feed ---- */
-const activity = [
-  { id: 1, type: "rfq", icon: Inbox, text: "New RFQ from Meridian Bank Plc", meta: "25 x Dell Latitude laptops", time: "12m ago" },
-  { id: 2, type: "quote", icon: FileText, text: "Quote QT-2026-0418 sent to Meridian Bank", meta: "GH₵53.1M · v1", time: "1h ago" },
-  { id: 3, type: "po", icon: PackageCheck, text: "PO received from Equator Logistics", meta: "30 x Rugged tablets", time: "3h ago" },
-  { id: 4, type: "invoice", icon: ReceiptText, text: "Invoice INV-0392 marked paid", meta: "GH₵27.3M settled", time: "5h ago" },
-  { id: 5, type: "rfq", icon: Inbox, text: "New RFQ from Sahel Health Group", meta: "Network switches & UPS", time: "Yesterday" },
-  { id: 6, type: "delivered", icon: Truck, text: "Order ORD-0356 delivered", meta: "Atlas Manufacturing", time: "Yesterday" },
-  { id: 7, type: "quote", icon: FileText, text: "Quote QT-2026-0381 approved", meta: "Atlas Manufacturing · GH₵14.8M", time: "2 days ago" },
-  { id: 8, type: "po", icon: PackageCheck, text: "PO received from Sahel Health", meta: "6 x APC UPS units", time: "2 days ago" },
-  { id: 9, type: "rfq", icon: Inbox, text: "New RFQ from Coastal Telecoms", meta: "Server rack & cooling", time: "3 days ago" },
-  { id: 10, type: "invoice", icon: ReceiptText, text: "Invoice INV-0370 issued", meta: "Sahel Health · GH₵19.2M", time: "4 days ago" },
-]
-
 const activityTone: Record<string, string> = {
   rfq: "bg-info/10 text-info",
   quote: "bg-primary/10 text-primary",
-  po: "bg-accent/10 text-accent",
-  invoice: "bg-success/10 text-success",
-  delivered: "bg-success/10 text-success",
+}
+
+const activityIcon = {
+  rfq: Inbox,
+  quote: FileText,
+} as const
+
+function timeAgo(iso: string): string {
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return ""
+  const diff = Date.now() - then
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return "just now"
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  const d = Math.floor(h / 24)
+  if (d === 1) return "Yesterday"
+  if (d < 7) return `${d} days ago`
+  return new Date(iso).toLocaleDateString()
 }
 
 /* ---- Quote pipeline ---- */
