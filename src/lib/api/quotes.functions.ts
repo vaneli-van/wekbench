@@ -552,3 +552,78 @@ export const updateQuoteStatus = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+/* ---------- dashboard activity feed ---------- */
+
+type ActivityEvent = {
+  id: string;
+  type: "rfq" | "quote";
+  text: string;
+  meta: string;
+  at: string;
+};
+
+export const listActivity = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+
+    const [{ data: rfqRows }, { data: quoteRows }] = await Promise.all([
+      supabase
+        .from("rfqs")
+        .select("id, buyer_ref, buyer_name, buyer_company, summary, status, created_at")
+        .order("created_at", { ascending: false })
+        .limit(12),
+      supabase
+        .from("quotes")
+        .select(
+          "id, quote_number, status, total, currency, sent_at, created_at, rfqs(buyer_name, buyer_company, buyer_ref)",
+        )
+        .order("created_at", { ascending: false })
+        .limit(12),
+    ]);
+
+    const events: ActivityEvent[] = [];
+
+    for (const r of rfqRows ?? []) {
+      const who = r.buyer_company || r.buyer_name || r.buyer_ref || "a buyer";
+      events.push({
+        id: `rfq-${r.id}`,
+        type: "rfq",
+        text: `New RFQ from ${who}`,
+        meta: r.summary || "RFQ received",
+        at: r.created_at,
+      });
+    }
+
+    for (const q of quoteRows ?? []) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rfq = (q as any).rfqs as { buyer_name?: string | null; buyer_company?: string | null; buyer_ref?: string | null } | null;
+      const label =
+        q.status === "accepted"
+          ? "accepted"
+          : q.status === "declined"
+            ? "declined"
+            : q.status === "sent" || q.sent_at
+              ? "sent"
+              : "drafted";
+      const who = rfq?.buyer_company || rfq?.buyer_name || rfq?.buyer_ref;
+      let text = `Quote ${q.quote_number} ${label}`;
+      if (label !== "drafted" && who) text += ` for ${who}`;
+      const total = q.total != null ? Number(q.total) : null;
+      const meta =
+        total != null && !Number.isNaN(total)
+          ? `${q.currency ?? ""} ${total.toLocaleString()}`.trim()
+          : `Status: ${q.status}`;
+      events.push({
+        id: `quote-${q.id}`,
+        type: "quote",
+        text,
+        meta,
+        at: label === "sent" && q.sent_at ? q.sent_at : q.created_at,
+      });
+    }
+
+    events.sort((a, b) => +new Date(b.at) - +new Date(a.at));
+    return { events: events.slice(0, 10) };
+  });

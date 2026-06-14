@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router"
 import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useServerFn } from "@tanstack/react-start"
 import {
   Inbox,
   FileClock,
@@ -11,8 +13,6 @@ import {
   AlertTriangle,
   Sparkles,
   FileText,
-  PackageCheck,
-  ReceiptText,
   Mailbox,
   ArrowRight,
   Plus,
@@ -37,6 +37,8 @@ import { DashboardWelcome } from "@/components/dashboard-welcome"
 import { rfqs, buyers } from "@/lib/data"
 import { cn } from "@/lib/utils"
 import { useProfile } from "@/hooks/use-profile"
+import { useWorkspaceId } from "@/hooks/use-workspace"
+import { listActivity } from "@/lib/api/quotes.functions"
 
 /* ---- KPI strip ---- */
 const kpis = [
@@ -71,25 +73,29 @@ const kpis = [
 ]
 
 /* ---- Activity feed ---- */
-const activity = [
-  { id: 1, type: "rfq", icon: Inbox, text: "New RFQ from Meridian Bank Plc", meta: "25 x Dell Latitude laptops", time: "12m ago" },
-  { id: 2, type: "quote", icon: FileText, text: "Quote QT-2026-0418 sent to Meridian Bank", meta: "GH₵53.1M · v1", time: "1h ago" },
-  { id: 3, type: "po", icon: PackageCheck, text: "PO received from Equator Logistics", meta: "30 x Rugged tablets", time: "3h ago" },
-  { id: 4, type: "invoice", icon: ReceiptText, text: "Invoice INV-0392 marked paid", meta: "GH₵27.3M settled", time: "5h ago" },
-  { id: 5, type: "rfq", icon: Inbox, text: "New RFQ from Sahel Health Group", meta: "Network switches & UPS", time: "Yesterday" },
-  { id: 6, type: "delivered", icon: Truck, text: "Order ORD-0356 delivered", meta: "Atlas Manufacturing", time: "Yesterday" },
-  { id: 7, type: "quote", icon: FileText, text: "Quote QT-2026-0381 approved", meta: "Atlas Manufacturing · GH₵14.8M", time: "2 days ago" },
-  { id: 8, type: "po", icon: PackageCheck, text: "PO received from Sahel Health", meta: "6 x APC UPS units", time: "2 days ago" },
-  { id: 9, type: "rfq", icon: Inbox, text: "New RFQ from Coastal Telecoms", meta: "Server rack & cooling", time: "3 days ago" },
-  { id: 10, type: "invoice", icon: ReceiptText, text: "Invoice INV-0370 issued", meta: "Sahel Health · GH₵19.2M", time: "4 days ago" },
-]
-
 const activityTone: Record<string, string> = {
   rfq: "bg-info/10 text-info",
   quote: "bg-primary/10 text-primary",
-  po: "bg-accent/10 text-accent",
-  invoice: "bg-success/10 text-success",
-  delivered: "bg-success/10 text-success",
+}
+
+const activityIcon = {
+  rfq: Inbox,
+  quote: FileText,
+} as const
+
+function timeAgo(iso: string): string {
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return ""
+  const diff = Date.now() - then
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return "just now"
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  const d = Math.floor(h / 24)
+  if (d === 1) return "Yesterday"
+  if (d < 7) return `${d} days ago`
+  return new Date(iso).toLocaleDateString()
 }
 
 /* ---- Quote pipeline ---- */
@@ -153,6 +159,14 @@ function CreateQuoteButton() {
 
 function DashboardPage() {
   const { data: profile } = useProfile();
+  const { data: workspaceId } = useWorkspaceId();
+  const listActivityFn = useServerFn(listActivity);
+  const { data: activityData, isLoading: activityLoading } = useQuery({
+    queryKey: ["dashboard-activity", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: () => listActivityFn(),
+  });
+  const activity = activityData?.events ?? [];
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const today = new Date().toLocaleDateString(undefined, {
@@ -279,26 +293,34 @@ function DashboardPage() {
           </div>
           <ol className="relative px-4 py-3">
             <span className="absolute left-[27px] top-4 bottom-4 w-px bg-border" aria-hidden />
-            {activity.map((e) => {
-              const Icon = e.icon
-              return (
-                <li key={e.id} className="relative flex gap-3 pb-3.5 last:pb-0">
-                  <span
-                    className={cn(
-                      "z-10 flex size-7 shrink-0 items-center justify-center rounded-full ring-4 ring-card",
-                      activityTone[e.type],
-                    )}
-                  >
-                    <Icon className="size-3.5" />
-                  </span>
-                  <div className="min-w-0 flex-1 pt-0.5">
-                    <p className="text-xs font-medium leading-snug text-foreground">{e.text}</p>
-                    <p className="truncate text-xs text-muted-foreground">{e.meta}</p>
-                  </div>
-                  <span className="shrink-0 pt-0.5 text-[11px] text-muted-foreground">{e.time}</span>
-                </li>
-              )
-            })}
+            {activityLoading ? (
+              <li className="px-1 py-2 text-xs text-muted-foreground">Loading activity…</li>
+            ) : activity.length === 0 ? (
+              <li className="px-1 py-2 text-xs text-muted-foreground">
+                No activity yet. New RFQs and quotes will appear here.
+              </li>
+            ) : (
+              activity.map((e) => {
+                const Icon = activityIcon[e.type]
+                return (
+                  <li key={e.id} className="relative flex gap-3 pb-3.5 last:pb-0">
+                    <span
+                      className={cn(
+                        "z-10 flex size-7 shrink-0 items-center justify-center rounded-full ring-4 ring-card",
+                        activityTone[e.type],
+                      )}
+                    >
+                      <Icon className="size-3.5" />
+                    </span>
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <p className="text-xs font-medium leading-snug text-foreground">{e.text}</p>
+                      <p className="truncate text-xs text-muted-foreground">{e.meta}</p>
+                    </div>
+                    <span className="shrink-0 pt-0.5 text-[11px] text-muted-foreground">{timeAgo(e.at)}</span>
+                  </li>
+                )
+              })
+            )}
           </ol>
         </section>
       </div>
