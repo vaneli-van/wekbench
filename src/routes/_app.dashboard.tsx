@@ -293,26 +293,34 @@ function DashboardPage() {
           </div>
           <ol className="relative px-4 py-3">
             <span className="absolute left-[27px] top-4 bottom-4 w-px bg-border" aria-hidden />
-            {activity.map((e) => {
-              const Icon = e.icon
-              return (
-                <li key={e.id} className="relative flex gap-3 pb-3.5 last:pb-0">
-                  <span
-                    className={cn(
-                      "z-10 flex size-7 shrink-0 items-center justify-center rounded-full ring-4 ring-card",
-                      activityTone[e.type],
-                    )}
-                  >
-                    <Icon className="size-3.5" />
-                  </span>
-                  <div className="min-w-0 flex-1 pt-0.5">
-                    <p className="text-xs font-medium leading-snug text-foreground">{e.text}</p>
-                    <p className="truncate text-xs text-muted-foreground">{e.meta}</p>
-                  </div>
-                  <span className="shrink-0 pt-0.5 text-[11px] text-muted-foreground">{e.time}</span>
-                </li>
-              )
-            })}
+            {activityLoading ? (
+              <li className="px-1 py-2 text-xs text-muted-foreground">Loading activity…</li>
+            ) : activity.length === 0 ? (
+              <li className="px-1 py-2 text-xs text-muted-foreground">
+                No activity yet. New RFQs and quotes will appear here.
+              </li>
+            ) : (
+              activity.map((e) => {
+                const Icon = activityIcon[e.type]
+                return (
+                  <li key={e.id} className="relative flex gap-3 pb-3.5 last:pb-0">
+                    <span
+                      className={cn(
+                        "z-10 flex size-7 shrink-0 items-center justify-center rounded-full ring-4 ring-card",
+                        activityTone[e.type],
+                      )}
+                    >
+                      <Icon className="size-3.5" />
+                    </span>
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <p className="text-xs font-medium leading-snug text-foreground">{e.text}</p>
+                      <p className="truncate text-xs text-muted-foreground">{e.meta}</p>
+                    </div>
+                    <span className="shrink-0 pt-0.5 text-[11px] text-muted-foreground">{timeAgo(e.at)}</span>
+                  </li>
+                )
+              })
+            )}
           </ol>
         </section>
       </div>
