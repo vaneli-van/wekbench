@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
+import { useServerFn } from "@tanstack/react-start"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { addManualQuote } from "@/lib/manual-quotes"
+import { createQuote } from "@/lib/api/quotes.functions"
 import { ASSIGNEES, SECTORS } from "@/lib/pipeline"
 import { buyers } from "@/lib/data"
 import { addSessionBuyer, useSessionBuyers } from "@/lib/session-buyers"
@@ -48,7 +49,9 @@ export function NewQuoteDialog({
   const [assignee, setAssignee] = useState<string>(ASSIGNEES[0])
   const [showNewBuyer, setShowNewBuyer] = useState(false)
   const [newBuyerName, setNewBuyerName] = useState("")
+  const [submitting, setSubmitting] = useState(false)
 
+  const createQuoteFn = useServerFn(createQuote)
   const sessionBuyers = useSessionBuyers()
   const buyerOptions = useMemo(() => {
     const all = [...sessionBuyers, ...buyers.map((b) => b.company)]
@@ -82,21 +85,27 @@ export function NewQuoteDialog({
     setNewBuyerName("")
   }
 
-  function handleCreate() {
+  async function handleCreate() {
     if (!title.trim() || !buyer.trim()) {
       toast.error("Title and buyer are required")
       return
     }
-    const quote = addManualQuote({
-      title: title.trim(),
-      buyer: buyer.trim(),
-      sector,
-      assignee,
-    })
-    toast.success(`${quote.id} created`, { description: "Opened in the quote builder" })
-    reset()
-    setOpen(false)
-    navigate({ to: "/quote/$id", params: { id: quote.id } })
+    setSubmitting(true)
+    try {
+      const { id } = await createQuoteFn({
+        data: { title: title.trim(), buyer: buyer.trim(), sector, assignee },
+      })
+      toast.success("Quote created", { description: "Opened in the quote builder" })
+      reset()
+      setOpen(false)
+      navigate({ to: "/quote/$id", params: { id } })
+    } catch (err) {
+      toast.error("Could not create quote", {
+        description: err instanceof Error ? err.message : "Please try again.",
+      })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -206,8 +215,10 @@ export function NewQuoteDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handleCreate}>Create &amp; open</Button>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button>
+          <Button onClick={handleCreate} disabled={submitting}>
+            {submitting ? "Creating…" : "Create & open"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

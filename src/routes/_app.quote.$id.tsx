@@ -245,7 +245,7 @@ function QuoteDetailPage() {
 
       <PageHeader
         title={`Quote ${q.quote_number}`}
-        description={rfq?.summary ?? rfq?.buyer_ref ?? ""}
+        description={q.title ?? rfq?.summary ?? rfq?.buyer_ref ?? ""}
         actions={
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="capitalize">{q.status}</Badge>
@@ -268,7 +268,7 @@ function QuoteDetailPage() {
           <div className="mb-1 flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
             <Building2 className="size-3.5" /> Buyer
           </div>
-          <p className="font-medium">{rfq?.buyer_company ?? rfq?.buyer_name ?? "—"}</p>
+          <p className="font-medium">{rfq?.buyer_company ?? rfq?.buyer_name ?? q.buyer_name ?? "—"}</p>
           <p className="text-sm text-muted-foreground">{rfq?.buyer_email ?? "—"}</p>
         </Card>
         <Card className="p-4">

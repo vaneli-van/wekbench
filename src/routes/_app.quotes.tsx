@@ -549,8 +549,11 @@ function LiveQuotesPanel() {
                 <span className="font-medium">{q.quote_number}</span>
                 <Badge variant="outline" className="capitalize">{q.status}</Badge>
               </div>
+              {q.title && (
+                <p className="mt-1 truncate text-xs font-medium text-foreground">{q.title}</p>
+              )}
               <p className="mt-1 truncate text-xs text-muted-foreground">
-                {q.rfqs?.buyer_name ?? q.rfqs?.buyer_email ?? q.rfqs?.buyer_ref ?? "—"}
+                {q.rfqs?.buyer_name ?? q.rfqs?.buyer_email ?? q.rfqs?.buyer_ref ?? q.buyer_name ?? "—"}
               </p>
               <div className="mt-2 flex items-center justify-between text-sm">
                 <span className="tabular-nums font-semibold">

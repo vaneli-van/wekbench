@@ -243,7 +243,7 @@ export const listQuotes = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("quotes")
       .select(
-        "id, quote_number, status, currency, subtotal, total, margin_pct, valid_until, sent_at, created_at, rfq_id, rfqs(buyer_ref, buyer_name, buyer_email, summary)",
+        "id, quote_number, status, currency, subtotal, total, margin_pct, valid_until, sent_at, created_at, rfq_id, title, buyer_name, rfqs(buyer_ref, buyer_name, buyer_email, summary)",
       )
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -382,7 +382,7 @@ export const getQuote = createServerFn({ method: "POST" })
     const { data: quote, error } = await context.supabase
       .from("quotes")
       .select(
-        "id, workspace_id, quote_number, status, currency, subtotal, tax_pct, tax_amount, total, margin_pct, valid_until, notes, sent_at, created_at, incoterm, delivery_location, lead_time_days, site_address, site_contact_name, site_contact_phone, install_window, rfq_id, rfqs(buyer_ref, buyer_name, buyer_email, buyer_company, summary, due_date)",
+        "id, workspace_id, quote_number, status, currency, subtotal, tax_pct, tax_amount, total, margin_pct, valid_until, notes, sent_at, created_at, incoterm, delivery_location, lead_time_days, site_address, site_contact_name, site_contact_phone, install_window, rfq_id, title, buyer_name, sector, assignee, rfqs(buyer_ref, buyer_name, buyer_email, buyer_company, summary, due_date)",
       )
       .eq("id", data.id)
       .maybeSingle();
@@ -626,4 +626,50 @@ export const listActivity = createServerFn({ method: "GET" })
 
     events.sort((a, b) => +new Date(b.at) - +new Date(a.at));
     return { events: events.slice(0, 10) };
+  });
+
+/* ---------- createQuote: standalone (no-RFQ) quote ---------- */
+
+export const createQuote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        title: z.string().min(1),
+        buyer: z.string().min(1),
+        sector: z.string().optional(),
+        assignee: z.string().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+
+    const { data: ws } = await supabase
+      .from("workspaces")
+      .select("id")
+      .eq("owner_id", context.userId)
+      .maybeSingle();
+    if (!ws) throw new Error("No workspace found for this user");
+    const workspaceId: string = ws.id;
+
+    const quote_number = await nextQuoteNumber(supabase, workspaceId);
+
+    const { data: created, error } = await supabase
+      .from("quotes")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .insert({
+        workspace_id: workspaceId,
+        rfq_id: null,
+        quote_number,
+        status: "draft",
+        title: data.title,
+        buyer_name: data.buyer,
+        sector: data.sector ?? null,
+        assignee: data.assignee ?? null,
+      } as any)
+      .select("id")
+      .single();
+    if (error || !created) throw new Error(error?.message ?? "Could not create quote");
+    return { id: created.id as string };
   });
