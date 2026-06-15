@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { priceAtQty } from "@/lib/sourcing/pricing";
+import { createOrderForQuote } from "./orders.functions";
 
 /* ---------- helpers ---------- */
 
@@ -592,6 +593,14 @@ export const updateQuoteStatus = createServerFn({ method: "POST" })
       const { data: q } = await context.supabase.from("quotes").select("rfq_id").eq("id", data.quoteId).single();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (q?.rfq_id) await context.supabase.from("rfqs").update({ status: "quoted" } as any).eq("id", q.rfq_id);
+    }
+    // accepting a quote spins up an order to track
+    if (data.status === "accepted") {
+      try {
+        await createOrderForQuote(context.supabase, data.quoteId);
+      } catch (e) {
+        console.error("[quote accept] order creation failed", e);
+      }
     }
     return { ok: true };
   });
