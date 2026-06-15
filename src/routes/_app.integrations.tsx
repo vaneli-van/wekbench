@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Mail, Database, FileSpreadsheet, MessageSquare, CreditCard, Truck, Plug, Check, Zap } from "lucide-react"
-import { lookupNexar } from "@/lib/api/sourcing.functions"
+import { lookupNexar, routePreview } from "@/lib/api/sourcing.functions"
 
 type Integration = {
   id: string
@@ -169,6 +169,91 @@ function NexarTestCard() {
   )
 }
 
+function RoutePreviewCard() {
+  const routeFn = useServerFn(routePreview)
+  const [desc, setDesc] = useState("Dell Latitude 5440 laptop")
+  const [mpn, setMpn] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [result, setResult] = useState<any>(null)
+
+  async function run() {
+    setLoading(true)
+    setError(null)
+    setResult(null)
+    try {
+      const r = await routeFn({
+        data: { items: [{ description: desc.trim() || undefined, mpn: mpn.trim() || undefined }] },
+      })
+      setResult(r)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Routing failed")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const item = result?.items?.[0]
+
+  return (
+    <Card className="mb-6 border-primary/40">
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <Plug className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <CardTitle className="text-base">Sourcing router preview</CardTitle>
+            <CardDescription>Phase 3 — classify a line item (no AI) and route it to the providers for its category.</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Line item description" />
+          <Input value={mpn} onChange={(e) => setMpn(e.target.value)} placeholder="MPN (optional)" />
+        </div>
+        <Button onClick={run} disabled={loading || (!desc.trim() && !mpn.trim())}>
+          {loading ? "Routing…" : "Route item"}
+        </Button>
+        {error && (
+          <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        {item && (
+          <div className="rounded-md border border-border bg-muted/30 p-3 text-sm">
+            <p className="mb-2">
+              <span className="font-medium">{item.label}</span> → category{" "}
+              <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{item.category}</span>
+              {item.mpn ? <span className="text-muted-foreground"> · MPN {item.mpn}</span> : null}
+            </p>
+            {item.providers.length === 0 ? (
+              <p className="text-muted-foreground">No providers enabled for this category.</p>
+            ) : (
+              <ul className="space-y-1">
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {item.providers.map((p: any) => (
+                  <li key={p.providerKey} className="flex items-center justify-between gap-2">
+                    <span>{p.providerName}</span>
+                    <span className="text-muted-foreground">
+                      {p.status}
+                      {p.offerCount ? ` · ${p.offerCount} offer(s)` : ""}
+                      {p.bestPrice ? ` · best ${p.bestPrice.currency} ${p.bestPrice.price}` : ""}
+                      {p.error ? ` · ${p.error}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 function IntegrationsPage() {
   const [integrations, setIntegrations] = useState(initialIntegrations)
 
@@ -187,6 +272,7 @@ function IntegrationsPage() {
       />
 
       <NexarTestCard />
+      <RoutePreviewCard />
 
       <div className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
         <Plug className="h-4 w-4" />

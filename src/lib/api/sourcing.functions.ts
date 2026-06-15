@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { nexarAdapter } from "@/lib/sourcing/nexar.server";
+import { routeItems } from "@/lib/sourcing/router.server";
 
 /**
  * Phase 1 verification endpoint: look up a part on Nexar by MPN (exact match),
@@ -38,4 +39,45 @@ export const lookupNexar = createServerFn({ method: "POST" })
       mode = "search";
     }
     return { mode, count: parts.length, parts };
+  });
+
+/**
+ * Phase 3 verification: classify line items (deterministic, no AI), route each
+ * to the providers enabled for its category, fan out in parallel, cache offers,
+ * and return a per-item routing summary. Auth-gated; resolves the caller's
+ * workspace for scoping and caching.
+ */
+export const routePreview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        items: z
+          .array(
+            z.object({
+              description: z.string().optional(),
+              brand: z.string().optional(),
+              model: z.string().optional(),
+              mpn: z.string().optional(),
+              qty: z.number().optional(),
+            }),
+          )
+          .min(1)
+          .max(20),
+        currency: z.string().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: ws } = await context.supabase
+      .from("workspaces")
+      .select("id")
+      .eq("owner_id", context.userId)
+      .maybeSingle();
+    if (!ws) throw new Error("No workspace found for this user");
+    return routeItems(data.items, {
+      supabase: context.supabase,
+      workspaceId: ws.id,
+      currency: data.currency,
+    });
   });
