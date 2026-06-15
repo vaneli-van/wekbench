@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveWorkspaceId } from "./workspace.functions";
+import { createInvoiceForOrder } from "./invoices.functions";
 
 export const ORDER_STATUSES = [
   "received",
@@ -101,6 +102,12 @@ export async function createOrderForQuote(supabase: any, quoteId: string): Promi
     status: "received",
     label: STATUS_LABEL.received,
   });
+  // Generate a draft invoice for the new order.
+  try {
+    await createInvoiceForOrder(supabase, order.id);
+  } catch (e) {
+    console.error("[order] invoice creation failed", e);
+  }
   return order.id;
 }
 
@@ -182,6 +189,11 @@ export const createManualOrder = createServerFn({ method: "POST" })
       status: "received",
       label: STATUS_LABEL.received,
     });
+    try {
+      await createInvoiceForOrder(context.supabase, order.id);
+    } catch (e) {
+      console.error("[order] invoice creation failed", e);
+    }
     return { id: order.id as string };
   });
 
