@@ -36,7 +36,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/onboarding")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Welcome to wekbench" }] }),
+  head: () => ({ meta: [{ title: "Welcome to Wekbench" }] }),
   component: OnboardingPage,
 });
 
@@ -317,7 +317,7 @@ function StepRole({
   return (
     <div className="mx-auto w-full max-w-2xl text-center">
       <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">
-        How will you use wekbench?
+        How will you use Wekbench?
       </h1>
       <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground text-pretty">
         This tailors your workspace. You can change it later in settings.

@@ -62,7 +62,7 @@ export function CommunicationUpdates() {
       <div className="rounded-xl border border-warning/30 bg-warning/5">
         <div className="flex items-center gap-2 border-b border-warning/20 px-5 py-3">
           <Sparkles className="size-4 text-warning" />
-          <h3 className="text-sm font-semibold text-foreground">wekbench Detected Changes</h3>
+          <h3 className="text-sm font-semibold text-foreground">Wekbench Detected Changes</h3>
         </div>
         <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2">
           {update.detectedChanges.map((c) => (

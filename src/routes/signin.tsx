@@ -11,7 +11,7 @@ import { Wordmark } from "@/components/wordmark";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/signin")({
-  head: () => ({ meta: [{ title: "Sign in — wekbench" }] }),
+  head: () => ({ meta: [{ title: "Sign in — Wekbench" }] }),
   component: SignInPage,
 });
 
@@ -123,7 +123,7 @@ function SignInPage() {
             </Button>
 
             <p className="mt-8 text-center text-sm text-muted-foreground">
-              New to wekbench?{" "}
+              New to Wekbench?{" "}
               <Link to="/signup" className="font-medium text-foreground underline-offset-4 hover:underline">
                 Create an account
               </Link>
@@ -132,7 +132,7 @@ function SignInPage() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground lg:text-left">
-          wekbench · wekbench.com · 2026
+          Wekbench · wekbench.com · 2026
         </p>
       </div>
 
@@ -176,7 +176,7 @@ function SignInPanel() {
               Back to work
             </p>
             <h2 className="mt-4 max-w-md text-4xl font-bold leading-tight tracking-tight text-foreground text-balance">
-              Close deals faster with wekbench
+              Close deals faster with Wekbench
             </h2>
           </div>
 

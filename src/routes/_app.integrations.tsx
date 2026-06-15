@@ -268,7 +268,7 @@ function IntegrationsPage() {
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
       <PageHeader
         title="Integrations"
-        description="Connect wekbench to the systems your procurement team already runs on."
+        description="Connect Wekbench to the systems your procurement team already runs on."
       />
 
       <NexarTestCard />

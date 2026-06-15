@@ -11,7 +11,7 @@ import { Wordmark } from "@/components/wordmark";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/signup")({
-  head: () => ({ meta: [{ title: "Create your account — wekbench" }] }),
+  head: () => ({ meta: [{ title: "Create your account — Wekbench" }] }),
   component: SignUpPage,
 });
 
@@ -199,7 +199,7 @@ function SignUpPage() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground lg:text-left">
-          wekbench · wekbench.com · 2026
+          Wekbench · wekbench.com · 2026
         </p>
       </div>
 

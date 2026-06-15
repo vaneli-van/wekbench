@@ -221,7 +221,7 @@ function RfqDetailPage() {
 
 export const Route = createFileRoute("/_app/rfq/$id")({
   component: RfqDetailPage,
-  head: ({ params }) => ({ meta: [{ title: `RFQ ${params.id} — wekbench` }] }),
+  head: ({ params }) => ({ meta: [{ title: `RFQ ${params.id} — Wekbench` }] }),
   errorComponent: ({ error, reset }) => {
     const router = useRouter();
     return (

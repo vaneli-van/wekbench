@@ -242,7 +242,7 @@ function ExtractionsPage() {
             <EmptyState
               icon={Sparkles}
               title="No extractions yet"
-              description="Once an email arrives at your wekbench address, it's classified and extracted here automatically."
+              description="Once an email arrives at your Wekbench address, it's classified and extracted here automatically."
             />
           ) : (
             <ul className="divide-y divide-border">

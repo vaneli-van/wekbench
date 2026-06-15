@@ -11,7 +11,7 @@ const journey = [
     icon: Network,
     step: "02",
     title: "Submit an RFQ or RFP",
-    body: "Raise a request in a few clicks. wekbench routes it across our connected network of OEMs and distributors.",
+    body: "Raise a request in a few clicks. Wekbench routes it across our connected network of OEMs and distributors.",
   },
   {
     icon: PackageCheck,
@@ -39,7 +39,7 @@ export function ProcurementNetwork() {
             Your trusted partner from request to delivery
           </h2>
           <p className="mt-4 text-pretty text-lg leading-relaxed text-muted-foreground">
-            Think of the simplicity of buying online — but for business. wekbench plugs into a network of OEMs and
+            Think of the simplicity of buying online — but for business. Wekbench plugs into a network of OEMs and
             distributors through partnerships and APIs, so any purchase you need to make is handled from the very
             first request all the way to the doorstep.
           </p>
@@ -60,7 +60,7 @@ export function ProcurementNetwork() {
                 <span className="flex size-16 items-center justify-center rounded-xl bg-accent/10 text-accent ring-1 ring-accent/20">
                   <Network className="size-7" />
                 </span>
-                <span className="text-sm font-semibold text-foreground">wekbench</span>
+                <span className="text-sm font-semibold text-foreground">Wekbench</span>
                 <span className="text-xs text-muted-foreground">Procurement hub</span>
               </div>
 

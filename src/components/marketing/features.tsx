@@ -5,7 +5,7 @@ const features = [
   { icon: Globe, title: "Live FX & landed cost", body: "Real-time rates with your own buffer, plus duties and freight baked in — no spreadsheet gymnastics." },
   { icon: TrendingUp, title: "Margin you control", body: "Set default margins once and override per quote. See your profit before you hit send." },
   { icon: Workflow, title: "RFQ-to-order pipeline", body: "Track every request from quote to PO to invoice to delivery in one connected workflow." },
-  { icon: FileSpreadsheet, title: "Any format in", body: "PDFs, Excel sheets, scanned images, or plain email text — wekbench reads them all." },
+  { icon: FileSpreadsheet, title: "Any format in", body: "PDFs, Excel sheets, scanned images, or plain email text — Wekbench reads them all." },
   { icon: ShieldCheck, title: "Audit-ready records", body: "Versioned quotes and documents keep a clean trail for buyers, finance, and compliance." },
 ];
 

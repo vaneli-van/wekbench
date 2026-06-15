@@ -64,7 +64,7 @@ export function MarketingFooter() {
         </div>
 
         <div className="mt-10 border-t border-border pt-6 text-center text-xs text-muted-foreground sm:text-left">
-          wekbench · wekbench.com · {new Date().getFullYear()}
+          Wekbench · wekbench.com · {new Date().getFullYear()}
         </div>
       </div>
     </footer>

@@ -793,7 +793,7 @@ function StockBadge({ li }: { li: LI }) {
 }
 
 export const Route = createFileRoute("/_app/quote/$id")({
-  head: ({ params }) => ({ meta: [{ title: `Quote ${params.id} — wekbench` }] }),
+  head: ({ params }) => ({ meta: [{ title: `Quote ${params.id} — Wekbench` }] }),
   errorComponent: ({ error, reset }) => {
     const router = useRouter();
     return (

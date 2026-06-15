@@ -13,13 +13,13 @@ import { MarketingFooter } from "@/components/marketing/marketing-footer";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "wekbench — Respond to RFQs in seconds" },
+      { title: "Wekbench — Respond to RFQs in seconds" },
       {
         name: "description",
         content:
           "Vendor-first procurement platform. Manage the full RFQ-to-Quote-to-Order workflow for enterprise buyers.",
       },
-      { property: "og:title", content: "wekbench — Respond to RFQs in seconds" },
+      { property: "og:title", content: "Wekbench — Respond to RFQs in seconds" },
       {
         property: "og:description",
         content: "End-to-end B2B procurement. From inbox to quote in seconds.",

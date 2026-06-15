@@ -187,7 +187,7 @@ function BuyerTrackingPage() {
         </div>
       </div>
 
-      <p className="mt-6 text-center text-xs text-muted-foreground">wekbench · wekbench.com · 2026</p>
+      <p className="mt-6 text-center text-xs text-muted-foreground">Wekbench · wekbench.com · 2026</p>
     </Shell>
   );
 }

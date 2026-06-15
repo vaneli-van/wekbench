@@ -28,7 +28,7 @@ export function Metrics() {
 
         <figure className="mx-auto mt-14 max-w-3xl text-center">
           <blockquote className="text-balance text-xl font-medium leading-relaxed text-foreground sm:text-2xl">
-            &ldquo;We used to lose deals simply because we replied too late. With wekbench we&apos;re
+            &ldquo;We used to lose deals simply because we replied too late. With Wekbench we&apos;re
             first in with a clean quote — and we&apos;re winning a lot more of them.&rdquo;
           </blockquote>
           <figcaption className="mt-5 text-sm text-muted-foreground">

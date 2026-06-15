@@ -27,7 +27,7 @@ const TOUR_STEPS = [
   {
     icon: Inbox,
     title: "Capture every RFQ automatically",
-    body: "Incoming RFQs land in your inbox the moment they arrive by email. wekbench reads the attachments and extracts line items, quantities, and deadlines for you.",
+    body: "Incoming RFQs land in your inbox the moment they arrive by email. Wekbench reads the attachments and extracts line items, quantities, and deadlines for you.",
   },
   {
     icon: FileText,
@@ -107,7 +107,7 @@ export function DashboardWelcome() {
             Getting started
           </span>
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-balance md:text-3xl">
-            Welcome to wekbench, {companyName}
+            Welcome to Wekbench, {companyName}
           </h2>
           <p className="mt-2 max-w-lg text-sm leading-relaxed text-primary-foreground/85 text-pretty md:text-base">
             {data.role === "buyer"

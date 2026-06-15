@@ -80,7 +80,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "wekbench" },
+      { title: "Wekbench" },
       {
         name: "description",
         content:
@@ -88,8 +88,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { property: "og:title", content: "wekbench" },
-      { name: "twitter:title", content: "wekbench" },
+      { property: "og:title", content: "Wekbench" },
+      { name: "twitter:title", content: "Wekbench" },
       { name: "description", content: "The vendor-first procurement platform that turns RFQs into winning quotes in seconds." },
       { property: "og:description", content: "The vendor-first procurement platform that turns RFQs into winning quotes in seconds." },
       { name: "twitter:description", content: "The vendor-first procurement platform that turns RFQs into winning quotes in seconds." },

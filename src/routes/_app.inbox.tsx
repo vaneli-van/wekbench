@@ -209,7 +209,7 @@ function InboxPage() {
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
       <PageHeader
         title="My Wekbench"
-        description="Inbound emails captured through your unique wekbench addresses. wekbench classifies each message — RFQs, purchase orders, amendments and more — and suggests the next action."
+        description="Inbound emails captured through your unique Wekbench addresses. Wekbench classifies each message — RFQs, purchase orders, amendments and more — and suggests the next action."
         actions={
           <button
             onClick={copyEmail}
@@ -244,7 +244,7 @@ function InboxPage() {
           ) : error ? (
             <EmptyState icon={MailOpen} title="Inbox could not load." description="Refresh the page and try again." />
           ) : emails.length === 0 ? (
-            <EmptyState icon={MailOpen} title="No emails captured yet." description="Messages sent to your wekbench address will appear here." />
+            <EmptyState icon={MailOpen} title="No emails captured yet." description="Messages sent to your Wekbench address will appear here." />
           ) : (
             <ul className="divide-y divide-border">
               {emails.map((email) => {
@@ -373,7 +373,7 @@ function InboxPage() {
                 <div className="rounded-lg border border-accent/20 bg-accent/5 p-3">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-accent">
                     <Sparkles className="size-3.5" />
-                    wekbench Suggestion
+                    Wekbench Suggestion
                   </div>
                   <p className="mt-1 text-sm text-foreground">{suggestionFor(selectedType, selectedDoc)}</p>
                 </div>
@@ -422,7 +422,7 @@ function InboxPage() {
               <EmptyState
                 icon={MailOpen}
                 title="No email selected."
-                description="Select an email to see wekbench suggestions and actions."
+                description="Select an email to see Wekbench suggestions and actions."
               />
             </div>
           )}

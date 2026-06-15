@@ -4,7 +4,7 @@ const steps = [
   {
     icon: Mailbox,
     title: "Capture the RFQ",
-    body: "Forward an email or drop a PDF, Excel, or scanned doc into your wekbench. Nothing to copy and paste.",
+    body: "Forward an email or drop a PDF, Excel, or scanned doc into your Wekbench. Nothing to copy and paste.",
   },
   {
     icon: ScanText,

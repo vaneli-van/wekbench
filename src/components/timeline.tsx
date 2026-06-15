@@ -11,7 +11,7 @@ const typeIcon: Record<string, React.ElementType> = {
 
 const typeLabel: Record<string, string> = {
   system: "System",
-  ai: "wekbench AI",
+  ai: "Wekbench AI",
   user: "Vendor",
   buyer: "Buyer",
 }

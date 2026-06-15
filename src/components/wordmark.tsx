@@ -13,7 +13,7 @@ export function Wordmark({
   return (
     <img
       src="/wekbench-logo.png"
-      alt="wekbench"
+      alt="Wekbench"
       className={cn("select-none w-auto", className)}
       style={{ height }}
     />
