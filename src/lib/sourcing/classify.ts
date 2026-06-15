@@ -62,12 +62,13 @@ const KEYWORDS: Array<{ category: SourcingCategory; words: string[] }> = [
   },
 ];
 
-// A loose MPN heuristic: alphanumeric, contains a digit, no spaces, 3–40 chars,
-// may include dashes/dots/slashes. Catches things like "ACS770ECB-200U-PFF-T".
-const MPN_RE = /^[A-Za-z0-9][A-Za-z0-9._/+-]{2,39}$/;
+// A loose MPN heuristic: alphanumeric token that contains BOTH a letter and a
+// digit (so "NE555P" / "ACS770ECB-200U-PFF-T" match, but "5440" and "Latitude"
+// don't), no spaces, 4–40 chars, may include dashes/dots/slashes.
+const MPN_RE = /^[A-Za-z0-9][A-Za-z0-9._/+-]{3,39}$/;
 function looksLikeMpn(s: string): boolean {
   const t = s.trim();
-  return MPN_RE.test(t) && /\d/.test(t) && !/\s/.test(t);
+  return MPN_RE.test(t) && /[A-Za-z]/.test(t) && /\d/.test(t) && !/\s/.test(t);
 }
 
 export function classifyItem(input: ClassifyInput): ClassifiedItem {
@@ -84,10 +85,15 @@ export function classifyItem(input: ClassifyInput): ClassifiedItem {
     }
   }
 
-  // MPN resolution: explicit mpn wins; else a model that looks like an MPN.
+  // MPN resolution: explicit mpn wins; else a model that looks like an MPN;
+  // else the first MPN-looking token inside the description.
   let mpn: string | undefined = input.mpn?.trim() || undefined;
   if (!mpn && input.model && looksLikeMpn(input.model)) {
     mpn = input.model.trim();
+  }
+  if (!mpn && input.description) {
+    const tok = input.description.split(/[\s,;]+/).find((w) => looksLikeMpn(w));
+    if (tok) mpn = tok;
   }
 
   // If we still don't have a category but we DO have an MPN, lean electronics —

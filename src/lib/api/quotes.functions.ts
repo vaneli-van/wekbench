@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { priceAtQty } from "@/lib/sourcing/pricing";
 
 /* ---------- helpers ---------- */
 
@@ -480,6 +481,48 @@ export const updateQuoteLineItem = createServerFn({ method: "POST" })
     if (error || !updated) throw new Error(error?.message ?? "Update failed");
     await recomputeQuoteTotals(context.supabase, updated.quote_id);
     return { ok: true };
+  });
+
+export const applyOfferToLine = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ lineItemId: z.string().uuid(), offerId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const supabase = context.supabase;
+    const { data: offer } = await supabase
+      .from("provider_offers")
+      .select("id, identifier, distributor_name, external_part_id, price_breaks, currency")
+      .eq("id", data.offerId)
+      .maybeSingle();
+    if (!offer) throw new Error("Offer not found");
+    const { data: line } = await supabase
+      .from("quote_line_items")
+      .select("id, quote_id, qty, margin_pct")
+      .eq("id", data.lineItemId)
+      .maybeSingle();
+    if (!line) throw new Error("Line item not found");
+
+    const at = priceAtQty(offer.price_breaks, Number(line.qty) || 1);
+    if (!at) throw new Error("Selected offer has no usable price");
+    const unitPrice = computeUnitPrice(at.price, line.margin_pct ?? 0);
+
+    const { error } = await supabase
+      .from("quote_line_items")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update({
+        unit_cost: at.price,
+        unit_price: unitPrice,
+        selected_offer_id: offer.id,
+        source_distributor: offer.distributor_name,
+        mpn: offer.identifier,
+        external_part_id: offer.external_part_id,
+        price_fetched_at: new Date().toISOString(),
+      } as any)
+      .eq("id", data.lineItemId);
+    if (error) throw new Error(error.message);
+    await recomputeQuoteTotals(supabase, line.quote_id);
+    return { ok: true, unitCost: at.price, currency: at.currency, distributor: offer.distributor_name };
   });
 
 export const addQuoteLineItem = createServerFn({ method: "POST" })

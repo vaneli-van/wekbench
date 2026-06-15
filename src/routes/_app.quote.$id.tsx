@@ -12,7 +12,16 @@ import {
   Send,
   Building2,
   Calendar,
+  Search,
+  ExternalLink,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,7 +38,9 @@ import {
   deleteQuoteLineItem,
   updateQuoteStatus,
   updateQuoteHeader,
+  applyOfferToLine,
 } from "@/lib/api/quotes.functions";
+import { priceQuoteLine } from "@/lib/api/sourcing.functions";
 
 function fmt(n: number | null | undefined, currency: string | null | undefined) {
   if (n == null) return "—";
@@ -87,6 +98,132 @@ function groupBySection(items: LI[]): { key: string; section: string | null; ite
     map.get(key)!.items.push(li);
   }
   return Array.from(map.values());
+}
+
+function SourceOfferDialog({
+  lineItemId,
+  onApplied,
+}: {
+  lineItemId: string;
+  onApplied: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const priceFn = useServerFn(priceQuoteLine);
+  const applyFn = useServerFn(applyOfferToLine);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [data, setData] = useState<any>(null);
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    setData(null);
+    try {
+      setData(await priceFn({ data: { lineItemId } }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sourcing failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function openDialog() {
+    setOpen(true);
+    void load();
+  }
+
+  async function apply(offerId: string) {
+    setApplyingId(offerId);
+    try {
+      await applyFn({ data: { lineItemId, offerId } });
+      toast.success("Line cost updated from live offer");
+      setOpen(false);
+      onApplied();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not apply offer");
+    } finally {
+      setApplyingId(null);
+    }
+  }
+
+  return (
+    <>
+      <Button size="icon" variant="ghost" className="size-7" title="Source live pricing" onClick={openDialog}>
+        <Search className="size-3.5" />
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Live distributor offers</DialogTitle>
+            <DialogDescription>
+              {data
+                ? `${data.offers.length} offer(s) · ${data.category}${data.identifier ? ` · ${data.identifier}` : ""} · qty ${data.qty}`
+                : "Sourcing across enabled providers…"}
+            </DialogDescription>
+          </DialogHeader>
+          {loading && <p className="py-6 text-center text-sm text-muted-foreground">Sourcing…</p>}
+          {error && (
+            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          {data && !loading ? (
+            data.offers.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                No priced offers found for this line.
+              </p>
+            ) : (
+              <div className="max-h-[55vh] overflow-auto rounded-md border border-border">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-muted/50 text-left">
+                    <tr className="border-b border-border">
+                      <th className="px-3 py-2 font-medium">Distributor</th>
+                      <th className="px-3 py-2 font-medium">Provider</th>
+                      <th className="px-3 py-2 text-right font-medium">Stock</th>
+                      <th className="px-3 py-2 text-right font-medium">Lead</th>
+                      <th className="px-3 py-2 text-right font-medium">Unit @ qty</th>
+                      <th className="px-3 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                    {data.offers.map((o: any, i: number) => (
+                      <tr key={o.offerId} className="border-b border-border last:border-0">
+                        <td className="px-3 py-2">
+                          <span className="inline-flex items-center gap-1.5">
+                            {o.distributor ?? "—"}
+                            {i === 0 && <Badge variant="outline" className="text-[10px]">best</Badge>}
+                            {o.buyUrl && (
+                              <a href={o.buyUrl} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground">
+                                <ExternalLink className="size-3" />
+                              </a>
+                            )}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-muted-foreground">{o.provider}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{o.stockQty ?? "—"}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{o.leadTimeDays != null ? `${o.leadTimeDays}d` : "—"}</td>
+                        <td className="px-3 py-2 text-right tabular-nums font-medium">
+                          {o.currency} {Number(o.unitCost).toFixed(4)}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <Button size="sm" disabled={applyingId === o.offerId} onClick={() => apply(o.offerId)}>
+                            {applyingId === o.offerId ? "…" : "Use"}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
 function EditableCell({
@@ -475,14 +612,17 @@ function QuoteDetailPage() {
                         </td>
                         {editable && (
                           <td className="px-1 py-2 align-top">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="size-7"
-                              onClick={() => delMut.mutate(li.id)}
-                            >
-                              <Trash2 className="size-3.5" />
-                            </Button>
+                            <div className="flex items-center gap-0.5">
+                              <SourceOfferDialog lineItemId={li.id} onApplied={invalidate} />
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="size-7"
+                                onClick={() => delMut.mutate(li.id)}
+                              >
+                                <Trash2 className="size-3.5" />
+                              </Button>
+                            </div>
                           </td>
                         )}
                       </tr>
