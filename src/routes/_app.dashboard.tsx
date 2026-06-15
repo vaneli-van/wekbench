@@ -29,16 +29,16 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { NewQuoteDialog } from "@/components/new-quote-dialog"
 
-import { StatusBadge } from "@/components/status-badge"
+import { Badge } from "@/components/ui/badge"
 import { FxRatesCard } from "@/components/fx-rates-card"
 import { ShippingRatesCard } from "@/components/shipping-rates-card"
 import { QuotesPerWeekChart } from "@/components/quotes-per-week-chart"
 import { DashboardWelcome } from "@/components/dashboard-welcome"
-import { rfqs, buyers } from "@/lib/data"
+import { buyers } from "@/lib/data"
 import { cn } from "@/lib/utils"
 import { useProfile } from "@/hooks/use-profile"
 import { useWorkspaceId } from "@/hooks/use-workspace"
-import { listActivity } from "@/lib/api/quotes.functions"
+import { listActivity, listRfqs } from "@/lib/api/quotes.functions"
 
 /* ---- KPI strip ---- */
 const kpis = [
@@ -117,9 +117,18 @@ const topBuyers = [...buyers]
   .slice(0, 5)
 const topBuyerMax = Math.max(...topBuyers.map((b) => b.value))
 
-/* ---- RFQs needing attention (closest deadlines) ---- */
-const attentionRfqs = [...rfqs].sort((a, b) => +new Date(a.deadline) - +new Date(b.deadline)).slice(0, 5)
-const isUrgent = (rel: string) => /today|tomorrow|24/i.test(rel)
+/* ---- RFQ due-date formatting ---- */
+function formatDue(d: string | null | undefined): { label: string; urgent: boolean } {
+  if (!d) return { label: "No date", urgent: false }
+  const due = new Date(`${d}T00:00:00`).getTime()
+  if (Number.isNaN(due)) return { label: String(d), urgent: false }
+  const days = Math.round((due - Date.now()) / 86_400_000)
+  if (days < 0) return { label: `${Math.abs(days)}d overdue`, urgent: true }
+  if (days === 0) return { label: "Today", urgent: true }
+  if (days === 1) return { label: "Tomorrow", urgent: true }
+  if (days <= 3) return { label: `in ${days} days`, urgent: true }
+  return { label: `in ${days} days`, urgent: false }
+}
 
 function DeltaIcon({ dir }: { dir: "up" | "down" | "flat" }) {
   if (dir === "up") return <ArrowUpRight className="size-3.5 text-success" />
@@ -167,6 +176,25 @@ function DashboardPage() {
     queryFn: () => listActivityFn(),
   });
   const activity = activityData?.events ?? [];
+
+  const listRfqsFn = useServerFn(listRfqs);
+  const { data: rfqData, isLoading: rfqLoading } = useQuery({
+    queryKey: ["dashboard-rfqs", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: () => listRfqsFn(),
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allRfqs = (rfqData?.rfqs ?? []) as any[];
+  const openRfqs = allRfqs.filter((r) => r.status === "open");
+  const attentionRfqs = (openRfqs.length ? openRfqs : allRfqs)
+    .slice()
+    .sort((a, b) => {
+      const ad = a.due_date ? +new Date(a.due_date) : Infinity;
+      const bd = b.due_date ? +new Date(b.due_date) : Infinity;
+      return ad - bd;
+    })
+    .slice(0, 6);
+
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const today = new Date().toLocaleDateString(undefined, {
@@ -238,48 +266,62 @@ function DashboardPage() {
                 <tr className="border-b border-border text-left text-xs text-muted-foreground">
                   <th className="px-4 py-2 font-medium">Buyer</th>
                   <th className="px-4 py-2 font-medium">Reference</th>
-                  <th className="px-4 py-2 text-center font-medium">Items</th>
-                  <th className="px-4 py-2 font-medium">Deadline</th>
+                  <th className="px-4 py-2 font-medium">Due</th>
                   <th className="px-4 py-2 font-medium">Status</th>
                   <th className="px-4 py-2 text-right font-medium">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {attentionRfqs.map((rfq) => {
-                  const urgent = isUrgent(rfq.deadlineRelative)
-                  return (
-                    <tr key={rfq.id} className="border-b border-border last:border-0 hover:bg-secondary/40">
-                      <td className="px-4 py-2.5 font-medium text-foreground">{rfq.buyer}</td>
-                      <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{rfq.ref}</td>
-                      <td className="px-4 py-2.5 text-center tabular-nums text-muted-foreground">
-                        {rfq.lineItems.length}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <span
-                          className={cn(
-                            "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium tabular-nums",
-                            urgent ? "bg-destructive/10 text-destructive" : "text-muted-foreground",
-                          )}
-                        >
-                          {urgent && <AlertTriangle className="size-3" />}
-                          {rfq.deadlineRelative}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <StatusBadge status={rfq.status} />
-                      </td>
-                      <td className="px-4 py-2.5 text-right">
-                        <Link
-                          to="/rfq/$id"
-                          params={{ id: rfq.id }}
-                          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                        >
-                          Open <ArrowRight className="size-3" />
-                        </Link>
-                      </td>
-                    </tr>
-                  )
-                })}
+                {rfqLoading ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-6 text-center text-xs text-muted-foreground">
+                      Loading RFQs…
+                    </td>
+                  </tr>
+                ) : attentionRfqs.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-6 text-center text-xs text-muted-foreground">
+                      No RFQs yet. New RFQs appear here as they arrive.
+                    </td>
+                  </tr>
+                ) : (
+                  attentionRfqs.map((rfq) => {
+                    const due = formatDue(rfq.due_date)
+                    return (
+                      <tr key={rfq.id} className="border-b border-border last:border-0 hover:bg-secondary/40">
+                        <td className="px-4 py-2.5 font-medium text-foreground">
+                          {rfq.buyer_name ?? rfq.buyer_email ?? rfq.buyer_ref ?? "—"}
+                        </td>
+                        <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
+                          {rfq.buyer_ref ?? String(rfq.id).slice(0, 8)}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium",
+                              due.urgent ? "bg-destructive/10 text-destructive" : "text-muted-foreground",
+                            )}
+                          >
+                            {due.urgent && <AlertTriangle className="size-3" />}
+                            {due.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <Badge variant="outline" className="capitalize">{rfq.status}</Badge>
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <Link
+                            to="/rfq/$id"
+                            params={{ id: rfq.id }}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                          >
+                            Open <ArrowRight className="size-3" />
+                          </Link>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
               </tbody>
             </table>
           </div>
