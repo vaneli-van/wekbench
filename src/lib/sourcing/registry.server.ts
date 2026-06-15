@@ -6,9 +6,11 @@
 // router skips them gracefully or treats them as manual.
 import type { SourcingAdapter } from "./types";
 import { nexarAdapter } from "./nexar.server";
+import { oemsecretsAdapter } from "./oemsecrets.server";
 
 const ADAPTERS: Record<string, SourcingAdapter> = {
   [nexarAdapter.key]: nexarAdapter,
+  [oemsecretsAdapter.key]: oemsecretsAdapter,
 };
 
 export function getAdapter(key: string): SourcingAdapter | null {
