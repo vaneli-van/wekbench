@@ -77,7 +77,7 @@ export function AppSidebar() {
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-sidebar-foreground/50" />
           <input
             type="search"
-            placeholder="Search RFQs, buyers, parts..."
+            placeholder="Search…"
             className="w-full rounded-md border border-sidebar-border bg-sidebar-accent/40 py-1.5 pl-8 pr-2 text-sm text-sidebar-accent-foreground outline-none placeholder:text-sidebar-foreground/50 focus:ring-2 focus:ring-sidebar-ring/30"
           />
         </div>
