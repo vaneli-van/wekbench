@@ -7,7 +7,7 @@
 // Required env (set server-side, never committed):
 //   NEXAR_CLIENT_ID
 //   NEXAR_CLIENT_SECRET
-//   NEXAR_SCOPE        (optional, defaults to "supply")
+//   NEXAR_SCOPE        (optional, defaults to "supply.domain")
 import process from "node:process";
 
 import type {
@@ -28,7 +28,7 @@ let cachedToken: { value: string; expiresAt: number } | null = null;
 function getCreds() {
   const clientId = process.env.NEXAR_CLIENT_ID;
   const clientSecret = process.env.NEXAR_CLIENT_SECRET;
-  const scope = process.env.NEXAR_SCOPE || "supply";
+  const scope = process.env.NEXAR_SCOPE || "supply.domain";
   if (!clientId || !clientSecret) {
     throw new Error(
       "Nexar credentials missing. Set NEXAR_CLIENT_ID and NEXAR_CLIENT_SECRET in the server environment.",
