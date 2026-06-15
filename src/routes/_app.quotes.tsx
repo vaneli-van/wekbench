@@ -1,12 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useServerFn } from "@tanstack/react-start"
-import { listQuotes } from "@/lib/api/quotes.functions"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ArrowRight } from "lucide-react"
+import { listQuotes, updateQuoteStage } from "@/lib/api/quotes.functions"
 import {
   Plus,
   Search,
@@ -34,7 +31,6 @@ import { toast } from "sonner"
 import { QuoteCard } from "@/components/pipeline/quote-card"
 import { EmptyState } from "@/components/foundations/empty-state"
 import {
-  pipelineQuotes,
   PIPELINE_STAGES,
   ASSIGNEES,
   SECTORS,
@@ -44,19 +40,81 @@ import {
   type PipelineQuote,
   type PipelineStageId,
 } from "@/lib/pipeline"
-import { useManualQuotes } from "@/lib/manual-quotes"
 import { NewQuoteDialog } from "@/components/new-quote-dialog"
 import { cn } from "@/lib/utils"
 
 type ViewMode = "kanban" | "list"
 type SortKey = "value" | "daysInStage" | "buyer" | "updatedAt"
 
+const STAGE_IDS: PipelineStageId[] = [
+  "drafted",
+  "submitted",
+  "clarification",
+  "reviewing",
+  "won",
+  "lost",
+  "expired",
+]
+
+function statusToStage(status: string | null | undefined): PipelineStageId {
+  switch (status) {
+    case "sent":
+      return "submitted"
+    case "accepted":
+      return "won"
+    case "declined":
+      return "lost"
+    case "expired":
+      return "expired"
+    default:
+      return "drafted"
+  }
+}
+
+function daysSince(iso: string | null | undefined): number {
+  if (!iso) return 0
+  const t = new Date(iso).getTime()
+  if (Number.isNaN(t)) return 0
+  return Math.max(0, Math.floor((Date.now() - t) / 86400000))
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapQuote(q: any): PipelineQuote {
+  const updated = q.updated_at ?? q.created_at
+  const stage: PipelineStageId = STAGE_IDS.includes(q.stage) ? q.stage : statusToStage(q.status)
+  return {
+    id: q.id,
+    title: q.title ?? q.rfqs?.summary ?? q.quote_number,
+    buyer: q.buyer_name ?? q.rfqs?.buyer_name ?? q.rfqs?.buyer_ref ?? q.rfqs?.buyer_email ?? "—",
+    sector: q.sector ?? "—",
+    value: Number(q.total ?? 0),
+    stage,
+    daysInStage: daysSince(updated),
+    lineItems: 0,
+    attachments: 0,
+    comments: 0,
+    assignee: q.assignee ?? "—",
+    createdAt: (q.created_at ?? "").slice(0, 10),
+    updatedAt: (updated ?? "").slice(0, 10),
+  }
+}
+
 function QuotesPage() {
   const navigate = useNavigate()
-  const manualQuotes = useManualQuotes()
-  const [seededQuotes, setSeededQuotes] = useState<PipelineQuote[]>(pipelineQuotes)
-  const quotes = useMemo(() => [...manualQuotes, ...seededQuotes], [manualQuotes, seededQuotes])
-  const setQuotes = setSeededQuotes
+  const qc = useQueryClient()
+  const listFn = useServerFn(listQuotes)
+  const stageFn = useServerFn(updateQuoteStage)
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["quotes-board"],
+    queryFn: () => listFn(),
+  })
+  const quotes = useMemo<PipelineQuote[]>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    () => ((data?.quotes ?? []) as any[]).map(mapQuote),
+    [data],
+  )
+
   const [view, setView] = useState<ViewMode>("kanban")
   const [search, setSearch] = useState("")
   const [buyerFilter, setBuyerFilter] = useState<string[]>([])
@@ -67,10 +125,34 @@ function QuotesPage() {
   const [sortKey, setSortKey] = useState<SortKey>("updatedAt")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
 
-  const buyers = useMemo(
-    () => Array.from(new Set([...manualQuotes, ...pipelineQuotes].map((q) => q.buyer))),
-    [manualQuotes],
-  )
+  const stageMut = useMutation({
+    mutationFn: (vars: { quoteId: string; stage: PipelineStageId }) => stageFn({ data: vars }),
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: ["quotes-board"] })
+      const prev = qc.getQueryData(["quotes-board"])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      qc.setQueryData(["quotes-board"], (old: any) =>
+        old
+          ? {
+              ...old,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              quotes: old.quotes.map((q: any) =>
+                q.id === vars.quoteId ? { ...q, stage: vars.stage } : q,
+              ),
+            }
+          : old,
+      )
+      return { prev }
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onError: (_e, _v, ctx: any) => {
+      if (ctx?.prev) qc.setQueryData(["quotes-board"], ctx.prev)
+      toast.error("Could not move quote")
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["quotes-board"] }),
+  })
+
+  const buyers = useMemo(() => Array.from(new Set(quotes.map((q) => q.buyer))), [quotes])
 
   const filtered = useMemo(() => {
     return quotes.filter((q) => {
@@ -99,28 +181,12 @@ function QuotesPage() {
     setOverStage(null)
     if (!dragId) return
     const quote = quotes.find((q) => q.id === dragId)
-    if (!quote || quote.stage === stage) {
-      setDragId(null)
-      return
-    }
+    setDragId(null)
+    if (!quote || quote.stage === stage) return
     const fromLabel = PIPELINE_STAGES.find((s) => s.id === quote.stage)?.label
     const toLabel = PIPELINE_STAGES.find((s) => s.id === stage)?.label
-    setQuotes((prev) =>
-      prev.map((q) => (q.id === dragId ? { ...q, stage, daysInStage: 0, updatedAt: "2026-06-10" } : q)),
-    )
-    setDragId(null)
-    toast.success(`${quote.id} moved to ${toLabel}`, {
-      description: `From ${fromLabel}`,
-      action: {
-        label: "Undo",
-        onClick: () =>
-          setQuotes((prev) =>
-            prev.map((q) =>
-              q.id === quote.id ? { ...q, stage: quote.stage, daysInStage: quote.daysInStage } : q,
-            ),
-          ),
-      },
-    })
+    stageMut.mutate({ quoteId: quote.id, stage })
+    toast.success(`${quote.title} moved to ${toLabel}`, { description: `From ${fromLabel}` })
   }
 
   function toggle(list: string[], value: string, setter: (v: string[]) => void) {
@@ -130,8 +196,6 @@ function QuotesPage() {
   return (
     <div className="flex h-full flex-col">
       <Toaster position="bottom-right" />
-
-      <LiveQuotesPanel />
 
       {/* Header + controls */}
       <div className="shrink-0 border-b border-border bg-background px-4 py-4 md:px-6">
@@ -186,7 +250,11 @@ function QuotesPage() {
       </div>
 
       {/* Body */}
-      {filtered.length === 0 && quotes.length === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-1 items-center justify-center py-16 text-sm text-muted-foreground">
+          Loading quotes…
+        </div>
+      ) : quotes.length === 0 ? (
         <BoardEmptyState />
       ) : view === "kanban" ? (
         <KanbanBoard
@@ -219,17 +287,8 @@ function QuotesPage() {
   )
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
 function openQuote(q: PipelineQuote, navigate: ReturnType<typeof useNavigate>) {
-  if (UUID_RE.test(q.id)) {
-    navigate({ to: "/quote/$id", params: { id: q.id } })
-    return
-  }
-  toast.info("Sample pipeline quote", {
-    description: "This card is demo data. Approve an RFQ from the inbox to open a real, editable quote.",
-    action: { label: "Go to inbox", onClick: () => navigate({ to: "/inbox" }) },
-  })
+  navigate({ to: "/quote/$id", params: { id: q.id } })
 }
 
 /* ---------- Kanban board ---------- */
@@ -522,49 +581,3 @@ function BoardEmptyState() {
 export const Route = createFileRoute("/_app/quotes")({
   component: QuotesPage,
 });
-
-function LiveQuotesPanel() {
-  const listFn = useServerFn(listQuotes);
-  const { data } = useQuery({
-    queryKey: ["quotes-live"],
-    queryFn: () => listFn(),
-  });
-  const quotes = data?.quotes ?? [];
-  if (quotes.length === 0) return null;
-  return (
-    <div className="border-b border-border bg-muted/20 px-4 py-4 md:px-6">
-      <div className="mb-3 flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold">Live quotes</h2>
-          <p className="text-xs text-muted-foreground">From approved RFQ extractions</p>
-        </div>
-        <span className="text-xs text-muted-foreground">{quotes.length} quote(s)</span>
-      </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        {quotes.map((q: any) => (
-          <Link key={q.id} to="/quote/$id" params={{ id: q.id }} className="block">
-            <Card className="p-4 transition-colors hover:bg-muted/40">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{q.quote_number}</span>
-                <Badge variant="outline" className="capitalize">{q.status}</Badge>
-              </div>
-              {q.title && (
-                <p className="mt-1 truncate text-xs font-medium text-foreground">{q.title}</p>
-              )}
-              <p className="mt-1 truncate text-xs text-muted-foreground">
-                {q.rfqs?.buyer_name ?? q.rfqs?.buyer_email ?? q.rfqs?.buyer_ref ?? q.buyer_name ?? "—"}
-              </p>
-              <div className="mt-2 flex items-center justify-between text-sm">
-                <span className="tabular-nums font-semibold">
-                  {q.currency ?? ""} {Number(q.total ?? 0).toFixed(2)}
-                </span>
-                <ArrowRight className="size-3.5 text-muted-foreground" />
-              </div>
-            </Card>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}

@@ -243,7 +243,7 @@ export const listQuotes = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("quotes")
       .select(
-        "id, quote_number, status, currency, subtotal, total, margin_pct, valid_until, sent_at, created_at, rfq_id, title, buyer_name, rfqs(buyer_ref, buyer_name, buyer_email, summary)",
+        "id, quote_number, status, stage, currency, subtotal, total, margin_pct, valid_until, sent_at, created_at, updated_at, rfq_id, title, buyer_name, sector, assignee, rfqs(buyer_ref, buyer_name, buyer_email, summary)",
       )
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -550,6 +550,37 @@ export const updateQuoteStatus = createServerFn({ method: "POST" })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (q?.rfq_id) await context.supabase.from("rfqs").update({ status: "quoted" } as any).eq("id", q.rfq_id);
     }
+    return { ok: true };
+  });
+
+/* ---------- updateQuoteStage: pipeline drag-and-drop ---------- */
+
+export const updateQuoteStage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        quoteId: z.string().uuid(),
+        stage: z.enum([
+          "drafted",
+          "submitted",
+          "clarification",
+          "reviewing",
+          "won",
+          "lost",
+          "expired",
+        ]),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await context.supabase
+      .from("quotes")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update({ stage: data.stage } as any)
+      .eq("id", data.quoteId);
+    if (error) throw new Error(error.message);
     return { ok: true };
   });
 
