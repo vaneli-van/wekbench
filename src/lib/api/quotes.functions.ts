@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { priceAtQty } from "@/lib/sourcing/pricing";
 import { createOrderForQuote } from "./orders.functions";
+import { resolveWorkspaceId } from "./workspace.functions";
 
 /* ---------- helpers ---------- */
 
@@ -728,13 +729,8 @@ export const createQuote = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
 
-    const { data: ws } = await supabase
-      .from("workspaces")
-      .select("id")
-      .eq("owner_id", context.userId)
-      .maybeSingle();
-    if (!ws) throw new Error("No workspace found for this user");
-    const workspaceId: string = ws.id;
+    const workspaceId = await resolveWorkspaceId(supabase, context.userId);
+    if (!workspaceId) throw new Error("No workspace found for this user");
 
     const quote_number = await nextQuoteNumber(supabase, workspaceId);
 

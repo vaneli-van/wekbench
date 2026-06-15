@@ -16,6 +16,7 @@ import {
   Settings,
   Sparkles,
   ShieldCheck,
+  Users,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -54,6 +55,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { name: "Reports", href: "/reports", icon: BarChart3 },
       { name: "Email Capture", href: "/email-capture", icon: AtSign },
       { name: "Integrations", href: "/integrations", icon: Plug },
+      { name: "Team", href: "/team", icon: Users },
       { name: "Settings", href: "/settings", icon: Settings },
     ],
   },

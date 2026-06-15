@@ -4,6 +4,7 @@ import process from "node:process";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { resolveWorkspaceId } from "./workspace.functions";
 
 export const ORDER_STATUSES = [
   "received",
@@ -108,13 +109,9 @@ async function resolveWorkspace(
   supabase: any,
   userId: string,
 ): Promise<string> {
-  const { data: ws } = await supabase
-    .from("workspaces")
-    .select("id")
-    .eq("owner_id", userId)
-    .maybeSingle();
-  if (!ws) throw new Error("No workspace found for this user");
-  return ws.id;
+  const wsId = await resolveWorkspaceId(supabase, userId);
+  if (!wsId) throw new Error("No workspace found for this user");
+  return wsId;
 }
 
 export const listOrders = createServerFn({ method: "GET" })

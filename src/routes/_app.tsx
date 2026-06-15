@@ -25,13 +25,38 @@ function AppLayout() {
     }
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
+      // Accept any pending invites for this email, so invited users join the
+      // inviter's workspace instead of being pushed into onboarding.
+      await supabase.rpc("claim_workspace_invites").catch(() => {});
+
+      // Resolve the workspace via membership first, then ownership.
+      const { data: role } = await supabase
+        .from("user_roles")
+        .select("workspace_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+      let wsId: string | null = role?.workspace_id ?? null;
+      if (!wsId) {
+        const { data: owned } = await supabase
+          .from("workspaces")
+          .select("id")
+          .eq("owner_id", user.id)
+          .maybeSingle();
+        wsId = owned?.id ?? null;
+      }
+      if (cancelled) return;
+      if (!wsId) {
+        navigate({ to: "/onboarding", replace: true });
+        return;
+      }
+      const { data: ws } = await supabase
         .from("workspaces")
         .select("onboarding_completed_at")
-        .eq("owner_id", user.id)
+        .eq("id", wsId)
         .maybeSingle();
       if (cancelled) return;
-      if (!data?.onboarding_completed_at) {
+      if (!ws?.onboarding_completed_at) {
         navigate({ to: "/onboarding", replace: true });
       } else {
         setChecking(false);

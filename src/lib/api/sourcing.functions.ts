@@ -6,6 +6,7 @@ import { nexarAdapter } from "@/lib/sourcing/nexar.server";
 import { routeItems } from "@/lib/sourcing/router.server";
 import { classifyItem } from "@/lib/sourcing/classify";
 import { priceAtQty } from "@/lib/sourcing/pricing";
+import { resolveWorkspaceId } from "./workspace.functions";
 
 /**
  * Phase 1 verification endpoint: look up a part on Nexar by MPN (exact match),
@@ -71,15 +72,11 @@ export const routePreview = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { data: ws } = await context.supabase
-      .from("workspaces")
-      .select("id")
-      .eq("owner_id", context.userId)
-      .maybeSingle();
-    if (!ws) throw new Error("No workspace found for this user");
+    const wsId = await resolveWorkspaceId(context.supabase, context.userId);
+    if (!wsId) throw new Error("No workspace found for this user");
     return routeItems(data.items, {
       supabase: context.supabase,
-      workspaceId: ws.id,
+      workspaceId: wsId,
       currency: data.currency,
     });
   });
