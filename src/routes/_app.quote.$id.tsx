@@ -134,12 +134,16 @@ function SourceOfferDialog({
     void load();
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [detail, setDetail] = useState<any>(null);
+
   async function apply(offerId: string) {
     setApplyingId(offerId);
     try {
       await applyFn({ data: { lineItemId, offerId } });
       toast.success("Line cost updated from live offer");
       setOpen(false);
+      setDetail(null);
       onApplied();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not apply offer");
@@ -153,76 +157,170 @@ function SourceOfferDialog({
       <Button size="icon" variant="ghost" className="size-7" title="Source live pricing" onClick={openDialog}>
         <Search className="size-3.5" />
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setDetail(null); }}>
         <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Live distributor offers</DialogTitle>
-            <DialogDescription>
-              {data
-                ? `${data.offers.length} offer(s) · ${data.category}${data.identifier ? ` · ${data.identifier}` : ""} · qty ${data.qty}`
-                : "Sourcing across enabled providers…"}
-            </DialogDescription>
-          </DialogHeader>
-          {loading && <p className="py-6 text-center text-sm text-muted-foreground">Sourcing…</p>}
-          {error && (
-            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {error}
-            </p>
+          {detail ? (
+            <OfferDetail
+              offer={detail}
+              qty={data?.qty}
+              applying={applyingId === detail.offerId}
+              onBack={() => setDetail(null)}
+              onUse={() => apply(detail.offerId)}
+            />
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Live distributor offers</DialogTitle>
+                <DialogDescription>
+                  {data
+                    ? `${data.offers.length} offer(s) · ${data.category}${data.identifier ? ` · ${data.identifier}` : ""} · qty ${data.qty}`
+                    : "Sourcing across enabled providers…"}
+                </DialogDescription>
+              </DialogHeader>
+              {loading && <p className="py-6 text-center text-sm text-muted-foreground">Sourcing…</p>}
+              {error && (
+                <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {error}
+                </p>
+              )}
+              {data && !loading ? (
+                data.offers.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    No priced offers found for this line.
+                  </p>
+                ) : (
+                  <div className="max-h-[55vh] overflow-auto rounded-md border border-border">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-muted/50 text-left">
+                        <tr className="border-b border-border">
+                          <th className="px-3 py-2 font-medium">Distributor</th>
+                          <th className="px-3 py-2 text-right font-medium">Stock</th>
+                          <th className="px-3 py-2 text-right font-medium">Lead</th>
+                          <th className="px-3 py-2 text-right font-medium">Unit @ qty</th>
+                          <th className="px-3 py-2"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        {data.offers.map((o: any, i: number) => (
+                          <tr
+                            key={o.offerId}
+                            onClick={() => setDetail(o)}
+                            className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/40"
+                          >
+                            <td className="px-3 py-2">
+                              <span className="inline-flex items-center gap-1.5">
+                                {o.distributor ?? "—"}
+                                {i === 0 && <Badge variant="outline" className="text-[10px]">best</Badge>}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-right tabular-nums">{o.stockQty ?? "—"}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">{o.leadTimeDays != null ? `${o.leadTimeDays}d` : "—"}</td>
+                            <td className="px-3 py-2 text-right tabular-nums font-medium">
+                              {o.currency} {Number(o.unitCost).toFixed(4)}
+                            </td>
+                            <td className="px-3 py-2 text-right text-muted-foreground">
+                              <ArrowLeft className="inline size-3.5 rotate-180" />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              ) : null}
+            </>
           )}
-          {data && !loading ? (
-            data.offers.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                No priced offers found for this line.
-              </p>
-            ) : (
-              <div className="max-h-[55vh] overflow-auto rounded-md border border-border">
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-muted/50 text-left">
-                    <tr className="border-b border-border">
-                      <th className="px-3 py-2 font-medium">Distributor</th>
-                      <th className="px-3 py-2 font-medium">Provider</th>
-                      <th className="px-3 py-2 text-right font-medium">Stock</th>
-                      <th className="px-3 py-2 text-right font-medium">Lead</th>
-                      <th className="px-3 py-2 text-right font-medium">Unit @ qty</th>
-                      <th className="px-3 py-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    {data.offers.map((o: any, i: number) => (
-                      <tr key={o.offerId} className="border-b border-border last:border-0">
-                        <td className="px-3 py-2">
-                          <span className="inline-flex items-center gap-1.5">
-                            {o.distributor ?? "—"}
-                            {i === 0 && <Badge variant="outline" className="text-[10px]">best</Badge>}
-                            {o.buyUrl && (
-                              <a href={o.buyUrl} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground">
-                                <ExternalLink className="size-3" />
-                              </a>
-                            )}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 text-muted-foreground">{o.provider}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{o.stockQty ?? "—"}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{o.leadTimeDays != null ? `${o.leadTimeDays}d` : "—"}</td>
-                        <td className="px-3 py-2 text-right tabular-nums font-medium">
-                          {o.currency} {Number(o.unitCost).toFixed(4)}
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <Button size="sm" disabled={applyingId === o.offerId} onClick={() => apply(o.offerId)}>
-                            {applyingId === o.offerId ? "…" : "Use"}
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )
-          ) : null}
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function OfferDetail({ offer, qty, applying, onBack, onUse }: { offer: any; qty?: number; applying: boolean; onBack: () => void; onUse: () => void }) {
+  return (
+    <>
+      <DialogHeader>
+        <button onClick={onBack} className="mb-1 inline-flex w-fit items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="size-3.5" /> Back to offers
+        </button>
+        <DialogTitle>{offer.distributor ?? "Offer"}</DialogTitle>
+        <DialogDescription>
+          {[offer.manufacturer, offer.provider].filter(Boolean).join(" · ")}
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="grid gap-4 sm:grid-cols-[140px_1fr]">
+        <div className="flex h-32 w-full items-center justify-center overflow-hidden rounded-md border border-border bg-muted/30 sm:h-36">
+          {offer.imageUrl ? (
+            <img src={offer.imageUrl} alt={offer.distributor ?? "part"} className="max-h-full max-w-full object-contain" />
+          ) : (
+            <span className="text-xs text-muted-foreground">No image</span>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+          <Detail label="Unit @ qty" value={`${offer.currency} ${Number(offer.unitCost).toFixed(4)}`} strong />
+          <Detail label="In stock" value={offer.stockQty != null ? String(offer.stockQty) : "—"} />
+          <Detail label="MOQ" value={offer.moq != null ? String(offer.moq) : "—"} />
+          <Detail label="Order multiple" value={offer.orderMultiple != null ? String(offer.orderMultiple) : "—"} />
+          <Detail label="Lead time" value={offer.leadTimeDays != null ? `${offer.leadTimeDays} days` : "—"} />
+          <Detail label="Packaging" value={offer.packaging ?? "—"} />
+        </div>
+      </div>
+
+      {Array.isArray(offer.priceBreaks) && offer.priceBreaks.length > 0 && (
+        <div className="mt-1">
+          <p className="mb-1 text-xs font-medium text-muted-foreground">Price breaks</p>
+          <div className="max-h-40 overflow-auto rounded-md border border-border">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-muted/50 text-left">
+                <tr className="border-b border-border">
+                  <th className="px-3 py-1.5 font-medium">Qty</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Unit price</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {offer.priceBreaks.map((b: any, idx: number) => (
+                  <tr key={idx} className="border-b border-border last:border-0">
+                    <td className="px-3 py-1.5 tabular-nums">{b.quantity}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">{b.currency} {Number(b.price).toFixed(4)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3 text-xs">
+          {offer.datasheetUrl && (
+            <a href={offer.datasheetUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
+              <ExternalLink className="size-3" /> Datasheet
+            </a>
+          )}
+          {offer.buyUrl && (
+            <a href={offer.buyUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
+              <ExternalLink className="size-3" /> Distributor page
+            </a>
+          )}
+        </div>
+        <Button onClick={onUse} disabled={applying}>
+          {applying ? "Applying…" : `Use this offer${qty ? ` (qty ${qty})` : ""}`}
+        </Button>
+      </div>
+    </>
+  );
+}
+
+function Detail({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div>
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={strong ? "font-semibold" : ""}>{value}</p>
+    </div>
   );
 }
 

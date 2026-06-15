@@ -116,6 +116,8 @@ type NexarPart = {
   mpn: string | null;
   manufacturer: { name: string | null } | null;
   octopartUrl: string | null;
+  bestImage: { url: string | null } | null;
+  bestDatasheet: { url: string | null } | null;
   sellers: NexarSeller[] | null;
 };
 
@@ -124,6 +126,8 @@ const PART_FIELDS = `
   mpn
   manufacturer { name }
   octopartUrl
+  bestImage { url }
+  bestDatasheet { url }
   sellers {
     company { id name }
     offers {
@@ -194,7 +198,8 @@ function normalizePart(p: NexarPart | null): NormalizedPart | null {
     mpn: p.mpn,
     manufacturer: p.manufacturer?.name ?? null,
     lifecycleStatus: null,
-    datasheetUrl: p.octopartUrl, // link out; richer datasheet field added later
+    datasheetUrl: p.bestDatasheet?.url ?? p.octopartUrl,
+    imageUrl: p.bestImage?.url ?? null,
     offers,
   };
 }

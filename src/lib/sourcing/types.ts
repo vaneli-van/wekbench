@@ -29,6 +29,7 @@ export type NormalizedPart = {
   manufacturer?: string | null;
   lifecycleStatus?: string | null;
   datasheetUrl?: string | null;
+  imageUrl?: string | null;
   offers: NormalizedOffer[];
 };
 

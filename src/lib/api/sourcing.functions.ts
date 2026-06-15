@@ -129,7 +129,7 @@ export const priceQuoteLine = createServerFn({ method: "POST" })
     const { data: rows } = await supabase
       .from("provider_offers")
       .select(
-        "id, distributor_name, stock_qty, moq, lead_time_days, price_breaks, currency, buy_url, sourcing_providers(key, name)",
+        "id, distributor_name, stock_qty, moq, order_multiple, packaging, lead_time_days, price_breaks, currency, buy_url, image_url, datasheet_url, manufacturer, sourcing_providers(key, name)",
       )
       .eq("workspace_id", line.workspace_id)
       .eq("identifier", identifier);
@@ -139,16 +139,32 @@ export const priceQuoteLine = createServerFn({ method: "POST" })
       .map((r) => {
         const at = priceAtQty(r.price_breaks, qty);
         const prov = Array.isArray(r.sourcing_providers) ? r.sourcing_providers[0] : r.sourcing_providers;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const priceBreaks = (Array.isArray(r.price_breaks) ? r.price_breaks : [])
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .map((b: any) => ({
+            quantity: Number(b.quantity),
+            price: Number(b.price),
+            currency: b.currency ?? r.currency ?? "USD",
+          }))
+          .filter((b: { price: number }) => Number.isFinite(b.price) && b.price > 0)
+          .sort((a: { quantity: number }, b: { quantity: number }) => a.quantity - b.quantity);
         return {
           offerId: r.id as string,
           provider: prov?.name ?? prov?.key ?? "",
           distributor: r.distributor_name as string | null,
+          manufacturer: r.manufacturer as string | null,
           stockQty: r.stock_qty as number | null,
           moq: r.moq as number | null,
+          orderMultiple: r.order_multiple as number | null,
+          packaging: r.packaging as string | null,
           leadTimeDays: r.lead_time_days as number | null,
           unitCost: at?.price ?? null,
           currency: at?.currency ?? r.currency ?? null,
+          priceBreaks,
           buyUrl: r.buy_url as string | null,
+          imageUrl: r.image_url as string | null,
+          datasheetUrl: r.datasheet_url as string | null,
         };
       })
       .filter((o) => o.unitCost != null)

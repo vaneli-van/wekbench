@@ -110,6 +110,7 @@ async function fetchParts(
         manufacturer,
         lifecycleStatus: entry.lifecycle_status ?? null,
         datasheetUrl: entry.datasheet?.url ?? entry.datasheet_url ?? null,
+        imageUrl: entry.image_url ?? entry.photo ?? entry.image ?? entry.thumbnail ?? null,
         offers: [],
       };
       byPart.set(key, part);
