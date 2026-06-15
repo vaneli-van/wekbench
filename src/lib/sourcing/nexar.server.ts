@@ -56,7 +56,9 @@ async function getToken(): Promise<string> {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`Nexar token request failed (${res.status}): ${text.slice(0, 300)}`);
+    throw new Error(
+      `Nexar token request failed (${res.status}) [scope="${scope}"]: ${text.slice(0, 300)}`,
+    );
   }
   const json = (await res.json()) as { access_token?: string; expires_in?: number };
   if (!json.access_token) throw new Error("Nexar token response had no access_token");
