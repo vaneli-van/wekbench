@@ -140,3 +140,125 @@ export const deleteBuyer = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/* ---------- buyer contracts & agreed pricing ---------- */
+
+export const listBuyerContracts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ buyerId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: contracts, error } = await context.supabase
+      .from("buyer_contracts")
+      .select("id, title, reference, currency, starts_at, ends_at, status, notes, created_at")
+      .eq("buyer_id", data.buyerId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    const { data: items } = await context.supabase
+      .from("buyer_contract_items")
+      .select("id, contract_id, description, brand, model, mpn, unit, agreed_price, currency, min_qty")
+      .eq("buyer_id", data.buyerId)
+      .order("created_at", { ascending: true });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const byContract: Record<string, any[]> = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const it of (items ?? []) as any[]) (byContract[it.contract_id] ??= []).push(it);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rows = ((contracts ?? []) as any[]).map((c) => ({ ...c, items: byContract[c.id] ?? [] }));
+    return { contracts: rows };
+  });
+
+export const createBuyerContract = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        buyerId: z.string().uuid(),
+        title: z.string().min(1),
+        reference: z.string().optional(),
+        currency: z.string().optional(),
+        startsAt: z.string().optional(),
+        endsAt: z.string().optional(),
+        notes: z.string().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const wsId = await resolveWorkspaceId(context.supabase, context.userId);
+    if (!wsId) throw new Error("No workspace found");
+    const { data: created, error } = await context.supabase
+      .from("buyer_contracts")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .insert({
+        workspace_id: wsId,
+        buyer_id: data.buyerId,
+        title: data.title,
+        reference: data.reference || null,
+        currency: data.currency || null,
+        starts_at: data.startsAt || null,
+        ends_at: data.endsAt || null,
+        notes: data.notes || null,
+      } as any)
+      .select("id")
+      .single();
+    if (error || !created) throw new Error(error?.message ?? "Could not create contract");
+    return { id: created.id as string };
+  });
+
+export const addContractItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        contractId: z.string().uuid(),
+        buyerId: z.string().uuid(),
+        description: z.string().min(1),
+        brand: z.string().optional(),
+        model: z.string().optional(),
+        mpn: z.string().optional(),
+        unit: z.string().optional(),
+        agreedPrice: z.number().optional(),
+        currency: z.string().optional(),
+        minQty: z.number().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const wsId = await resolveWorkspaceId(context.supabase, context.userId);
+    if (!wsId) throw new Error("No workspace found");
+    const { error } = await context.supabase
+      .from("buyer_contract_items")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .insert({
+        workspace_id: wsId,
+        contract_id: data.contractId,
+        buyer_id: data.buyerId,
+        description: data.description,
+        brand: data.brand || null,
+        model: data.model || null,
+        mpn: data.mpn || null,
+        unit: data.unit || null,
+        agreed_price: data.agreedPrice ?? null,
+        currency: data.currency || null,
+        min_qty: data.minQty ?? null,
+      } as any);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteContractItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("buyer_contract_items").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteBuyerContract = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("buyer_contracts").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
