@@ -15,6 +15,7 @@ import { listInvoices, updateInvoiceStatus, backfillInvoices } from "@/lib/api/i
 const STATUS_TONE: Record<string, string> = {
   draft: "bg-warning/15 text-warning border-warning/30",
   sent: "bg-info/15 text-info border-info/30",
+  partial: "bg-primary/15 text-primary border-primary/30",
   paid: "bg-success/15 text-success border-success/30",
   overdue: "bg-destructive/15 text-destructive border-destructive/30",
   disputed: "bg-destructive/15 text-destructive border-destructive/30",
@@ -36,7 +37,10 @@ function InvoicesPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const invoices: any[] = (data as any)?.invoices ?? [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const stats = (data as any)?.stats ?? { outstanding: 0, sent: 0, paid: 0, disputed: 0, currency: "" };
+  const stats = (data as any)?.stats ?? {
+    outstanding: 0, overdue: 0, paidThisMonth: 0, draft: 0,
+    aging: { current: 0, d30: 0, d60: 0, d90: 0, d90plus: 0 }, currency: "GHS",
+  };
 
   const statusMut = useMutation({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,11 +56,21 @@ function InvoicesPage() {
   });
 
   const cards = [
-    { label: "Outstanding", value: money(stats.outstanding, stats.currency), tone: "text-warning" },
-    { label: "Sent this month", value: money(stats.sent, stats.currency), tone: "text-info" },
-    { label: "Paid this month", value: money(stats.paid, stats.currency), tone: "text-success" },
-    { label: "Disputed", value: money(stats.disputed, stats.currency), tone: "text-muted-foreground" },
+    { label: "Outstanding", value: money(stats.outstanding, stats.currency), tone: "text-foreground" },
+    { label: "Overdue", value: money(stats.overdue, stats.currency), tone: "text-destructive" },
+    { label: "Paid this month", value: money(stats.paidThisMonth, stats.currency), tone: "text-success" },
+    { label: "Draft (unbilled)", value: money(stats.draft, stats.currency), tone: "text-warning" },
   ];
+
+  const aging = stats.aging ?? { current: 0, d30: 0, d60: 0, d90: 0, d90plus: 0 };
+  const agingBuckets = [
+    { label: "Current", value: aging.current, tone: "bg-success" },
+    { label: "1–30d", value: aging.d30, tone: "bg-warning" },
+    { label: "31–60d", value: aging.d60, tone: "bg-warning/80" },
+    { label: "61–90d", value: aging.d90, tone: "bg-destructive/70" },
+    { label: "90d+", value: aging.d90plus, tone: "bg-destructive" },
+  ];
+  const agingTotal = agingBuckets.reduce((s, b) => s + b.value, 0);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-8">
@@ -71,7 +85,7 @@ function InvoicesPage() {
         }
       />
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {cards.map((s) => (
           <Card key={s.label} className="p-4">
             <p className="text-sm text-muted-foreground">{s.label}</p>
@@ -79,6 +93,34 @@ function InvoicesPage() {
           </Card>
         ))}
       </div>
+
+      {/* AR aging */}
+      <Card className="mb-6 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Receivables aging</h2>
+          <span className="text-xs text-muted-foreground">Outstanding by age of overdue balance</span>
+        </div>
+        {agingTotal === 0 ? (
+          <p className="text-xs text-muted-foreground">Nothing outstanding — all invoices settled.</p>
+        ) : (
+          <>
+            <div className="flex h-3 w-full overflow-hidden rounded-full">
+              {agingBuckets.map((b) => b.value > 0 && (
+                <div key={b.label} className={b.tone} style={{ width: `${(b.value / agingTotal) * 100}%` }} title={`${b.label}: ${money(b.value, stats.currency)}`} />
+              ))}
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+              {agingBuckets.map((b) => (
+                <div key={b.label} className="flex items-center gap-1.5 text-xs">
+                  <span className={`size-2.5 rounded-sm ${b.tone}`} aria-hidden />
+                  <span className="text-muted-foreground">{b.label}</span>
+                  <span className="ml-auto font-medium tabular-nums">{money(b.value, stats.currency)}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </Card>
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading invoices…</p>
@@ -97,8 +139,9 @@ function InvoicesPage() {
                 <TableRow>
                   <TableHead>Invoice</TableHead>
                   <TableHead>Buyer</TableHead>
-                  <TableHead>Order</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Due</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Outstanding</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -121,17 +164,19 @@ function InvoicesPage() {
                       <p className="font-medium">{inv.buyer_company ?? inv.buyer_name ?? "—"}</p>
                     </TableCell>
                     <TableCell>
-                      {inv.order_id ? (
-                        <Link to="/orders/$id" params={{ id: inv.order_id }} className="text-sm text-info hover:underline">
-                          View order
-                        </Link>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
-                      )}
+                      <span className={`text-sm tabular-nums ${inv.isOverdue ? "font-medium text-destructive" : "text-muted-foreground"}`}>
+                        {inv.due_date ?? "—"}
+                        {inv.isOverdue ? ` · ${inv.daysOverdue}d` : ""}
+                      </span>
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">{money(inv.total, inv.currency)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {inv.outstanding > 0 ? money(inv.outstanding, inv.currency) : <span className="text-success">Settled</span>}
+                    </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={`capitalize ${STATUS_TONE[inv.status] ?? ""}`}>{inv.status}</Badge>
+                      <Badge variant="outline" className={`capitalize ${inv.isOverdue && inv.status !== "paid" ? STATUS_TONE.overdue : STATUS_TONE[inv.status] ?? ""}`}>
+                        {inv.isOverdue && inv.status !== "paid" ? "overdue" : inv.status}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">

@@ -1,17 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Download, FileQuestion, Package } from "lucide-react";
+import { ArrowLeft, Download, FileQuestion, Package, Plus, Trash2, Wallet } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/foundations/empty-state";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { getInvoice, updateInvoiceStatus, INVOICE_STATUSES } from "@/lib/api/invoices.functions";
+import {
+  getInvoice, updateInvoiceStatus, recordPayment, deletePayment, INVOICE_STATUSES,
+} from "@/lib/api/invoices.functions";
 
 function money(v: number | null | undefined, c: string | null | undefined) {
   return `${c ?? ""} ${Number(v ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`.trim();
@@ -22,17 +27,39 @@ function InvoiceDetailPage() {
   const qc = useQueryClient();
   const getFn = useServerFn(getInvoice);
   const statusFn = useServerFn(updateInvoiceStatus);
+  const payFn = useServerFn(recordPayment);
+  const delPayFn = useServerFn(deletePayment);
 
   const { data, isLoading, error } = useQuery({ queryKey: ["invoice", id], queryFn: () => getFn({ data: { id } }) });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const inv = (data as any)?.invoice;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const payments: any[] = (data as any)?.payments ?? [];
+  const outstanding = (data as any)?.outstanding ?? 0;
   const order = inv?.orders;
+
+  const [amount, setAmount] = useState("");
+  const [paidOn, setPaidOn] = useState(new Date().toISOString().slice(0, 10));
+  const [method, setMethod] = useState("");
+  const [reference, setReference] = useState("");
+
+  const refresh = () => { qc.invalidateQueries({ queryKey: ["invoice", id] }); qc.invalidateQueries({ queryKey: ["invoices"] }); };
 
   const statusMut = useMutation({
     mutationFn: (status: string) =>
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       statusFn({ data: { invoiceId: id, status: status as any } }),
-    onSuccess: () => { toast.success("Invoice updated"); qc.invalidateQueries({ queryKey: ["invoice", id] }); qc.invalidateQueries({ queryKey: ["invoices"] }); },
+    onSuccess: () => { toast.success("Invoice updated"); refresh(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const payMut = useMutation({
+    mutationFn: () => payFn({ data: { invoiceId: id, amount: Number(amount), paidOn, method: method || undefined, reference: reference || undefined } }),
+    onSuccess: () => { toast.success("Payment recorded"); setAmount(""); setMethod(""); setReference(""); refresh(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const delPayMut = useMutation({
+    mutationFn: (paymentId: string) => delPayFn({ data: { paymentId, invoiceId: id } }),
+    onSuccess: () => { toast.success("Payment removed"); refresh(); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
@@ -114,6 +141,73 @@ function InvoiceDetailPage() {
           <Link to="/orders/$id" params={{ id: inv.order_id }} className="mt-4 inline-flex items-center gap-1.5 text-sm text-primary hover:underline">
             <Package className="size-3.5" /> {order.order_number} — view order &amp; tracking
           </Link>
+        )}
+      </Card>
+
+      {/* Receivable / payments */}
+      <Card className="mt-4 p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-sm font-semibold"><Wallet className="size-4" /> Payment</h2>
+          <div className="flex items-center gap-4 text-sm">
+            <span className="text-muted-foreground">Paid <span className="font-medium tabular-nums text-foreground">{money(inv.amount_paid, inv.currency)}</span></span>
+            <span className="text-muted-foreground">Outstanding{" "}
+              <span className={`font-semibold tabular-nums ${outstanding > 0 ? "text-foreground" : "text-success"}`}>
+                {outstanding > 0 ? money(outstanding, inv.currency) : "Settled"}
+              </span>
+            </span>
+          </div>
+        </div>
+
+        {/* Record a payment */}
+        {outstanding > 0 && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
+            <div className="sm:col-span-1">
+              <p className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">Amount</p>
+              <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" className="h-9" />
+            </div>
+            <div className="sm:col-span-1">
+              <p className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">Date</p>
+              <Input type="date" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} className="h-9" />
+            </div>
+            <div className="sm:col-span-1">
+              <p className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">Method</p>
+              <Input value={method} onChange={(e) => setMethod(e.target.value)} placeholder="Bank transfer" className="h-9" />
+            </div>
+            <div className="sm:col-span-1">
+              <p className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">Reference</p>
+              <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Txn ref" className="h-9" />
+            </div>
+            <div className="flex items-end">
+              <Button size="sm" className="h-9 w-full" onClick={() => payMut.mutate()} disabled={payMut.isPending || !(Number(amount) > 0)}>
+                <Plus className="size-3.5" /> Record
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Payment history */}
+        {payments.length > 0 ? (
+          <ul className="mt-4 divide-y divide-border rounded-md border border-border">
+            {payments.map((p) => (
+              <li key={p.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                <div>
+                  <p className="font-medium tabular-nums">{money(p.amount, inv.currency)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {p.paid_on}{p.method ? ` · ${p.method}` : ""}{p.reference ? ` · ${p.reference}` : ""}
+                  </p>
+                </div>
+                <Button size="icon" variant="ghost" className="size-8" onClick={() => delPayMut.mutate(p.id)} aria-label="Remove payment">
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-4 text-xs text-muted-foreground">No payments recorded yet.</p>
+        )}
+
+        {inv.status === "paid" && (
+          <Badge variant="outline" className="mt-3 border-success/30 bg-success/10 text-success">Paid in full{inv.paid_at ? ` · ${inv.paid_at}` : ""}</Badge>
         )}
       </Card>
     </div>
