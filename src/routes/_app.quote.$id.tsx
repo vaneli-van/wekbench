@@ -31,6 +31,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/foundations/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { QuoteAttachmentsCard } from "@/components/quote-attachments-card";
+import { QuoteShippingCard } from "@/components/quote-shipping-card";
 import {
   getQuote,
   updateQuoteLineItem,
@@ -54,7 +55,8 @@ type LineType =
   | "labour"
   | "travel"
   | "training"
-  | "subscription";
+  | "subscription"
+  | "shipping";
 
 const LINE_TYPE_LABEL: Record<LineType, string> = {
   hardware: "Hardware",
@@ -64,6 +66,7 @@ const LINE_TYPE_LABEL: Record<LineType, string> = {
   travel: "Travel",
   training: "Training",
   subscription: "Subscription",
+  shipping: "Shipping",
 };
 
 type LI = {
@@ -553,6 +556,13 @@ function QuoteDetailPage() {
           <TermsField label="Site contact phone" value={q.site_contact_phone} editable={editable} placeholder="+233…" onCommit={(v) => headerMut.mutate({ site_contact_phone: v || null })} />
         </div>
       </Card>
+
+      <QuoteShippingCard
+        quoteId={id}
+        quoteCurrency={q.currency}
+        destinationCity={q.delivery_location ?? q.site_address ?? null}
+        editable={editable}
+      />
 
       <Card className="mt-6 p-0 overflow-hidden">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">

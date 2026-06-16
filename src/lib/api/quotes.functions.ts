@@ -208,7 +208,7 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
 /* ---------- recompute totals ---------- */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function recomputeQuoteTotals(supabase: any, quoteId: string) {
+export async function recomputeQuoteTotals(supabase: any, quoteId: string) {
   const { data: lines } = await supabase
     .from("quote_line_items")
     .select("qty, unit_price, unit_cost, discount_pct")
