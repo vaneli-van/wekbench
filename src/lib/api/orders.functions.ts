@@ -63,7 +63,7 @@ export async function createOrderForQuote(supabase: any, quoteId: string): Promi
   const { data: quote, error } = await supabase
     .from("quotes")
     .select(
-      "id, workspace_id, quote_number, title, buyer_name, currency, total, rfq_id, rfqs(buyer_name, buyer_email, buyer_company, summary)",
+      "id, workspace_id, quote_number, title, buyer_name, buyer_id, currency, total, rfq_id, rfqs(buyer_name, buyer_email, buyer_company, summary)",
     )
     .eq("id", quoteId)
     .maybeSingle();
@@ -82,6 +82,7 @@ export async function createOrderForQuote(supabase: any, quoteId: string): Promi
       workspace_id: quote.workspace_id,
       quote_id: quote.id,
       rfq_id: quote.rfq_id ?? null,
+      buyer_id: quote.buyer_id ?? null,
       order_number: orderNumber,
       buyer_name: buyerName,
       buyer_email: rfq?.buyer_email ?? null,

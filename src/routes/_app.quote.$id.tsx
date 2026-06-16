@@ -80,6 +80,9 @@ type LI = {
   line_type: LineType;
   section: string | null;
   discount_pct: number | null;
+  source_currency?: string | null;
+  source_unit_cost?: number | null;
+  fx_rate?: number | null;
   catalog_items?: {
     stock_qty: number | null;
     reserved_qty: number | null;
@@ -662,6 +665,11 @@ function QuoteDetailPage() {
                             />
                           ) : (
                             fmt(li.unit_cost, q.currency)
+                          )}
+                          {li.source_currency && li.source_unit_cost != null && (
+                            <p className="text-[10px] font-normal text-muted-foreground">
+                              from {li.source_currency} {Number(li.source_unit_cost).toFixed(2)}
+                            </p>
                           )}
                         </td>
                         <td className="px-2 py-2 text-right tabular-nums align-top">

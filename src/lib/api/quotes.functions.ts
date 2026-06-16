@@ -5,6 +5,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { priceAtQty } from "@/lib/sourcing/pricing";
 import { createOrderForQuote } from "./orders.functions";
 import { resolveWorkspaceId } from "./workspace.functions";
+import { convertAmount } from "@/lib/fx.server";
+import { findOrCreateBuyer } from "./buyers.functions";
 
 /* ---------- helpers ---------- */
 
@@ -94,6 +96,10 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const email = (doc as any).inbound_emails as { from_address?: string; from_name?: string } | null;
+      const buyerName = doc.buyer_ref || email?.from_name || null;
+      const buyerId = await findOrCreateBuyer(supabase, workspaceId, buyerName, {
+        email: email?.from_address ?? null,
+      });
       const { data: rfq, error: rfqErr } = await supabase
         .from("rfqs")
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -106,6 +112,7 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
           due_date: doc.due_date,
           buyer_email: email?.from_address ?? null,
           buyer_name: email?.from_name ?? null,
+          buyer_id: buyerId,
           status: "open",
         } as any)
         .select("id")
@@ -507,14 +514,28 @@ export const applyOfferToLine = createServerFn({ method: "POST" })
 
     const at = priceAtQty(offer.price_breaks, Number(line.qty) || 1);
     if (!at) throw new Error("Selected offer has no usable price");
-    const unitPrice = computeUnitPrice(at.price, line.margin_pct ?? 0);
+
+    // Convert the offer price (e.g. USD) into the quote's currency (default GHS).
+    const { data: quote } = await supabase
+      .from("quotes")
+      .select("currency")
+      .eq("id", line.quote_id)
+      .maybeSingle();
+    const targetCurrency = (quote?.currency && String(quote.currency).trim()) || "GHS";
+    const conv = await convertAmount(at.price, at.currency, targetCurrency);
+    const unitCost = conv ? Number(conv.amount.toFixed(4)) : at.price;
+    const fxRate = conv?.rate ?? 1;
+    const unitPrice = computeUnitPrice(unitCost, line.margin_pct ?? 0);
 
     const { error } = await supabase
       .from("quote_line_items")
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .update({
-        unit_cost: at.price,
+        unit_cost: unitCost,
         unit_price: unitPrice,
+        source_currency: at.currency,
+        source_unit_cost: at.price,
+        fx_rate: fxRate,
         selected_offer_id: offer.id,
         source_distributor: offer.distributor_name,
         mpn: offer.identifier,
@@ -523,8 +544,14 @@ export const applyOfferToLine = createServerFn({ method: "POST" })
       } as any)
       .eq("id", data.lineItemId);
     if (error) throw new Error(error.message);
+
+    // If the quote had no currency, lock it to the conversion target.
+    if (!quote?.currency) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await supabase.from("quotes").update({ currency: targetCurrency } as any).eq("id", line.quote_id);
+    }
     await recomputeQuoteTotals(supabase, line.quote_id);
-    return { ok: true, unitCost: at.price, currency: at.currency, distributor: offer.distributor_name };
+    return { ok: true, unitCost, currency: targetCurrency, distributor: offer.distributor_name };
   });
 
 export const addQuoteLineItem = createServerFn({ method: "POST" })
@@ -721,6 +748,7 @@ export const createQuote = createServerFn({ method: "POST" })
       .object({
         title: z.string().min(1),
         buyer: z.string().min(1),
+        buyerId: z.string().uuid().optional(),
         sector: z.string().optional(),
         assignee: z.string().optional(),
       })
@@ -731,6 +759,11 @@ export const createQuote = createServerFn({ method: "POST" })
 
     const workspaceId = await resolveWorkspaceId(supabase, context.userId);
     if (!workspaceId) throw new Error("No workspace found for this user");
+
+    // Resolve the buyer to a real record (create on the fly if needed).
+    const buyerId =
+      data.buyerId ??
+      (await findOrCreateBuyer(supabase, workspaceId, data.buyer, { sector: data.sector ?? null }));
 
     const quote_number = await nextQuoteNumber(supabase, workspaceId);
 
@@ -744,6 +777,7 @@ export const createQuote = createServerFn({ method: "POST" })
         status: "draft",
         title: data.title,
         buyer_name: data.buyer,
+        buyer_id: buyerId,
         sector: data.sector ?? null,
         assignee: data.assignee ?? null,
       } as any)
