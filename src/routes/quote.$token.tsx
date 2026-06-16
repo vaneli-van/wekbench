@@ -93,7 +93,7 @@ function QuoteAcceptPage() {
           <CheckCircle2 className="size-5 shrink-0" />
           <div>
             <p className="text-sm font-semibold">Quote accepted</p>
-            <p className="text-xs">Signed by {q.accepted_by} on {fmtDate(q.accepted_at)}. The supplier has been notified.</p>
+            <p className="text-xs">Signed by {q.accepted_by} on {fmtDate(q.accepted_at)}. Your acceptance has been recorded.</p>
           </div>
         </div>
       )}

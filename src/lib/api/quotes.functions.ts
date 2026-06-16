@@ -8,6 +8,7 @@ import { priceAtQty } from "@/lib/sourcing/pricing";
 import { createOrderForQuote } from "./orders.functions";
 import { resolveWorkspaceId } from "./workspace.functions";
 import { convertAmount } from "@/lib/fx.server";
+import { sendEmail, escapeHtml } from "@/lib/email.server";
 import { findOrCreateBuyer } from "./buyers.functions";
 
 /* ---------- helpers ---------- */
@@ -831,6 +832,37 @@ export const acceptQuotePublic = createServerFn({ method: "POST" })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const r = (result ?? {}) as any;
     if (!r.ok) throw new Error(r.error ?? "Could not accept quote");
+
+    // Notify the seller that the buyer accepted online (best-effort; never blocks acceptance).
+    if (!r.already && r.seller_email) {
+      try {
+        const amount = `${r.currency ?? "GHS"} ${Number(r.total ?? 0).toLocaleString()}`;
+        const html =
+          `<div style="font-family:system-ui,Arial,sans-serif;font-size:15px;color:#1a1a1a;line-height:1.6">` +
+          `<h2 style="margin:0 0 8px">Quote accepted${r.buyer ? ` by ${escapeHtml(r.buyer)}` : ""}</h2>` +
+          `<p style="margin:0 0 12px">${escapeHtml(r.buyer ?? "The buyer")} has accepted and e-signed quote ` +
+          `<strong>${escapeHtml(r.quote_number)}</strong> online.</p>` +
+          `<table style="border-collapse:collapse;font-size:14px">` +
+          `<tr><td style="color:#666;padding:2px 16px 2px 0">Quote</td><td>${escapeHtml(r.quote_number)}</td></tr>` +
+          (r.order_number ? `<tr><td style="color:#666;padding:2px 16px 2px 0">Order created</td><td>${escapeHtml(r.order_number)}</td></tr>` : "") +
+          `<tr><td style="color:#666;padding:2px 16px 2px 0">Value</td><td>${escapeHtml(amount)}</td></tr>` +
+          `<tr><td style="color:#666;padding:2px 16px 2px 0">Signed by</td><td>${escapeHtml(r.buyer)}</td></tr>` +
+          `</table>` +
+          `<p style="margin:14px 0 0;color:#666;font-size:13px">An order has been created in wekbench. Open wekbench to process it.</p>` +
+          `</div>`;
+        const emailRes = await sendEmail({
+          to: r.seller_email,
+          subject: `Quote ${r.quote_number} accepted${r.buyer ? ` by ${r.buyer}` : ""}`,
+          html,
+        });
+        r.notified = emailRes.sent;
+        if (emailRes.skipped) r.notifySkipped = emailRes.skipped;
+        if (emailRes.error) r.notifyError = emailRes.error;
+      } catch (e) {
+        r.notified = false;
+        r.notifyError = e instanceof Error ? e.message : "notify failed";
+      }
+    }
     return r;
   });
 
