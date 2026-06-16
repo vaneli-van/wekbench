@@ -183,8 +183,8 @@ function InvoicesPage() {
                         <Button variant="ghost" size="icon" className="size-8" aria-label="Open" asChild>
                           <Link to="/invoices/$id" params={{ id: inv.id }}><FileText className="size-4" /></Link>
                         </Button>
-                        <Button variant="ghost" size="icon" className="size-8" aria-label="Download" onClick={() => toast.info("PDF export coming soon")}>
-                          <Download className="size-4" />
+                        <Button variant="ghost" size="icon" className="size-8" aria-label="Download PDF" asChild>
+                          <Link to="/invoices/$id" params={{ id: inv.id }}><Download className="size-4" /></Link>
                         </Button>
                         {inv.status === "draft" && (
                           <Button variant="ghost" size="icon" className="size-8" aria-label="Mark sent" onClick={() => statusMut.mutate({ invoiceId: inv.id, status: "sent" })}>

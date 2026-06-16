@@ -36,8 +36,81 @@ function InvoiceDetailPage() {
   const inv = (data as any)?.invoice;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const payments: any[] = (data as any)?.payments ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const lineItems: any[] = (data as any)?.lineItems ?? [];
   const outstanding = (data as any)?.outstanding ?? 0;
   const order = inv?.orders;
+
+  function printInvoice() {
+    if (!inv) return;
+    const esc = (s: unknown) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
+    const cur = inv.currency ?? "GHS";
+    const fmt = (v: unknown) => `${cur} ${Number(v ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const seller = esc(inv.workspaces?.name ?? "");
+    const rows = lineItems.length
+      ? lineItems.map((li) => `<tr>
+          <td>${esc(li.product ?? li.description ?? "—")}</td>
+          <td class="r">${Number(li.qty ?? 0).toLocaleString()}</td>
+          <td class="r">${fmt(li.unit_price)}</td>
+          <td class="r">${fmt(li.subtotal)}</td></tr>`).join("")
+      : `<tr><td>${esc(inv.description ?? "Goods & services")}</td><td class="r"></td><td class="r"></td><td class="r">${fmt(inv.amount)}</td></tr>`;
+    const paidRow = Number(inv.amount_paid ?? 0) > 0
+      ? `<tr><td class="r k">Paid</td><td class="r">-${fmt(inv.amount_paid)}</td></tr>
+         <tr><td class="r k"><strong>Balance due</strong></td><td class="r"><strong>${fmt(outstanding)}</strong></td></tr>` : "";
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(inv.invoice_number)}</title>
+<style>
+  @page { size: A4; margin: 18mm; }
+  body { font-family: system-ui, Arial, sans-serif; color:#1a1a1a; font-size: 12pt; }
+  .top { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #1a1a1a; padding-bottom:10px; }
+  .seller { font-size:16pt; font-weight:700; }
+  h1 { font-size:18pt; margin:0; letter-spacing:1px; color:#444; }
+  .muted { color:#666; }
+  .meta { margin-top:14px; display:flex; justify-content:space-between; font-size:11pt; }
+  table.items { width:100%; border-collapse:collapse; margin-top:18px; font-size:11pt; }
+  table.items th { text-align:left; border-bottom:1px solid #ccc; padding:6px 4px; color:#666; font-weight:600; }
+  table.items td { padding:6px 4px; border-bottom:1px solid #eee; }
+  .r { text-align:right; }
+  table.tot { margin-left:auto; margin-top:12px; border-collapse:collapse; font-size:11pt; min-width:240px; }
+  table.tot td { padding:3px 4px; }
+  table.tot td.k { color:#666; }
+  .status { margin-top:18px; display:inline-block; padding:4px 12px; border-radius:4px; font-weight:600; font-size:10pt; }
+  .paid { background:#e7f6ec; color:#1a7f43; }
+  .due { background:#fdecec; color:#b3261e; }
+</style></head><body>
+  <div class="top">
+    <div class="seller">${seller || "Invoice"}</div>
+    <div style="text-align:right"><h1>INVOICE</h1><div class="muted">${esc(inv.invoice_number)}</div></div>
+  </div>
+  <div class="meta">
+    <div>
+      <div class="muted">Billed to</div>
+      <div style="font-weight:600">${esc(inv.buyer_company ?? inv.buyer_name ?? "—")}</div>
+      <div class="muted">${esc(inv.buyer_email ?? "")}</div>
+    </div>
+    <div style="text-align:right">
+      <div><span class="muted">Issued:</span> ${esc(inv.issued_at ?? "—")}</div>
+      <div><span class="muted">Due:</span> ${esc(inv.due_date ?? "—")}</div>
+      ${inv.terms ? `<div><span class="muted">Terms:</span> ${esc(inv.terms)}</div>` : ""}
+      ${order?.order_number ? `<div><span class="muted">Order:</span> ${esc(order.order_number)}</div>` : ""}
+    </div>
+  </div>
+  <table class="items">
+    <thead><tr><th>Description</th><th class="r">Qty</th><th class="r">Unit</th><th class="r">Amount</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <table class="tot">
+    <tr><td class="k">Subtotal</td><td class="r">${fmt(inv.amount)}</td></tr>
+    <tr><td class="k">Tax (${Number(inv.tax_pct ?? 0)}%)</td><td class="r">${fmt(inv.tax_amount)}</td></tr>
+    <tr><td class="k"><strong>Total</strong></td><td class="r"><strong>${fmt(inv.total)}</strong></td></tr>
+    ${paidRow}
+  </table>
+  <div class="status ${outstanding > 0 ? "due" : "paid"}">${outstanding > 0 ? "Balance due " + fmt(outstanding) : "Paid in full"}</div>
+</body></html>`;
+    const w = window.open("", "_blank", "width=860,height=1000");
+    if (!w) { toast.error("Pop-up blocked — allow pop-ups to print the invoice"); return; }
+    w.document.open(); w.document.write(html); w.document.close(); w.focus();
+    setTimeout(() => w.print(), 300);
+  }
 
   const [amount, setAmount] = useState("");
   const [paidOn, setPaidOn] = useState(new Date().toISOString().slice(0, 10));
@@ -104,7 +177,7 @@ function InvoiceDetailPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button size="sm" variant="outline" onClick={() => toast.info("PDF export coming soon")}>
+            <Button size="sm" variant="outline" onClick={printInvoice}>
               <Download className="size-4" /> PDF
             </Button>
           </div>

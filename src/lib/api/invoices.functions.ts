@@ -171,7 +171,7 @@ export const getInvoice = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: invoice, error } = await context.supabase
       .from("invoices")
-      .select("*, orders(order_number, share_token, status)")
+      .select("*, orders(order_number, share_token, status), workspaces(name)")
       .eq("id", data.id)
       .maybeSingle();
     if (error || !invoice) throw new Error("Invoice not found");
@@ -180,9 +180,19 @@ export const getInvoice = createServerFn({ method: "POST" })
       .select("id, amount, paid_on, method, reference, note, created_at")
       .eq("invoice_id", data.id)
       .order("paid_on", { ascending: false });
+    // Pull the order's line items so the invoice can be itemised.
+    let lineItems: unknown[] = [];
+    if (invoice.order_id) {
+      const { data: li } = await context.supabase
+        .from("order_line_items")
+        .select("line_no, product, description, qty, unit, unit_price, subtotal")
+        .eq("order_id", invoice.order_id)
+        .order("line_no", { ascending: true });
+      lineItems = li ?? [];
+    }
     const total = Number(invoice.total ?? 0);
     const paid = Number(invoice.amount_paid ?? 0);
-    return { invoice, payments: payments ?? [], outstanding: Math.max(0, total - paid) };
+    return { invoice, payments: payments ?? [], lineItems, outstanding: Math.max(0, total - paid) };
   });
 
 /** Recompute amount_paid + status from the payments ledger. */
