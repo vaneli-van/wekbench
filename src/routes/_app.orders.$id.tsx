@@ -44,6 +44,8 @@ function OrderDetailPage() {
   const order = (data as any)?.order;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const events: any[] = (data as any)?.events ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const lineItems: any[] = (data as any)?.lineItems ?? [];
 
   const statusMut = useMutation({
     mutationFn: (status: string) => statusFn({ data: { orderId: id, status: status as (typeof ORDER_STATUSES)[number] } }),
@@ -155,6 +157,48 @@ function OrderDetailPage() {
           </a>
         </div>
       </Card>
+
+      {/* Line items */}
+      {lineItems.length > 0 && (
+        <Card className="mt-4 overflow-hidden p-0">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <h2 className="text-sm font-semibold">Items ({lineItems.length})</h2>
+            <span className="text-xs text-muted-foreground">Ex-tax subtotals</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2 text-left w-8">#</th>
+                  <th className="px-3 py-2 text-left">Product</th>
+                  <th className="px-3 py-2 text-right w-20">Qty</th>
+                  <th className="px-3 py-2 text-right w-28">Unit price</th>
+                  <th className="px-3 py-2 text-right w-32">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {lineItems.map((li) => (
+                  <tr key={li.id}>
+                    <td className="px-3 py-2 align-top text-muted-foreground tabular-nums">{li.line_no}</td>
+                    <td className="px-3 py-2">
+                      <p className="font-medium text-pretty">{li.product ?? li.description ?? "—"}</p>
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums align-top">{Number(li.qty ?? 0).toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right tabular-nums align-top">{Number(li.unit_price ?? 0).toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right font-medium tabular-nums align-top">{Number(li.subtotal ?? 0).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border bg-muted/20">
+                  <td colSpan={4} className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Order total (incl. tax)</td>
+                  <td className="px-3 py-2 text-right text-base font-semibold tabular-nums">{order.currency ?? "GHS"} {Number(order.value ?? 0).toLocaleString()}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </Card>
+      )}
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Shipment */}

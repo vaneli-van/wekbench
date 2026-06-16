@@ -150,7 +150,12 @@ export const getOrder = createServerFn({ method: "POST" })
       .select("id, event_type, status, label, note, occurred_at")
       .eq("order_id", data.id)
       .order("occurred_at", { ascending: true });
-    return { order, events: events ?? [] };
+    const { data: lineItems } = await context.supabase
+      .from("order_line_items")
+      .select("id, line_no, product, description, qty, unit, unit_price, subtotal, currency")
+      .eq("order_id", data.id)
+      .order("line_no", { ascending: true });
+    return { order, events: events ?? [], lineItems: lineItems ?? [] };
   });
 
 export const createManualOrder = createServerFn({ method: "POST" })
