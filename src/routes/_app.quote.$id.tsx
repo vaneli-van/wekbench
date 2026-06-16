@@ -14,6 +14,7 @@ import {
   Calendar,
   Search,
   ExternalLink,
+  Copy,
 } from "lucide-react";
 import {
   Dialog,
@@ -529,6 +530,40 @@ function QuoteDetailPage() {
           </div>
         </Card>
       </div>
+
+      {/* Shareable buyer acceptance link */}
+      {q.share_token && (
+        <Card className="mt-4 flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Buyer acceptance link</p>
+            {q.status === "accepted" ? (
+              <p className="truncate text-xs text-success">Accepted &amp; signed by {q.accepted_by}{q.accepted_at ? ` on ${new Date(q.accepted_at).toLocaleDateString()}` : ""}</p>
+            ) : q.status === "declined" ? (
+              <p className="truncate text-xs text-destructive">Declined by buyer</p>
+            ) : q.status === "draft" ? (
+              <p className="truncate text-xs text-muted-foreground">Send the quote to activate this link for the buyer.</p>
+            ) : (
+              <p className="truncate text-xs text-muted-foreground">Share this link — the buyer can review, accept &amp; e-sign online.</p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const url = `${typeof window !== "undefined" ? window.location.origin : ""}/quote/${q.share_token}`;
+                navigator.clipboard?.writeText(url);
+                toast.success("Buyer link copied");
+              }}
+            >
+              <Copy className="size-3.5" /> Copy link
+            </Button>
+            <a href={`/quote/${q.share_token}`} target="_blank" rel="noreferrer">
+              <Button size="sm" variant="ghost">Preview</Button>
+            </a>
+          </div>
+        </Card>
+      )}
 
       <Card className="mt-4 p-4">
         <div className="mb-3 flex items-center justify-between">

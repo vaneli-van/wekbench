@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { createClient } from "@supabase/supabase-js";
+import process from "node:process";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -392,7 +394,7 @@ export const getQuote = createServerFn({ method: "POST" })
     const { data: quote, error } = await context.supabase
       .from("quotes")
       .select(
-        "id, workspace_id, quote_number, status, currency, subtotal, tax_pct, tax_amount, total, margin_pct, valid_until, notes, sent_at, created_at, incoterm, buyer_po_ref, delivery_location, lead_time_days, site_address, site_contact_name, site_contact_phone, install_window, rfq_id, title, buyer_name, sector, assignee, rfqs(buyer_ref, buyer_name, buyer_email, buyer_company, summary, due_date)",
+        "id, workspace_id, quote_number, status, currency, subtotal, tax_pct, tax_amount, total, margin_pct, valid_until, notes, sent_at, created_at, incoterm, buyer_po_ref, delivery_location, lead_time_days, site_address, site_contact_name, site_contact_phone, install_window, rfq_id, title, buyer_name, sector, assignee, share_token, accepted_at, accepted_by, accept_signature, declined_at, rfqs(buyer_ref, buyer_name, buyer_email, buyer_company, summary, due_date)",
       )
       .eq("id", data.id)
       .maybeSingle();
@@ -786,4 +788,66 @@ export const createQuote = createServerFn({ method: "POST" })
       .single();
     if (error || !created) throw new Error(error?.message ?? "Could not create quote");
     return { id: created.id as string };
+  });
+
+/* ---------- public, tokenized quote acceptance ---------- */
+
+function anonClient() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) throw new Error("Supabase env not configured");
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+
+/** PUBLIC, no auth: fetch a sent quote + its line items by share token. */
+export const getQuotePublic = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ token: z.string().min(6) }).parse(input))
+  .handler(async ({ data }) => {
+    const supabase = anonClient();
+    const { data: result, error } = await supabase.rpc("get_quote_public", { p_token: data.token });
+    if (error) throw new Error(error.message);
+    return { quote: result ?? null };
+  });
+
+/** PUBLIC, no auth: accept + e-sign a quote. Idempotently creates the order. */
+export const acceptQuotePublic = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        token: z.string().min(6),
+        name: z.string().min(1).max(200),
+        signature: z.string().min(1).max(200),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const supabase = anonClient();
+    const { data: result, error } = await supabase.rpc("accept_quote_public", {
+      p_token: data.token,
+      p_name: data.name,
+      p_signature: data.signature,
+    });
+    if (error) throw new Error(error.message);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const r = (result ?? {}) as any;
+    if (!r.ok) throw new Error(r.error ?? "Could not accept quote");
+    return r;
+  });
+
+/** PUBLIC, no auth: decline a quote with an optional note. */
+export const declineQuotePublic = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ token: z.string().min(6), note: z.string().max(2000).optional() }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const supabase = anonClient();
+    const { data: result, error } = await supabase.rpc("decline_quote_public", {
+      p_token: data.token,
+      p_note: data.note ?? null,
+    });
+    if (error) throw new Error(error.message);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const r = (result ?? {}) as any;
+    if (!r.ok) throw new Error(r.error ?? "Could not decline quote");
+    return r;
   });
