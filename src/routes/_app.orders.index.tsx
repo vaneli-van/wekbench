@@ -12,17 +12,51 @@ function fmtMoney(v: number | null | undefined, c: string | null | undefined) {
   return `${c ?? ""} ${Number(v ?? 0).toLocaleString()}`.trim();
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function orderYear(o: any): number | null {
+  const d = o.ordered_at ?? o.created_at;
+  if (!d) return null;
+  const y = new Date(d).getFullYear();
+  return Number.isFinite(y) ? y : null;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function groupByYear(orders: any[]) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const map = new Map<string, any[]>();
+  for (const o of orders) {
+    const y = orderYear(o);
+    const key = y == null ? "Undated" : String(y);
+    (map.get(key) ?? map.set(key, []).get(key)!).push(o);
+  }
+  return [...map.entries()]
+    .sort((a, b) => {
+      if (a[0] === "Undated") return 1;
+      if (b[0] === "Undated") return -1;
+      return Number(b[0]) - Number(a[0]); // newest year first
+    })
+    .map(([year, items]) => ({
+      year,
+      items,
+      count: items.length,
+      total: items.reduce((s, o) => s + Number(o.value ?? 0), 0),
+      currency: items[0]?.currency ?? "GHS",
+    }));
+}
+
 function OrdersPage() {
   const listFn = useServerFn(listOrders);
   const { data, isLoading } = useQuery({ queryKey: ["orders"], queryFn: () => listFn() });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orders = ((data as any)?.orders ?? []) as any[];
+  const groups = groupByYear(orders);
+  const grandTotal = orders.reduce((s, o) => s + Number(o.value ?? 0), 0);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
       <PageHeader
         title="Orders"
-        description="Orders created from accepted quotes. Track fulfillment end to end."
+        description="Sales orders grouped by year. Track fulfillment end to end."
       />
 
       {isLoading ? (
@@ -36,48 +70,80 @@ function OrdersPage() {
           action={{ label: "Go to quotes", href: "/quotes" }}
         />
       ) : (
-        <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card">
-          <div className="hidden grid-cols-[1.4fr_1fr_1fr_1fr_auto] gap-4 border-b border-border bg-muted/40 px-5 py-3 text-xs font-medium text-muted-foreground md:grid">
-            <span>Order</span>
-            <span>Buyer</span>
-            <span>Shipment</span>
-            <span>Value</span>
-            <span>Status</span>
-          </div>
-          <ul className="divide-y divide-border">
-            {orders.map((order) => (
-              <li key={order.id}>
-                <Link
-                  to="/orders/$id"
-                  params={{ id: order.id }}
-                  className="grid grid-cols-1 gap-3 px-5 py-4 transition-colors hover:bg-muted/30 md:grid-cols-[1.4fr_1fr_1fr_1fr_auto] md:items-center md:gap-4"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                      <Package className="size-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-mono text-xs text-muted-foreground">{order.order_number}</p>
-                      <p className="truncate text-sm font-medium text-foreground">{order.description ?? "—"}</p>
-                    </div>
-                  </div>
-                  <div className="text-sm">
-                    <p className="font-medium text-foreground">{order.buyer_company ?? order.buyer_name ?? "—"}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Truck className="size-3.5" />
-                    {order.carrier ?? "Not shipped"}
-                  </div>
-                  <p className="text-sm font-semibold text-foreground">{fmtMoney(order.value, order.currency)}</p>
-                  <div className="flex items-center justify-between gap-2 md:justify-end">
-                    <Badge variant="outline" className="capitalize">{String(order.status).replace("_", " ")}</Badge>
-                    <ArrowUpRight className="hidden size-4 text-muted-foreground md:block" />
-                  </div>
-                </Link>
-              </li>
+        <>
+          {/* Year summary chips */}
+          <div className="mt-6 flex flex-wrap gap-3">
+            {groups.map((g) => (
+              <div key={`sum-${g.year}`} className="rounded-lg border border-border bg-card px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{g.year}</p>
+                <p className="text-lg font-semibold tabular-nums">{fmtMoney(g.total, g.currency)}</p>
+                <p className="text-xs text-muted-foreground">{g.count} order{g.count === 1 ? "" : "s"}</p>
+              </div>
             ))}
-          </ul>
-        </div>
+            <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">All years</p>
+              <p className="text-lg font-semibold tabular-nums">{fmtMoney(grandTotal, groups[0]?.currency ?? "GHS")}</p>
+              <p className="text-xs text-muted-foreground">{orders.length} orders</p>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-8">
+            {groups.map((g) => (
+              <section key={g.year}>
+                <div className="mb-2 flex items-baseline justify-between px-1">
+                  <h2 className="text-sm font-semibold text-foreground">{g.year}</h2>
+                  <p className="text-xs text-muted-foreground">
+                    {g.count} order{g.count === 1 ? "" : "s"} · <span className="tabular-nums">{fmtMoney(g.total, g.currency)}</span>
+                  </p>
+                </div>
+                <div className="overflow-hidden rounded-xl border border-border bg-card">
+                  <div className="hidden grid-cols-[1.4fr_1fr_1fr_1fr_auto] gap-4 border-b border-border bg-muted/40 px-5 py-3 text-xs font-medium text-muted-foreground md:grid">
+                    <span>Order</span>
+                    <span>Buyer</span>
+                    <span>Shipment</span>
+                    <span>Value</span>
+                    <span>Status</span>
+                  </div>
+                  <ul className="divide-y divide-border">
+                    {g.items.map((order) => (
+                      <li key={order.id}>
+                        <Link
+                          to="/orders/$id"
+                          params={{ id: order.id }}
+                          className="grid grid-cols-1 gap-3 px-5 py-4 transition-colors hover:bg-muted/30 md:grid-cols-[1.4fr_1fr_1fr_1fr_auto] md:items-center md:gap-4"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                              <Package className="size-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-mono text-xs text-muted-foreground">{order.order_number}</p>
+                              <p className="truncate text-sm font-medium text-foreground">
+                                {order.description ?? (order.ordered_at ? new Date(order.ordered_at).toLocaleDateString() : "—")}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-sm">
+                            <p className="font-medium text-foreground">{order.buyer_company ?? order.buyer_name ?? "—"}</p>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <Truck className="size-3.5" />
+                            {order.carrier ?? "Not shipped"}
+                          </div>
+                          <p className="text-sm font-semibold text-foreground">{fmtMoney(order.value, order.currency)}</p>
+                          <div className="flex items-center justify-between gap-2 md:justify-end">
+                            <Badge variant="outline" className="capitalize">{String(order.status).replace("_", " ")}</Badge>
+                            <ArrowUpRight className="hidden size-4 text-muted-foreground md:block" />
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
