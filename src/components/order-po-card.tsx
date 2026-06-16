@@ -86,6 +86,52 @@ export function OrderPoCard({
     onError: (e) => toast.error(e instanceof Error ? e.message : "Acknowledgement failed"),
   });
 
+  // Open a clean, standalone document (letter only) and print / save as PDF.
+  function printAcknowledgement() {
+    const esc = (s: unknown) => String(s ?? "—").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
+    const buyer = esc(order.buyer_company ?? order.buyer_name);
+    const value = `${order.currency ?? "GHS"} ${Number(order.value ?? 0).toLocaleString()}`;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>PO Acknowledgement — ${esc(order.order_number)}</title>
+<style>
+  @page { size: A4; margin: 22mm; }
+  body { font-family: Georgia, "Times New Roman", serif; color: #1a1a1a; line-height: 1.6; font-size: 12pt; }
+  h1 { font-size: 16pt; margin: 0 0 2px; }
+  .muted { color: #666; }
+  .rule { border: 0; border-top: 1px solid #ddd; margin: 16px 0; }
+  table { border-collapse: collapse; margin: 14px 0; }
+  td { padding: 2px 0; vertical-align: top; }
+  td.k { color: #666; padding-right: 16px; white-space: nowrap; }
+  .sig { margin-top: 40px; }
+  .sig .name { font-size: 16pt; font-style: italic; font-weight: 600; margin: 4px 0 2px; }
+</style></head><body>
+  <h1>Purchase Order Acknowledgement</h1>
+  <div class="muted">Date: ${esc(fmtDate(order.po_acknowledged_at))}</div>
+  <hr class="rule" />
+  <table>
+    <tr><td class="k">To</td><td>${buyer}</td></tr>
+    <tr><td class="k">Our order reference</td><td>${esc(order.order_number)}</td></tr>
+    <tr><td class="k">Your PO number</td><td>${esc(order.buyer_po_ref)}</td></tr>
+    ${order.buyer_po_date ? `<tr><td class="k">PO date</td><td>${esc(fmtDate(order.buyer_po_date))}</td></tr>` : ""}
+    <tr><td class="k">Order value</td><td>${esc(value)}</td></tr>
+  </table>
+  <p>We confirm receipt and acceptance of the above purchase order. The order has been entered and will be
+  fulfilled in accordance with its terms. Please retain this acknowledgement for your records.</p>
+  <div class="sig">
+    <div class="muted">Signed,</div>
+    <div class="name">${esc(order.po_signature)}</div>
+    <div>${esc(order.po_acknowledged_by)}</div>
+    <div class="muted" style="font-size:10pt">${esc(fmtDate(order.po_acknowledged_at))}</div>
+  </div>
+</body></html>`;
+    const w = window.open("", "_blank", "width=820,height=920");
+    if (!w) { toast.error("Pop-up blocked — allow pop-ups to print the acknowledgement"); return; }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 300);
+  }
+
   return (
     <Card className="p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -209,7 +255,7 @@ export function OrderPoCard({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setLetterOpen(false)}>Close</Button>
-            <Button onClick={() => window.print()}><Printer className="size-3.5" /> Print / save as PDF</Button>
+            <Button onClick={printAcknowledgement}><Printer className="size-3.5" /> Print / save as PDF</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

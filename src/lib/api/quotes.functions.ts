@@ -392,7 +392,7 @@ export const getQuote = createServerFn({ method: "POST" })
     const { data: quote, error } = await context.supabase
       .from("quotes")
       .select(
-        "id, workspace_id, quote_number, status, currency, subtotal, tax_pct, tax_amount, total, margin_pct, valid_until, notes, sent_at, created_at, incoterm, delivery_location, lead_time_days, site_address, site_contact_name, site_contact_phone, install_window, rfq_id, title, buyer_name, sector, assignee, rfqs(buyer_ref, buyer_name, buyer_email, buyer_company, summary, due_date)",
+        "id, workspace_id, quote_number, status, currency, subtotal, tax_pct, tax_amount, total, margin_pct, valid_until, notes, sent_at, created_at, incoterm, buyer_po_ref, delivery_location, lead_time_days, site_address, site_contact_name, site_contact_phone, install_window, rfq_id, title, buyer_name, sector, assignee, rfqs(buyer_ref, buyer_name, buyer_email, buyer_company, summary, due_date)",
       )
       .eq("id", data.id)
       .maybeSingle();
@@ -416,6 +416,7 @@ export const updateQuoteHeader = createServerFn({ method: "POST" })
         patch: z
           .object({
             incoterm: z.string().max(32).nullable().optional(),
+            buyer_po_ref: z.string().max(200).nullable().optional(),
             delivery_location: z.string().max(255).nullable().optional(),
             lead_time_days: z.number().int().min(0).max(3650).nullable().optional(),
             tax_pct: z.number().min(0).max(100).optional(),

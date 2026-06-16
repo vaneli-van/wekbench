@@ -121,6 +121,12 @@ function OrdersPage() {
                               <p className="truncate text-sm font-medium text-foreground">
                                 {order.description ?? (order.ordered_at ? new Date(order.ordered_at).toLocaleDateString() : "—")}
                               </p>
+                              {order.buyer_po_ref && (
+                                <p className="truncate text-[11px] text-muted-foreground">
+                                  PO {order.buyer_po_ref}
+                                  {order.po_status === "acknowledged" ? " · acknowledged" : ""}
+                                </p>
+                              )}
                             </div>
                           </div>
                           <div className="text-sm">

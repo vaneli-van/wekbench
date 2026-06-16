@@ -63,7 +63,7 @@ export async function createOrderForQuote(supabase: any, quoteId: string): Promi
   const { data: quote, error } = await supabase
     .from("quotes")
     .select(
-      "id, workspace_id, quote_number, title, buyer_name, buyer_id, currency, total, rfq_id, rfqs(buyer_name, buyer_email, buyer_company, summary)",
+      "id, workspace_id, quote_number, title, buyer_name, buyer_id, buyer_po_ref, currency, total, rfq_id, rfqs(buyer_name, buyer_email, buyer_company, summary)",
     )
     .eq("id", quoteId)
     .maybeSingle();
@@ -91,6 +91,8 @@ export async function createOrderForQuote(supabase: any, quoteId: string): Promi
       currency: quote.currency,
       value: quote.total ?? 0,
       status: "received",
+      buyer_po_ref: quote.buyer_po_ref ?? null,
+      po_status: quote.buyer_po_ref ? "received" : "none",
     } as any)
     .select("id, workspace_id")
     .single();
@@ -128,7 +130,7 @@ export const listOrders = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("orders")
       .select(
-        "id, order_number, buyer_name, buyer_company, description, status, currency, value, carrier, tracking_number, expected_delivery, ordered_at, created_at, quote_id",
+        "id, order_number, buyer_name, buyer_company, description, status, currency, value, carrier, tracking_number, expected_delivery, ordered_at, created_at, quote_id, buyer_po_ref, po_status",
       )
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
