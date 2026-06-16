@@ -6,6 +6,31 @@ import { resolveWorkspaceId } from "./workspace.functions";
 
 export const INVOICE_STATUSES = ["draft", "sent", "partial", "paid", "overdue", "disputed", "void"] as const;
 
+/** Named payment-term presets (drive the invoice due date). */
+export const PAYMENT_TERMS = [
+  { value: "receipt", label: "Due on receipt", days: 0 },
+  { value: "net15", label: "Net 15", days: 15 },
+  { value: "net30", label: "Net 30", days: 30 },
+  { value: "net45", label: "Net 45", days: 45 },
+  { value: "net60", label: "Net 60", days: 60 },
+  { value: "eofm", label: "End of following month", days: null as number | null },
+] as const;
+
+/** Compute a due date from an issue date + a term value. */
+export function computeDueDate(issuedAt: string | null | undefined, term: string): string | null {
+  const base = new Date(`${issuedAt ?? ""}T00:00:00`);
+  if (Number.isNaN(base.getTime())) return null;
+  if (term === "eofm") {
+    const d = new Date(base.getFullYear(), base.getMonth() + 2, 0); // last day of next month
+    return d.toISOString().slice(0, 10);
+  }
+  const t = PAYMENT_TERMS.find((x) => x.value === term);
+  if (!t || t.days == null) return null;
+  const d = new Date(base);
+  d.setDate(d.getDate() + t.days);
+  return d.toISOString().slice(0, 10);
+}
+
 /** Days between two ISO dates (a - b), or null. */
 function daysBetween(a: Date, b: Date): number {
   return Math.floor((a.getTime() - b.getTime()) / 86_400_000);

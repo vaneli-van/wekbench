@@ -27,6 +27,7 @@ const EMPTY = {
   pipeline: [] as Array<{ stage: string; count: number; value: number }>,
   topBuyers: [] as Array<{ company: string; value: number }>,
   ordersByYear: [] as Array<{ year: string; count: number; total: number }>,
+  receivables: { outstanding: 0, overdue: 0, current: 0 },
   currency: "GHS",
 };
 
@@ -38,13 +39,14 @@ export const getDashboardStats = createServerFn({ method: "GET" })
     const wsId = await resolveWorkspaceId(supabase, context.userId);
     if (!wsId) return EMPTY;
 
-    const [{ data: rfqs }, { data: quotes }, { data: orders }] = await Promise.all([
+    const [{ data: rfqs }, { data: quotes }, { data: orders }, { data: invoices }] = await Promise.all([
       supabase.from("rfqs").select("id, status, created_at").eq("workspace_id", wsId),
       supabase.from("quotes").select("id, status, stage, total, currency").eq("workspace_id", wsId),
       supabase
         .from("orders")
         .select("buyer_company, buyer_name, value, currency, status, ordered_at, expected_delivery")
         .eq("workspace_id", wsId),
+      supabase.from("invoices").select("total, amount_paid, status, due_date").eq("workspace_id", wsId),
     ]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -128,6 +130,22 @@ export const getDashboardStats = createServerFn({ method: "GET" })
       .sort((a, b) => (a === "Undated" ? 1 : b === "Undated" ? -1 : Number(b) - Number(a)))
       .map((year) => ({ year, count: yearCount[year], total: yearTotal[year] }));
 
+    // Receivables (AR) snapshot.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const INV = (invoices ?? []) as any[];
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const receivables = { outstanding: 0, overdue: 0, current: 0 };
+    for (const inv of INV) {
+      const settled = inv.status === "paid" || inv.status === "void";
+      const out = Math.max(0, Number(inv.total ?? 0) - Number(inv.amount_paid ?? 0));
+      if (settled || out <= 0) continue;
+      receivables.outstanding += out;
+      const due = inv.due_date ? new Date(`${inv.due_date}T00:00:00`) : null;
+      if (due && due.getTime() < todayStart.getTime()) receivables.overdue += out;
+      else receivables.current += out;
+    }
+
     return {
       kpis: {
         openRfqs,
@@ -142,6 +160,7 @@ export const getDashboardStats = createServerFn({ method: "GET" })
       pipeline,
       topBuyers,
       ordersByYear,
+      receivables,
       currency,
     };
   });

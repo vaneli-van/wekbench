@@ -15,7 +15,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  getInvoice, updateInvoiceStatus, recordPayment, deletePayment, INVOICE_STATUSES,
+  getInvoice, updateInvoiceStatus, recordPayment, deletePayment, updateInvoice,
+  INVOICE_STATUSES, PAYMENT_TERMS, computeDueDate,
 } from "@/lib/api/invoices.functions";
 
 function money(v: number | null | undefined, c: string | null | undefined) {
@@ -60,6 +61,16 @@ function InvoiceDetailPage() {
   const delPayMut = useMutation({
     mutationFn: (paymentId: string) => delPayFn({ data: { paymentId, invoiceId: id } }),
     onSuccess: () => { toast.success("Payment removed"); refresh(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const termsFn = useServerFn(updateInvoice);
+  const termsMut = useMutation({
+    mutationFn: (termValue: string) => {
+      const t = PAYMENT_TERMS.find((x) => x.value === termValue);
+      const due = computeDueDate(inv?.issued_at, termValue);
+      return termsFn({ data: { invoiceId: id, patch: { terms: t?.label ?? null, due_date: due } } });
+    },
+    onSuccess: () => { toast.success("Terms updated"); refresh(); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
@@ -107,9 +118,20 @@ function InvoiceDetailPage() {
             <p className="mt-1 font-medium">{inv.buyer_company ?? inv.buyer_name ?? "—"}</p>
             <p className="text-sm text-muted-foreground">{inv.buyer_email ?? ""}</p>
           </div>
-          <div className="text-right text-sm">
+          <div className="space-y-1.5 text-right text-sm">
             <p><span className="text-muted-foreground">Issued:</span> {inv.issued_at ?? "—"}</p>
             <p><span className="text-muted-foreground">Due:</span> {inv.due_date ?? "—"}</p>
+            <div className="flex items-center justify-end gap-2">
+              <span className="text-xs text-muted-foreground">Terms</span>
+              <Select value={PAYMENT_TERMS.find((t) => t.label === inv.terms)?.value ?? ""} onValueChange={(v) => termsMut.mutate(v)}>
+                <SelectTrigger className="h-8 w-44"><SelectValue placeholder="Set terms" /></SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_TERMS.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 

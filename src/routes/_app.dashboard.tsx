@@ -490,10 +490,42 @@ function DashboardPage() {
         </section>
       </div>
 
-      {/* Market data: FX (real) */}
-      <section className="mt-5">
+      {/* Receivables (AR) + FX */}
+      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <Link to="/invoices" className="rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-secondary/40">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground">Receivables</h2>
+            <span className="text-xs text-muted-foreground">Open invoices</span>
+          </div>
+          {(() => {
+            const ar = stats?.receivables ?? { outstanding: 0, overdue: 0, current: 0 };
+            const pctOverdue = ar.outstanding > 0 ? (ar.overdue / ar.outstanding) * 100 : 0;
+            return (
+              <div className="mt-3">
+                <div className="flex items-baseline justify-between">
+                  <div>
+                    <p className="text-2xl font-semibold tabular-nums text-foreground">{money(ar.outstanding, currency)}</p>
+                    <p className="text-xs text-muted-foreground">Outstanding</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={cn("text-2xl font-semibold tabular-nums", ar.overdue > 0 ? "text-destructive" : "text-foreground")}>{money(ar.overdue, currency)}</p>
+                    <p className="text-xs text-muted-foreground">Overdue</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex h-2.5 w-full overflow-hidden rounded-full bg-secondary">
+                  <div className="bg-success" style={{ width: `${100 - pctOverdue}%` }} aria-hidden />
+                  <div className="bg-destructive" style={{ width: `${pctOverdue}%` }} aria-hidden />
+                </div>
+                <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+                  <span>Current {money(ar.current, currency)}</span>
+                  <span>{pctOverdue.toFixed(0)}% overdue</span>
+                </div>
+              </div>
+            );
+          })()}
+        </Link>
         <FxRatesCard />
-      </section>
+      </div>
     </div>
   )
 }
