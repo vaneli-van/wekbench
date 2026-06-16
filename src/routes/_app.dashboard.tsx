@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils"
 import { useProfile } from "@/hooks/use-profile"
 import { useWorkspaceId } from "@/hooks/use-workspace"
 import { listActivity, listRfqs } from "@/lib/api/quotes.functions"
+import { listInboundHighlights } from "@/lib/api/emails.functions"
 
 /* ---- KPI strip ---- */
 const kpis = [
@@ -176,6 +177,15 @@ function DashboardPage() {
     queryFn: () => listActivityFn(),
   });
   const activity = activityData?.events ?? [];
+
+  const listEmailsFn = useServerFn(listInboundHighlights);
+  const { data: emailData } = useQuery({
+    queryKey: ["dashboard-emails", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: () => listEmailsFn(),
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const emailHighlights = ((emailData as any)?.emails ?? []) as any[];
 
   const listRfqsFn = useServerFn(listRfqs);
   const { data: rfqData, isLoading: rfqLoading } = useQuery({
@@ -366,6 +376,39 @@ function DashboardPage() {
           </ol>
         </section>
       </div>
+
+      {/* Email highlights */}
+      <section className="mt-5 overflow-hidden rounded-lg border border-border bg-card">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Email highlights</h2>
+            <p className="text-xs text-muted-foreground">Captured emails matching RFQ, PO, amendment, invoice &amp; delivery</p>
+          </div>
+          <Link to="/inbox" className="text-xs font-medium text-primary hover:underline">Open inbox</Link>
+        </div>
+        {emailHighlights.length === 0 ? (
+          <p className="px-4 py-6 text-center text-xs text-muted-foreground">
+            No matching emails captured yet. Forward RFQs and POs to your capture address (Email Capture).
+          </p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {emailHighlights.map((e) => (
+              <li key={e.id}>
+                <Link to="/inbox" className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-secondary/40">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{e.subject}</p>
+                    <p className="truncate text-xs text-muted-foreground">{e.from}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Badge variant="outline" className="text-[10px]">{e.category}</Badge>
+                    <span className="text-[11px] text-muted-foreground">{timeAgo(e.receivedAt)}</span>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {/* Row 4: Quote pipeline summary */}
       <section className="mt-5 overflow-hidden rounded-lg border border-border bg-card">
