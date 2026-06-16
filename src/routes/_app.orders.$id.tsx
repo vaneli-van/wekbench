@@ -17,6 +17,7 @@ import {
 import {
   getOrder, updateOrderStatus, setOrderShipping, addOrderEvent, ORDER_STATUSES,
 } from "@/lib/api/orders.functions";
+import { OrderPoCard } from "@/components/order-po-card";
 
 const STAGES = ["received", "confirmed", "processing", "shipped", "in_transit", "delivered"] as const;
 
@@ -199,6 +200,10 @@ function OrderDetailPage() {
           </div>
         </Card>
       )}
+
+      <div className="mt-4">
+        <OrderPoCard orderId={id} order={order} onChanged={invalidate} />
+      </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Shipment */}

@@ -273,6 +273,90 @@ export const setOrderShipping = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Record the buyer's purchase order reference / date / uploaded PO file. */
+export const setOrderPo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        orderId: z.string().uuid(),
+        poRef: z.string().max(200).optional().nullable(),
+        poDate: z.string().optional().nullable(),
+        poDocPath: z.string().max(500).optional().nullable(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const patch: Record<string, unknown> = {};
+    if (data.poRef !== undefined) patch.buyer_po_ref = data.poRef || null;
+    if (data.poDate !== undefined) patch.buyer_po_date = data.poDate || null;
+    if (data.poDocPath !== undefined) patch.po_doc_path = data.poDocPath || null;
+
+    // Load current state to decide status transition (don't downgrade an ack).
+    const { data: current } = await context.supabase
+      .from("orders")
+      .select("po_status")
+      .eq("id", data.orderId)
+      .maybeSingle();
+    const hasPo = !!(data.poRef || data.poDocPath);
+    if (current?.po_status !== "acknowledged") {
+      patch.po_status = hasPo ? "received" : "none";
+    }
+
+    const { data: order, error } = await context.supabase
+      .from("orders")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update(patch as any)
+      .eq("id", data.orderId)
+      .select("id, workspace_id, buyer_po_ref")
+      .single();
+    if (error || !order) throw new Error(error?.message ?? "Update failed");
+    if (hasPo) {
+      await context.supabase.from("order_events").insert({
+        order_id: order.id,
+        workspace_id: order.workspace_id,
+        event_type: "note",
+        label: order.buyer_po_ref ? `Buyer PO received — ${order.buyer_po_ref}` : "Buyer PO received",
+      });
+    }
+    return { ok: true };
+  });
+
+/** Acknowledge ("sign and revert") the buyer's purchase order. */
+export const acknowledgeOrderPo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        orderId: z.string().uuid(),
+        signerName: z.string().min(1).max(200),
+        signature: z.string().min(1).max(200),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: order, error } = await context.supabase
+      .from("orders")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update({
+        po_status: "acknowledged",
+        po_acknowledged_at: new Date().toISOString(),
+        po_acknowledged_by: data.signerName,
+        po_signature: data.signature,
+      } as any)
+      .eq("id", data.orderId)
+      .select("id, workspace_id, buyer_po_ref")
+      .single();
+    if (error || !order) throw new Error(error?.message ?? "Acknowledgement failed");
+    await context.supabase.from("order_events").insert({
+      order_id: order.id,
+      workspace_id: order.workspace_id,
+      event_type: "note",
+      label: `PO acknowledged & signed by ${data.signerName}${order.buyer_po_ref ? ` — ${order.buyer_po_ref}` : ""}`,
+    });
+    return { ok: true };
+  });
+
 export const addOrderEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
