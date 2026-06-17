@@ -59,7 +59,8 @@ export const listTeam = createServerFn({ method: "GET" })
     const { data: members, error } = await context.supabase.rpc("list_workspace_members");
     if (error) throw new Error(error.message);
     const wsId = await resolveWorkspaceId(context.supabase, context.userId);
-    let invites: unknown[] = [];
+    type Invite = { id: string; email: string; role: string; status: string; created_at: string };
+    let invites: Invite[] = [];
     if (wsId) {
       const { data: inv } = await context.supabase
         .from("workspace_invites")
