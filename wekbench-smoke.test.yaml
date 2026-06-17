@@ -1,8 +1,14 @@
 fileType: momentic/test/v2
-id: wekbench-app-loads
+id: f68454e7-f092-468f-b926-ef98d9036f27
+version: 1.0.24
 url: https://wekbench.lovable.app
+description: Smoke test — the Wekbench app loads without error
+disabled: false
+retries: 1
+viewport: 1920, 1080
+browserType: Chromium
 steps:
   - assert: >-
-      The Wekbench web app has loaded successfully — the page shows either the
+      The Wekbench web app loaded successfully — the page shows either the
       sign-in screen or the dashboard, with no error page, blank screen, or
       "something went wrong" message.
