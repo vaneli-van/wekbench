@@ -16,6 +16,9 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TrackTokenRouteImport } from './routes/track.$token'
+import { Route as QuoteTokenRouteImport } from './routes/quote.$token'
+import { Route as ApiFxRouteImport } from './routes/api/fx'
+import { Route as AppTeamRouteImport } from './routes/_app.team'
 import { Route as AppSuppliersRouteImport } from './routes/_app.suppliers'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppReviewQueueRouteImport } from './routes/_app.review-queue'
@@ -34,6 +37,7 @@ import { Route as AppBuyersRouteImport } from './routes/_app.buyers'
 import { Route as AppOrdersIndexRouteImport } from './routes/_app.orders.index'
 import { Route as AppInvoicesIndexRouteImport } from './routes/_app.invoices.index'
 import { Route as ApiPublicInboundEmailRouteImport } from './routes/api/public/inbound-email'
+import { Route as ApiCronArRouteImport } from './routes/api/cron.ar'
 import { Route as AppRfqIdRouteImport } from './routes/_app.rfq.$id'
 import { Route as AppQuoteIdRouteImport } from './routes/_app.quote.$id'
 import { Route as AppOrdersIdRouteImport } from './routes/_app.orders.$id'
@@ -72,6 +76,21 @@ const TrackTokenRoute = TrackTokenRouteImport.update({
   id: '/track/$token',
   path: '/track/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const QuoteTokenRoute = QuoteTokenRouteImport.update({
+  id: '/quote/$token',
+  path: '/quote/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFxRoute = ApiFxRouteImport.update({
+  id: '/api/fx',
+  path: '/api/fx',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppTeamRoute = AppTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppSuppliersRoute = AppSuppliersRouteImport.update({
   id: '/suppliers',
@@ -163,6 +182,11 @@ const ApiPublicInboundEmailRoute = ApiPublicInboundEmailRouteImport.update({
   path: '/api/public/inbound-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronArRoute = ApiCronArRouteImport.update({
+  id: '/api/cron/ar',
+  path: '/api/cron/ar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRfqIdRoute = AppRfqIdRouteImport.update({
   id: '/rfq/$id',
   path: '/rfq/$id',
@@ -205,11 +229,15 @@ export interface FileRoutesByFullPath {
   '/review-queue': typeof AppReviewQueueRoute
   '/settings': typeof AppSettingsRoute
   '/suppliers': typeof AppSuppliersRoute
+  '/team': typeof AppTeamRoute
+  '/api/fx': typeof ApiFxRoute
+  '/quote/$token': typeof QuoteTokenRoute
   '/track/$token': typeof TrackTokenRoute
   '/invoices/$id': typeof AppInvoicesIdRoute
   '/orders/$id': typeof AppOrdersIdRoute
   '/quote/$id': typeof AppQuoteIdRoute
   '/rfq/$id': typeof AppRfqIdRoute
+  '/api/cron/ar': typeof ApiCronArRoute
   '/api/public/inbound-email': typeof ApiPublicInboundEmailRoute
   '/invoices/': typeof AppInvoicesIndexRoute
   '/orders/': typeof AppOrdersIndexRoute
@@ -235,11 +263,15 @@ export interface FileRoutesByTo {
   '/review-queue': typeof AppReviewQueueRoute
   '/settings': typeof AppSettingsRoute
   '/suppliers': typeof AppSuppliersRoute
+  '/team': typeof AppTeamRoute
+  '/api/fx': typeof ApiFxRoute
+  '/quote/$token': typeof QuoteTokenRoute
   '/track/$token': typeof TrackTokenRoute
   '/invoices/$id': typeof AppInvoicesIdRoute
   '/orders/$id': typeof AppOrdersIdRoute
   '/quote/$id': typeof AppQuoteIdRoute
   '/rfq/$id': typeof AppRfqIdRoute
+  '/api/cron/ar': typeof ApiCronArRoute
   '/api/public/inbound-email': typeof ApiPublicInboundEmailRoute
   '/invoices': typeof AppInvoicesIndexRoute
   '/orders': typeof AppOrdersIndexRoute
@@ -267,11 +299,15 @@ export interface FileRoutesById {
   '/_app/review-queue': typeof AppReviewQueueRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/suppliers': typeof AppSuppliersRoute
+  '/_app/team': typeof AppTeamRoute
+  '/api/fx': typeof ApiFxRoute
+  '/quote/$token': typeof QuoteTokenRoute
   '/track/$token': typeof TrackTokenRoute
   '/_app/invoices/$id': typeof AppInvoicesIdRoute
   '/_app/orders/$id': typeof AppOrdersIdRoute
   '/_app/quote/$id': typeof AppQuoteIdRoute
   '/_app/rfq/$id': typeof AppRfqIdRoute
+  '/api/cron/ar': typeof ApiCronArRoute
   '/api/public/inbound-email': typeof ApiPublicInboundEmailRoute
   '/_app/invoices/': typeof AppInvoicesIndexRoute
   '/_app/orders/': typeof AppOrdersIndexRoute
@@ -299,11 +335,15 @@ export interface FileRouteTypes {
     | '/review-queue'
     | '/settings'
     | '/suppliers'
+    | '/team'
+    | '/api/fx'
+    | '/quote/$token'
     | '/track/$token'
     | '/invoices/$id'
     | '/orders/$id'
     | '/quote/$id'
     | '/rfq/$id'
+    | '/api/cron/ar'
     | '/api/public/inbound-email'
     | '/invoices/'
     | '/orders/'
@@ -329,11 +369,15 @@ export interface FileRouteTypes {
     | '/review-queue'
     | '/settings'
     | '/suppliers'
+    | '/team'
+    | '/api/fx'
+    | '/quote/$token'
     | '/track/$token'
     | '/invoices/$id'
     | '/orders/$id'
     | '/quote/$id'
     | '/rfq/$id'
+    | '/api/cron/ar'
     | '/api/public/inbound-email'
     | '/invoices'
     | '/orders'
@@ -360,11 +404,15 @@ export interface FileRouteTypes {
     | '/_app/review-queue'
     | '/_app/settings'
     | '/_app/suppliers'
+    | '/_app/team'
+    | '/api/fx'
+    | '/quote/$token'
     | '/track/$token'
     | '/_app/invoices/$id'
     | '/_app/orders/$id'
     | '/_app/quote/$id'
     | '/_app/rfq/$id'
+    | '/api/cron/ar'
     | '/api/public/inbound-email'
     | '/_app/invoices/'
     | '/_app/orders/'
@@ -377,7 +425,10 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
+  ApiFxRoute: typeof ApiFxRoute
+  QuoteTokenRoute: typeof QuoteTokenRoute
   TrackTokenRoute: typeof TrackTokenRoute
+  ApiCronArRoute: typeof ApiCronArRoute
   ApiPublicInboundEmailRoute: typeof ApiPublicInboundEmailRoute
 }
 
@@ -431,6 +482,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/track/$token'
       preLoaderRoute: typeof TrackTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/quote/$token': {
+      id: '/quote/$token'
+      path: '/quote/$token'
+      fullPath: '/quote/$token'
+      preLoaderRoute: typeof QuoteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/fx': {
+      id: '/api/fx'
+      path: '/api/fx'
+      fullPath: '/api/fx'
+      preLoaderRoute: typeof ApiFxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/team': {
+      id: '/_app/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof AppTeamRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/suppliers': {
       id: '/_app/suppliers'
@@ -558,6 +630,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicInboundEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/ar': {
+      id: '/api/cron/ar'
+      path: '/api/cron/ar'
+      fullPath: '/api/cron/ar'
+      preLoaderRoute: typeof ApiCronArRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/rfq/$id': {
       id: '/_app/rfq/$id'
       path: '/rfq/$id'
@@ -605,6 +684,7 @@ interface AppRouteChildren {
   AppReviewQueueRoute: typeof AppReviewQueueRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppSuppliersRoute: typeof AppSuppliersRoute
+  AppTeamRoute: typeof AppTeamRoute
   AppInvoicesIdRoute: typeof AppInvoicesIdRoute
   AppOrdersIdRoute: typeof AppOrdersIdRoute
   AppQuoteIdRoute: typeof AppQuoteIdRoute
@@ -629,6 +709,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppReviewQueueRoute: AppReviewQueueRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppSuppliersRoute: AppSuppliersRoute,
+  AppTeamRoute: AppTeamRoute,
   AppInvoicesIdRoute: AppInvoicesIdRoute,
   AppOrdersIdRoute: AppOrdersIdRoute,
   AppQuoteIdRoute: AppQuoteIdRoute,
@@ -646,9 +727,22 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
+  ApiFxRoute: ApiFxRoute,
+  QuoteTokenRoute: QuoteTokenRoute,
   TrackTokenRoute: TrackTokenRoute,
+  ApiCronArRoute: ApiCronArRoute,
   ApiPublicInboundEmailRoute: ApiPublicInboundEmailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
