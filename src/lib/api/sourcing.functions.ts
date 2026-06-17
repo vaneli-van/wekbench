@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { nexarAdapter } from "@/lib/sourcing/nexar.server";
+import { stockInTheChannelAdapter } from "@/lib/sourcing/stockinthechannel.server";
 import { routeItems } from "@/lib/sourcing/router.server";
 import { classifyItem } from "@/lib/sourcing/classify";
 import { priceAtQty } from "@/lib/sourcing/pricing";
@@ -42,6 +43,22 @@ export const lookupNexar = createServerFn({ method: "POST" })
       mode = "search";
     }
     return { mode, count: parts.length, parts };
+  });
+
+/** Quick check that Stock in the Channel (IT hardware) requests work. */
+export const lookupSitc = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        query: z.string().min(1),
+        limit: z.number().int().min(1).max(20).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const parts = await stockInTheChannelAdapter.search({ query: data.query, limit: data.limit ?? 10 });
+    return { count: parts.length, parts };
   });
 
 /**

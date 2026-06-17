@@ -7,10 +7,12 @@
 import type { SourcingAdapter } from "./types";
 import { nexarAdapter } from "./nexar.server";
 import { oemsecretsAdapter } from "./oemsecrets.server";
+import { stockInTheChannelAdapter } from "./stockinthechannel.server";
 
 const ADAPTERS: Record<string, SourcingAdapter> = {
   [nexarAdapter.key]: nexarAdapter,
   [oemsecretsAdapter.key]: oemsecretsAdapter,
+  [stockInTheChannelAdapter.key]: stockInTheChannelAdapter,
 };
 
 export function getAdapter(key: string): SourcingAdapter | null {
