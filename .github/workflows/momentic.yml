@@ -1,0 +1,39 @@
+name: Momentic E2E
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    name: Momentic tests
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    # Authenticate against Momentic. Add MOMENTIC_API_KEY in:
+    # GitHub repo → Settings → Secrets and variables → Actions.
+    env:
+      MOMENTIC_API_KEY: ${{ secrets.MOMENTIC_API_KEY }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+
+      - name: Install Momentic browsers
+        run: npx --yes momentic install-browsers --all
+
+      - name: Run Momentic tests
+        run: npx --yes momentic run
+
+      - name: Upload results
+        if: always()
+        run: npx --yes momentic results upload test-results
