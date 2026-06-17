@@ -1,0 +1,8 @@
+fileType: momentic/test/v2
+id: wekbench-app-loads
+url: https://wekbench.lovable.app
+steps:
+  - assert: >-
+      The Wekbench web app has loaded successfully — the page shows either the
+      sign-in screen or the dashboard, with no error page, blank screen, or
+      "something went wrong" message.
