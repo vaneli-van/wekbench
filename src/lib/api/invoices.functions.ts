@@ -420,6 +420,120 @@ export const sendInvoiceReminder = createServerFn({ method: "POST" })
     return { ...res, recipient };
   });
 
+/** A buyer's statement of account: open invoices + outstanding + aging. */
+export const getBuyerStatement = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ buyerId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const supabase = context.supabase;
+    const { data: buyer } = await supabase
+      .from("buyers")
+      .select("id, name, contact_name, email, billing_email")
+      .eq("id", data.buyerId)
+      .maybeSingle();
+    if (!buyer) throw new Error("Buyer not found");
+
+    const { data: orders } = await supabase.from("orders").select("id").eq("buyer_id", data.buyerId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const orderIds = ((orders ?? []) as any[]).map((o) => o.id);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let invRows: any[] = [];
+    if (orderIds.length) {
+      const { data: inv } = await supabase
+        .from("invoices")
+        .select("id, invoice_number, issued_at, due_date, total, amount_paid, status, currency")
+        .in("order_id", orderIds)
+        .order("issued_at", { ascending: true });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      invRows = (inv ?? []) as any[];
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const aging = { current: 0, d30: 0, d60: 0, d90: 0, d90plus: 0 };
+    let totalOutstanding = 0;
+    const open = invRows
+      .map((r) => {
+        const outstanding = Math.max(0, Number(r.total ?? 0) - Number(r.amount_paid ?? 0));
+        const due = r.due_date ? new Date(`${r.due_date}T00:00:00`) : null;
+        const daysOverdue = due ? daysBetween(today, due) : 0;
+        return { ...r, outstanding, daysOverdue, isOverdue: daysOverdue > 0 };
+      })
+      .filter((r) => r.outstanding > 0 && r.status !== "void");
+    for (const r of open) {
+      totalOutstanding += r.outstanding;
+      if (r.daysOverdue <= 0) aging.current += r.outstanding;
+      else if (r.daysOverdue <= 30) aging.d30 += r.outstanding;
+      else if (r.daysOverdue <= 60) aging.d60 += r.outstanding;
+      else if (r.daysOverdue <= 90) aging.d90 += r.outstanding;
+      else aging.d90plus += r.outstanding;
+    }
+    const currency = open[0]?.currency ?? "GHS";
+    const recipient = buyer.billing_email ?? buyer.email ?? null;
+    return { buyer, invoices: open, totalOutstanding, aging, currency, recipient };
+  });
+
+/** Email a buyer's statement of account to their billing contact. */
+export const sendBuyerStatement = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ buyerId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const supabase = context.supabase;
+    const { data: buyer } = await supabase
+      .from("buyers")
+      .select("id, name, email, billing_email, workspace_id")
+      .eq("id", data.buyerId)
+      .maybeSingle();
+    if (!buyer) throw new Error("Buyer not found");
+    const recipient = buyer.billing_email ?? buyer.email ?? null;
+    if (!recipient) throw new Error("No billing email set for this buyer.");
+
+    const { data: ws } = await supabase.from("workspaces").select("name").eq("id", buyer.workspace_id).maybeSingle();
+    const seller = ws?.name ?? "";
+
+    const { data: orders } = await supabase.from("orders").select("id").eq("buyer_id", data.buyerId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const orderIds = ((orders ?? []) as any[]).map((o) => o.id);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let invRows: any[] = [];
+    if (orderIds.length) {
+      const { data: inv } = await supabase
+        .from("invoices")
+        .select("invoice_number, issued_at, due_date, total, amount_paid, status, currency")
+        .in("order_id", orderIds);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      invRows = (inv ?? []) as any[];
+    }
+    const open = invRows
+      .map((r) => ({ ...r, outstanding: Math.max(0, Number(r.total ?? 0) - Number(r.amount_paid ?? 0)) }))
+      .filter((r) => r.outstanding > 0 && r.status !== "void");
+    if (open.length === 0) throw new Error("This buyer has no outstanding invoices.");
+
+    const cur = open[0]?.currency ?? "GHS";
+    const fmt = (v: number) => `${cur} ${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    const total = open.reduce((s, r) => s + r.outstanding, 0);
+    const rows = open
+      .map((r) => `<tr><td>${escapeHtml(r.invoice_number)}</td><td>${escapeHtml(r.due_date ?? "—")}</td><td style="text-align:right">${escapeHtml(fmt(r.outstanding))}</td></tr>`)
+      .join("");
+    const html =
+      `<div style="font-family:system-ui,Arial,sans-serif;font-size:15px;color:#1a1a1a;line-height:1.6">` +
+      `<p style="margin:0 0 8px">Dear ${escapeHtml(buyer.name)} accounts team,</p>` +
+      `<p style="margin:0 0 12px">Please find your statement of account. Total outstanding: <strong>${escapeHtml(fmt(total))}</strong> across ${open.length} invoice${open.length === 1 ? "" : "s"}.</p>` +
+      `<table style="border-collapse:collapse;font-size:14px;width:100%;max-width:480px">` +
+      `<thead><tr style="color:#666;text-align:left"><th style="padding:4px 0">Invoice</th><th style="padding:4px 0">Due</th><th style="padding:4px 0;text-align:right">Outstanding</th></tr></thead>` +
+      `<tbody>${rows}</tbody></table>` +
+      `<p style="margin:14px 0 0">We'd appreciate settlement of any overdue balances at your earliest convenience.</p>` +
+      (seller ? `<p style="margin:14px 0 0">Kind regards,<br>${escapeHtml(seller)}</p>` : "") +
+      `</div>`;
+    const res = await sendEmail({
+      to: recipient,
+      subject: `Statement of account — ${fmt(total)} outstanding`,
+      html,
+    });
+    return { ...res, recipient, totalOutstanding: total, count: open.length };
+  });
+
 /** Manually generate invoices for any orders that don't have one yet. */
 export const backfillInvoices = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

@@ -50,12 +50,16 @@ A single secured endpoint runs both daily: **`GET /api/cron/ar?key=<CRON_SECRET>
 Without the secrets the endpoint returns 401 / "not configured" and changes nothing,
 so it's safe to deploy before wiring the schedule.
 
+## Also shipped
+
+- **Customer statements** — each buyer card has a **Statement of account**: open invoices
+  + aging + total outstanding, with **Print / PDF** and **Email statement** (to the
+  buyer's billing contact). Server: `getBuyerStatement`, `sendBuyerStatement`.
+
 ## Still to come back to
 
-1. **Customer statements** — a per-buyer statement (all open invoices + aging) emailed to
-   the billing contact, tying into the Buyers page.
-2. **Backfill invoices for imported orders** — the 103 imported WP orders have no invoices
+1. **Backfill invoices for imported orders** — the 103 imported WP orders have no invoices
    yet; use the **Sync from orders** button on /invoices so AR has live data.
-3. **Credit notes / write-offs** and **per-line payment allocation** — later, if needed.
-4. **Reminder log** — a per-invoice history of reminders sent (currently only the last
-   sent timestamp + count are stored).
+2. **Credit notes / write-offs** and **per-line payment allocation** — later, if needed.
+3. **Reminder/statement log** — a per-invoice/buyer history of what was sent (currently
+   only the last reminder timestamp + count are stored).

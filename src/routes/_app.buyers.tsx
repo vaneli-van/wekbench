@@ -258,10 +258,13 @@ function BuyerCard({ buyer }: { buyer: any }) {
         </div>
       )}
 
-      <button onClick={() => setShowContracts((s) => !s)} className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-        {showContracts ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
-        Contracts &amp; agreed pricing
-      </button>
+      <div className="mt-3 flex flex-wrap items-center gap-4">
+        <button onClick={() => setShowContracts((s) => !s)} className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+          {showContracts ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+          Contracts &amp; agreed pricing
+        </button>
+        <BuyerStatementDialog buyerId={buyer.id} buyerName={buyer.name} />
+      </div>
       {showContracts && <ContractsSection buyer={buyer} />}
     </Card>
   );
