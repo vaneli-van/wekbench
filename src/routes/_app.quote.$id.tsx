@@ -33,6 +33,7 @@ import { EmptyState } from "@/components/foundations/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { QuoteAttachmentsCard } from "@/components/quote-attachments-card";
 import { QuoteShippingCard } from "@/components/quote-shipping-card";
+import { CatalogPickerDialog } from "@/components/catalog-picker-dialog";
 import {
   getQuote,
   updateQuoteLineItem,
@@ -604,9 +605,12 @@ function QuoteDetailPage() {
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h3 className="text-sm font-semibold">Line items</h3>
           {editable && (
-            <Button size="sm" variant="outline" onClick={() => addMut.mutate()} disabled={addMut.isPending}>
-              <Plus className="size-3.5" /> Add line
-            </Button>
+            <div className="flex items-center gap-2">
+              <CatalogPickerDialog quoteId={id} onAdded={invalidate} />
+              <Button size="sm" variant="outline" onClick={() => addMut.mutate()} disabled={addMut.isPending}>
+                <Plus className="size-3.5" /> Add line
+              </Button>
+            </div>
           )}
         </div>
         {items.length === 0 ? (

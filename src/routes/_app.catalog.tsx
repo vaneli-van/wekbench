@@ -54,6 +54,8 @@ type CatalogItem = {
   sku: string | null;
   brand: string | null;
   model: string | null;
+  category: string | null;
+  unit: string | null;
   description: string;
   unit_price: number | null;
   currency: string | null;
@@ -81,7 +83,7 @@ function useCatalogItems(workspaceId: string | null | undefined) {
       const { data, error } = await supabase
         .from("catalog_items")
         .select(
-          "id, sku, brand, model, description, unit_price, currency, lead_time_days, stock_qty, source, supplier_id, created_at, suppliers(name)",
+          "id, sku, brand, model, category, unit, description, unit_price, currency, lead_time_days, stock_qty, source, supplier_id, created_at, suppliers(name)",
         )
         .eq("workspace_id", workspaceId!)
         .order("created_at", { ascending: false });
@@ -124,7 +126,7 @@ function CatalogPage() {
     if (query.trim()) {
       const t = query.toLowerCase();
       list = list.filter((i) =>
-        [i.sku, i.brand, i.model, i.description, i.suppliers?.name].some((v) =>
+        [i.sku, i.brand, i.model, i.category, i.description, i.suppliers?.name].some((v) =>
           v?.toLowerCase().includes(t),
         ),
       );
@@ -327,10 +329,15 @@ function CatalogPage() {
                           </td>
                           <td className="px-3 py-2 font-mono text-xs">{i.sku ?? "—"}</td>
                           <td className="px-3 py-2">
-                            <div className="font-medium">{i.description}</div>
-                            {(i.brand || i.model) && (
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{i.description}</span>
+                              {i.category && (
+                                <Badge variant="outline" className="text-[10px] text-muted-foreground">{i.category}</Badge>
+                              )}
+                            </div>
+                            {(i.brand || i.model || i.unit) && (
                               <div className="text-xs text-muted-foreground">
-                                {[i.brand, i.model].filter(Boolean).join(" · ")}
+                                {[i.brand, i.model, i.unit ? `per ${i.unit}` : null].filter(Boolean).join(" · ")}
                               </div>
                             )}
                           </td>
@@ -507,6 +514,8 @@ function NewItemDialog({ workspaceId }: { workspaceId: string }) {
     sku: "",
     brand: "",
     model: "",
+    category: "",
+    unit: "",
     description: "",
     unit_price: "",
     currency: "USD",
@@ -524,6 +533,8 @@ function NewItemDialog({ workspaceId }: { workspaceId: string }) {
         sku: form.sku || null,
         brand: form.brand || null,
         model: form.model || null,
+        category: form.category || null,
+        unit: form.unit || null,
         description: form.description || form.model || form.sku || "Untitled",
         unit_price: form.unit_price ? Number(form.unit_price) : null,
         currency: form.currency || null,
@@ -571,6 +582,12 @@ function NewItemDialog({ workspaceId }: { workspaceId: string }) {
           </Field>
           <Field label="Model">
             <Input value={form.model} onChange={(e) => set("model", e.target.value)} />
+          </Field>
+          <Field label="Category">
+            <Input value={form.category} onChange={(e) => set("category", e.target.value)} placeholder="e.g. Toner, Laptops, Stationery" />
+          </Field>
+          <Field label="Unit">
+            <Input value={form.unit} onChange={(e) => set("unit", e.target.value)} placeholder="e.g. each, box, ream" />
           </Field>
           <Field label="Currency">
             <Input
