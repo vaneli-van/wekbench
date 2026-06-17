@@ -33,6 +33,7 @@ function AddBuyerDialog({ onAdded }: { onAdded: () => void }) {
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
   const [email, setEmail] = useState("");
+  const [billingEmail, setBillingEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [sector, setSector] = useState("");
   const [hasContract, setHasContract] = useState(false);
@@ -43,13 +44,13 @@ function AddBuyerDialog({ onAdded }: { onAdded: () => void }) {
       const tags = hasContract ? "Has agreed-pricing contract" : "";
       const combined = [notes.trim(), tags].filter(Boolean).join("\n\n");
       return createFn({
-        data: { name: name.trim(), contactName: contact || undefined, email: email || undefined, phone: phone || undefined, sector: sector || undefined },
+        data: { name: name.trim(), contactName: contact || undefined, email: email || undefined, billingEmail: billingEmail || undefined, phone: phone || undefined, sector: sector || undefined },
       }).then((r) => ({ ...r, combined }));
     },
     onSuccess: () => {
       toast.success("Buyer added");
       setOpen(false);
-      setName(""); setContact(""); setEmail(""); setPhone(""); setSector(""); setNotes(""); setHasContract(false);
+      setName(""); setContact(""); setEmail(""); setBillingEmail(""); setPhone(""); setSector(""); setNotes(""); setHasContract(false);
       onAdded();
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not add buyer"),
@@ -74,6 +75,7 @@ function AddBuyerDialog({ onAdded }: { onAdded: () => void }) {
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Contact email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
             <div><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+            <div className="sm:col-span-2"><Label>Billing / AP email <span className="font-normal text-muted-foreground">(receives payment reminders)</span></Label><Input type="email" value={billingEmail} onChange={(e) => setBillingEmail(e.target.value)} placeholder="accounts@buyer.com" /></div>
           </div>
           <div className="rounded-md border border-border p-3">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Relationship</p>

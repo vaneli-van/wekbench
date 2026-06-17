@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveWorkspaceId } from "./workspace.functions";
+import { sendEmail, escapeHtml } from "@/lib/email.server";
 
 export const INVOICE_STATUSES = ["draft", "sent", "partial", "paid", "overdue", "disputed", "void"] as const;
 
@@ -182,6 +183,7 @@ export const getInvoice = createServerFn({ method: "POST" })
       .order("paid_on", { ascending: false });
     // Pull the order's line items so the invoice can be itemised.
     let lineItems: unknown[] = [];
+    let defaultBillingEmail: string | null = null;
     if (invoice.order_id) {
       const { data: li } = await context.supabase
         .from("order_line_items")
@@ -189,10 +191,30 @@ export const getInvoice = createServerFn({ method: "POST" })
         .eq("order_id", invoice.order_id)
         .order("line_no", { ascending: true });
       lineItems = li ?? [];
+      // Resolve the buyer's billing/AP email (default reminder recipient).
+      const { data: ord } = await context.supabase
+        .from("orders")
+        .select("buyer_id")
+        .eq("id", invoice.order_id)
+        .maybeSingle();
+      if (ord?.buyer_id) {
+        const { data: b } = await context.supabase
+          .from("buyers")
+          .select("billing_email, email")
+          .eq("id", ord.buyer_id)
+          .maybeSingle();
+        defaultBillingEmail = b?.billing_email ?? b?.email ?? null;
+      }
     }
     const total = Number(invoice.total ?? 0);
     const paid = Number(invoice.amount_paid ?? 0);
-    return { invoice, payments: payments ?? [], lineItems, outstanding: Math.max(0, total - paid) };
+    return {
+      invoice,
+      payments: payments ?? [],
+      lineItems,
+      defaultBillingEmail,
+      outstanding: Math.max(0, total - paid),
+    };
   });
 
 /** Recompute amount_paid + status from the payments ledger. */
@@ -292,6 +314,7 @@ export const updateInvoice = createServerFn({ method: "POST" })
             terms: z.string().max(120).nullable().optional(),
             due_date: z.string().nullable().optional(),
             status: z.enum(INVOICE_STATUSES).optional(),
+            billing_email: z.string().max(200).nullable().optional(),
           })
           .strict(),
       })
@@ -326,6 +349,75 @@ export const updateInvoiceStatus = createServerFn({ method: "POST" })
       .eq("id", data.invoiceId);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+/**
+ * Send a payment reminder for an invoice. Recipient resolution (so reminders
+ * reach the AP/finance payer, not just the buyer contact):
+ *   1. invoice.billing_email (per-invoice override)
+ *   2. the buyer's billing_email (via the order's buyer), then buyer.email
+ *   3. invoice.buyer_email (last resort)
+ */
+export const sendInvoiceReminder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ invoiceId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const supabase = context.supabase;
+    const { data: inv } = await supabase
+      .from("invoices")
+      .select("id, order_id, invoice_number, buyer_name, buyer_company, buyer_email, billing_email, currency, total, amount_paid, due_date, workspaces(name)")
+      .eq("id", data.invoiceId)
+      .maybeSingle();
+    if (!inv) throw new Error("Invoice not found");
+
+    let recipient: string | null = inv.billing_email || null;
+    if (!recipient && inv.order_id) {
+      const { data: ord } = await supabase.from("orders").select("buyer_id").eq("id", inv.order_id).maybeSingle();
+      if (ord?.buyer_id) {
+        const { data: b } = await supabase.from("buyers").select("billing_email, email").eq("id", ord.buyer_id).maybeSingle();
+        recipient = b?.billing_email || b?.email || null;
+      }
+    }
+    if (!recipient) recipient = inv.buyer_email || null;
+    if (!recipient) throw new Error("No billing email set for this invoice. Add one before sending a reminder.");
+
+    const outstanding = Math.max(0, Number(inv.total ?? 0) - Number(inv.amount_paid ?? 0));
+    if (outstanding <= 0) throw new Error("Nothing outstanding on this invoice.");
+
+    const cur = inv.currency ?? "GHS";
+    const amount = `${cur} ${outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    let overdueLine = "";
+    if (inv.due_date) {
+      const due = new Date(`${inv.due_date}T00:00:00`);
+      const days = Math.floor((Date.now() - due.getTime()) / 86_400_000);
+      overdueLine = days > 0
+        ? `<p style="margin:0 0 12px;color:#b3261e">This invoice is <strong>${days} day${days === 1 ? "" : "s"} overdue</strong> (due ${escapeHtml(inv.due_date)}).</p>`
+        : `<p style="margin:0 0 12px">Due on <strong>${escapeHtml(inv.due_date)}</strong>.</p>`;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const seller = (inv as any).workspaces?.name ?? "";
+    const html =
+      `<div style="font-family:system-ui,Arial,sans-serif;font-size:15px;color:#1a1a1a;line-height:1.6">` +
+      `<p style="margin:0 0 8px">Dear ${escapeHtml(inv.buyer_company ?? inv.buyer_name ?? "Accounts team")},</p>` +
+      `<p style="margin:0 0 12px">This is a friendly reminder regarding invoice <strong>${escapeHtml(inv.invoice_number)}</strong> with an outstanding balance of <strong>${escapeHtml(amount)}</strong>.</p>` +
+      overdueLine +
+      `<p style="margin:0 0 12px">We'd appreciate settlement at your earliest convenience. If payment is already in progress, please disregard this note.</p>` +
+      (seller ? `<p style="margin:14px 0 0">Kind regards,<br>${escapeHtml(seller)}</p>` : "") +
+      `</div>`;
+
+    const res = await sendEmail({
+      to: recipient,
+      subject: `Payment reminder — invoice ${inv.invoice_number} (${amount} outstanding)`,
+      html,
+    });
+    if (res.sent) {
+      await supabase
+        .from("invoices")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update({ reminder_sent_at: new Date().toISOString(), reminder_count: (Number((inv as any).reminder_count ?? 0)) + 1 } as any)
+        .eq("id", inv.id);
+    }
+    return { ...res, recipient };
   });
 
 /** Manually generate invoices for any orders that don't have one yet. */

@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import {
   getInvoice, updateInvoiceStatus, recordPayment, deletePayment, updateInvoice,
-  INVOICE_STATUSES, PAYMENT_TERMS, computeDueDate,
+  sendInvoiceReminder, INVOICE_STATUSES, PAYMENT_TERMS, computeDueDate,
 } from "@/lib/api/invoices.functions";
 
 function money(v: number | null | undefined, c: string | null | undefined) {
@@ -39,7 +39,11 @@ function InvoiceDetailPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const lineItems: any[] = (data as any)?.lineItems ?? [];
   const outstanding = (data as any)?.outstanding ?? 0;
+  const defaultBillingEmail = (data as any)?.defaultBillingEmail ?? null;
   const order = inv?.orders;
+
+  const [billingEmail, setBillingEmail] = useState<string | null>(null);
+  const billingValue = billingEmail ?? inv?.billing_email ?? defaultBillingEmail ?? inv?.buyer_email ?? "";
 
   function printInvoice() {
     if (!inv) return;
@@ -136,14 +140,31 @@ function InvoiceDetailPage() {
     onSuccess: () => { toast.success("Payment removed"); refresh(); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
-  const termsFn = useServerFn(updateInvoice);
+  const updFn = useServerFn(updateInvoice);
   const termsMut = useMutation({
     mutationFn: (termValue: string) => {
       const t = PAYMENT_TERMS.find((x) => x.value === termValue);
       const due = computeDueDate(inv?.issued_at, termValue);
-      return termsFn({ data: { invoiceId: id, patch: { terms: t?.label ?? null, due_date: due } } });
+      return updFn({ data: { invoiceId: id, patch: { terms: t?.label ?? null, due_date: due } } });
     },
     onSuccess: () => { toast.success("Terms updated"); refresh(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const saveBillingMut = useMutation({
+    mutationFn: () => updFn({ data: { invoiceId: id, patch: { billing_email: billingValue || null } } }),
+    onSuccess: () => { toast.success("Billing email saved"); refresh(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+  const reminderFn = useServerFn(sendInvoiceReminder);
+  const reminderMut = useMutation({
+    mutationFn: () => reminderFn({ data: { invoiceId: id } }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onSuccess: (r: any) => {
+      if (r?.sent) toast.success(`Reminder sent to ${r.recipient}`);
+      else if (r?.skipped) toast.message(`Email not configured (${r.skipped}). Recipient would be ${r.recipient}.`);
+      else toast.error(r?.error ?? "Could not send reminder");
+      refresh();
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
@@ -305,6 +326,44 @@ function InvoiceDetailPage() {
           <Badge variant="outline" className="mt-3 border-success/30 bg-success/10 text-success">Paid in full{inv.paid_at ? ` · ${inv.paid_at}` : ""}</Badge>
         )}
       </Card>
+
+      {/* Payment reminder */}
+      {outstanding > 0 && (
+        <Card className="mt-4 p-6">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold"><Send className="size-4" /> Payment reminder</h2>
+            {inv.reminder_sent_at && (
+              <span className="text-xs text-muted-foreground">
+                Last sent {new Date(inv.reminder_sent_at).toLocaleDateString()}{inv.reminder_count ? ` · ${inv.reminder_count}×` : ""}
+              </span>
+            )}
+          </div>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Reminders go to the billing / accounts-payable contact — often different from the buyer. Set the right recipient here.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <p className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">Reminder recipient</p>
+              <Input
+                type="email"
+                value={billingValue}
+                onChange={(e) => setBillingEmail(e.target.value)}
+                placeholder="accounts@buyer.com"
+                className="h-9"
+              />
+            </div>
+            <Button size="sm" variant="outline" className="h-9" onClick={() => saveBillingMut.mutate()} disabled={saveBillingMut.isPending}>
+              Save
+            </Button>
+            <Button size="sm" className="h-9" onClick={() => reminderMut.mutate()} disabled={reminderMut.isPending || !billingValue}>
+              <Send className="size-3.5" /> {reminderMut.isPending ? "Sending…" : "Send reminder"}
+            </Button>
+          </div>
+          {defaultBillingEmail && !inv.billing_email && (
+            <p className="mt-2 text-[11px] text-muted-foreground">Defaulting to the buyer&apos;s billing email. Save to lock it for this invoice.</p>
+          )}
+        </Card>
+      )}
     </div>
   );
 }

@@ -47,7 +47,7 @@ export const listBuyers = createServerFn({ method: "GET" })
     const supabase = context.supabase;
     const { data: buyers, error } = await supabase
       .from("buyers")
-      .select("id, name, contact_name, email, phone, sector")
+      .select("id, name, contact_name, email, billing_email, phone, sector")
       .order("name");
     if (error) throw new Error(error.message);
     const [{ data: quotes }, { data: orders }, { data: rfqs }] = await Promise.all([
@@ -88,6 +88,7 @@ export const createBuyer = createServerFn({ method: "POST" })
         name: z.string().min(1),
         contactName: z.string().optional(),
         email: z.string().email().optional().or(z.literal("")),
+        billingEmail: z.string().email().optional().or(z.literal("")),
         phone: z.string().optional(),
         sector: z.string().optional(),
       })
@@ -99,6 +100,7 @@ export const createBuyer = createServerFn({ method: "POST" })
     const id = await findOrCreateBuyer(context.supabase, wsId, data.name, {
       contact_name: data.contactName || null,
       email: data.email || null,
+      billing_email: data.billingEmail || null,
       phone: data.phone || null,
       sector: data.sector || null,
     });
@@ -117,6 +119,7 @@ export const updateBuyer = createServerFn({ method: "POST" })
             name: z.string().min(1).optional(),
             contact_name: z.string().nullable().optional(),
             email: z.string().nullable().optional(),
+            billing_email: z.string().nullable().optional(),
             phone: z.string().nullable().optional(),
             sector: z.string().nullable().optional(),
             notes: z.string().nullable().optional(),
