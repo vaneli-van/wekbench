@@ -29,7 +29,7 @@ type Tutorial = {
   description: string
   cta: { label: string; to: string }
   chips: { label: string; to: string }[]
-  illustration: () => JSX.Element
+  illustration: () => React.ReactElement
 }
 
 const TABS = [
