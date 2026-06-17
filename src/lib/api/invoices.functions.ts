@@ -182,7 +182,7 @@ export const getInvoice = createServerFn({ method: "POST" })
       .eq("invoice_id", data.id)
       .order("paid_on", { ascending: false });
     // Pull the order's line items so the invoice can be itemised.
-    let lineItems: unknown[] = [];
+    let lineItems: Array<Record<string, unknown>> = [];
     let defaultBillingEmail: string | null = null;
     if (invoice.order_id) {
       const { data: li } = await context.supabase
