@@ -1,0 +1,23 @@
+fileType: momentic/test/v2
+id: 58a6d105-6e02-4dba-95dd-8feb78dc87fa
+version: 1.0.24
+url: https://wekbench.lovable.app
+description: Homepage → sign in → dashboard
+disabled: false
+retries: 1
+viewport: 1920, 1080
+browserType: Chromium
+steps:
+  - act: >-
+      From the Wekbench homepage, go to the sign-in page — click the "Sign in"
+      or "Log in" link/button. If you are already on a sign-in form, continue.
+  - type:
+      text: "{{ env.WEKBENCH_EMAIL }}"
+      into: the work email field
+  - type:
+      text: "{{ env.WEKBENCH_PASSWORD }}"
+      into: the password field
+  - click: the button to continue / sign in with work email
+  - assert: >-
+      Sign-in succeeded — the dashboard is shown and the user is logged in. No
+      error such as "That email and password don't match" is visible.
