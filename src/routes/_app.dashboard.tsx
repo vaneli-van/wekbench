@@ -31,6 +31,7 @@ import { NewQuoteDialog } from "@/components/new-quote-dialog"
 import { Badge } from "@/components/ui/badge"
 import { FxRatesCard } from "@/components/fx-rates-card"
 import { DashboardWelcome } from "@/components/dashboard-welcome"
+import { GettingStartedTutorials } from "@/components/getting-started-tutorials"
 import { cn } from "@/lib/utils"
 import { useProfile } from "@/hooks/use-profile"
 import { useWorkspaceId } from "@/hooks/use-workspace"
@@ -226,6 +227,7 @@ function DashboardPage() {
   return (
     <div className="mx-auto max-w-[1400px] px-4 pb-12 pt-4 md:px-8">
       <DashboardWelcome />
+      <GettingStartedTutorials />
 
       {/* Row 1: greeting + actions */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
