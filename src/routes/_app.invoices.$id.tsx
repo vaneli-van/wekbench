@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Download, FileQuestion, Package, Plus, Trash2, Wallet } from "lucide-react";
+import { ArrowLeft, Download, FileQuestion, Package, Plus, Send, Trash2, Wallet } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
