@@ -106,11 +106,11 @@ function QuotesPage() {
   const stageFn = useServerFn(updateQuoteStage)
 
   // Deep-link support: open the New Quote dialog when arriving with ?new=1.
-  const search = Route.useSearch()
+  const routeSearch = Route.useSearch()
   const [newQuoteOpen, setNewQuoteOpen] = useState(false)
   useEffect(() => {
-    if (search.new) setNewQuoteOpen(true)
-  }, [search.new])
+    if (routeSearch.new) setNewQuoteOpen(true)
+  }, [routeSearch.new])
 
   const { data, isLoading } = useQuery({
     queryKey: ["quotes-board"],
@@ -218,7 +218,7 @@ function QuotesPage() {
             onOpenChange={(o) => {
               setNewQuoteOpen(o)
               // Clear the deep-link param once handled so refreshes don't reopen it.
-              if (!o && search.new) navigate({ to: "/quotes", search: {}, replace: true })
+              if (!o && routeSearch.new) navigate({ to: "/quotes", search: {}, replace: true })
             }}
           />
         </div>
