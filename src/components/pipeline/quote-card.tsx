@@ -35,7 +35,7 @@ export function QuoteCard({
       onClick={onOpen}
       onDoubleClick={onOpenFull}
       className={cn(
-        "group rounded-lg border border-border bg-card p-3 shadow-sm transition-all hover:border-foreground/20 hover:shadow-md",
+        "group rounded-lg border border-border bg-card p-3 shadow-sm transition-all duration-200 hover:border-foreground/20 hover:shadow-md",
         dragging ? "cursor-grabbing opacity-50" : "cursor-grab hover:cursor-grab",
       )}
     >

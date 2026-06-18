@@ -27,8 +27,21 @@ export function notifyLoading(message: string) {
 
 export function copyToClipboard(text: string, label: string = "Copied") {
   navigator.clipboard.writeText(text).then(() => {
-    notifySuccess(label, "Text copied to clipboard");
+    toast.success(label, {
+      description: "Text copied to clipboard",
+      duration: 3000,
+    });
   }).catch(() => {
-    notifyError("Failed to copy", "Please try again");
+    toast.error("Failed to copy", {
+      description: "Please try again",
+      duration: 4000,
+    });
+  });
+}
+
+export function notifyStatusChange(oldStatus: string, newStatus: string) {
+  toast.success(`Status updated`, {
+    description: `Changed from ${oldStatus} to ${newStatus}`,
+    duration: 3000,
   });
 }

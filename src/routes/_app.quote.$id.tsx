@@ -34,6 +34,8 @@ import { PageHeader } from "@/components/page-header";
 import { BreadcrumbsDisplay } from "@/components/breadcrumbs-display";
 import { generateBreadcrumbs } from "@/lib/breadcrumbs";
 import { PageTransition } from "@/components/page-transition";
+import { CopyButton } from "@/components/copy-button";
+import { Tooltip } from "@/components/tooltip";
 import { FormSection } from "@/components/form-section";
 import { QuoteAttachmentsCard } from "@/components/quote-attachments-card";
 import { QuoteShippingCard } from "@/components/quote-shipping-card";

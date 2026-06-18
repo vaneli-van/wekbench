@@ -27,6 +27,7 @@ import { PageHeader } from "@/components/page-header";
 import { BreadcrumbsDisplay } from "@/components/breadcrumbs-display";
 import { generateBreadcrumbs } from "@/lib/breadcrumbs";
 import { PageTransition } from "@/components/page-transition";
+import { CopyButton } from "@/components/copy-button";
 import { getRfq, ensureQuoteForRfq } from "@/lib/api/quotes.functions";
 
 
@@ -177,7 +178,10 @@ function RfqDetailPage() {
       <Card className="mt-6 p-0 overflow-hidden">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h3 className="text-sm font-semibold">Requested line items</h3>
-          <span className="text-xs text-muted-foreground">{items.length} item(s)</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{items.length} item(s)</span>
+            <CopyButton text={items.map(i => `${i.requested_description} x${i.requested_qty}`).join('\n')} label="Copy" showLabel={false} size="sm" />
+          </div>
         </div>
         {items.length === 0 ? (
           <p className="p-6 text-center text-sm text-muted-foreground">No line items extracted.</p>

@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/page-header";
 import { BreadcrumbsDisplay } from "@/components/breadcrumbs-display";
 import { generateBreadcrumbs } from "@/lib/breadcrumbs";
 import { PageTransition } from "@/components/page-transition";
+import { CopyButton } from "@/components/copy-button";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
