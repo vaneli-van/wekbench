@@ -483,7 +483,7 @@ function QuoteDetailPage() {
   const rfq = q.rfqs;
   const editable = q.status === "draft";
 
-  const breadcrumbs = generateBreadcrumbs("quote", quote?.id?.slice(-6));
+  const breadcrumbs = generateBreadcrumbs("quote", q?.id?.slice(-6));
   return (
     <PageTransition>
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-8">
