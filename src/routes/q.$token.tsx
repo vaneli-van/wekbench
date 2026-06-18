@@ -227,6 +227,6 @@ function QuoteAcceptPage() {
   );
 }
 
-export const Route = createFileRoute("/quote/$token")({
+export const Route = createFileRoute("/q/$token")({
   component: QuoteAcceptPage,
 });
