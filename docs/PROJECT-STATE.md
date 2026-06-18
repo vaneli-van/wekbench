@@ -56,8 +56,12 @@ Wekbench is a B2B procurement web app (RFQ → quote → sourcing → order → 
 - **Data**: 103 real Western Premium sales orders (2024–2026, GH₵9.33M) imported
   with line items + 14 buyers.
 - **Testing**: Momentic wired (`momentic.config.yaml`, `.github/workflows/momentic.yml`).
-  Passing: `wekbench-smoke.test.yaml`. Ready (needs creds): `homepage-to-signin.test.yaml`.
-  Parked: `signup.test.yaml` (end-to-end runs; final landing assertion to tune).
+  Passing: `wekbench-smoke.test.yaml`. Needs creds (`WEKBENCH_EMAIL`/`WEKBENCH_PASSWORD`):
+  `homepage-to-signin.test.yaml` and `first-quote-activation.test.yaml` (NEW — guards the
+  `?new=1` deep-link auto-open + quote creation, i.e. the activation slice).
+  Parked: `signup.test.yaml` (end-to-end runs; final landing assertion to tune — note the
+  onboarding flow now ends on a "Create your first quote" CTA, so when re-enabled it can be
+  extended through to the first quote).
 
 ## Secrets the app expects (set in Lovable Cloud → Secrets)
 `NEXAR_*`, `OEMSECRETS_API_KEY`, `TERMINAL_AFRICA_API_KEY`, `RESEND_API_KEY`,

@@ -1,0 +1,56 @@
+fileType: momentic/test/v2
+id: 7c3e1f08-9a2b-4d6e-b1c4-2f5a8e0d9b13
+version: 1.0.24
+url: https://wekbench.lovable.app/signin
+description: Activation path — deep-link ?new=1 opens the New Quote dialog and a quote is created
+# Guards the self-serve activation slice: onboarding + the dashboard empty state both
+# route to /quotes?new=1, which must auto-open the New Quote dialog so a new company can
+# reach its first quote. Needs WEKBENCH_EMAIL / WEKBENCH_PASSWORD (an existing test account).
+disabled: false
+retries: 1
+viewport: 1920, 1080
+browserType: Chromium
+steps:
+  # 1. Sign in with the test account.
+  - type:
+      text: "{{ env.WEKBENCH_EMAIL }}"
+      into: the work email field
+  - type:
+      text: "{{ env.WEKBENCH_PASSWORD }}"
+      into: the password field
+  - click: the button to continue / sign in with work email
+  - waitForUrlNotToMatch: signin
+  - wait: 2500
+
+  # 2. A unique title so repeated runs never collide.
+  - javascript:
+      code: |-
+        const title = "QA Activation Quote " + Date.now();
+        setVariable("QUOTE_TITLE", title);
+        return title;
+      saveAs: QUOTE_TITLE_RET
+
+  # 3. Hit the deep link the onboarding + dashboard CTAs use. This is the behaviour
+  #    we shipped: the New Quote dialog must auto-open from ?new=1.
+  - navigate: https://wekbench.lovable.app/quotes?new=1
+  - wait: 2000
+  - assert: >-
+      The "New quote" dialog/modal is open — it shows a field for the quote title and
+      a control for choosing or adding a buyer. (This confirms ?new=1 auto-opened it.)
+
+  # 4. Fill the quote and create it.
+  - type:
+      text: "{{ env.QUOTE_TITLE }}"
+      into: the quote title / project name field
+  - act: >-
+      In the New Quote dialog, set the buyer to a buyer named "QA Activation Buyer" —
+      if there is an option to create a new buyer, use it and enter that name; otherwise
+      pick any existing buyer from the list.
+  - click: the button that creates / saves the new quote
+  - wait: 4000
+
+  # 5. Confirm the quote was actually created (outcome the customer cares about).
+  - assert: >-
+      The quote was created successfully — the app shows the new quote (a quote
+      detail/builder page or the quote pipeline) referencing "QA Activation Quote", and
+      no error toast or validation error is visible. The New Quote dialog has closed.
