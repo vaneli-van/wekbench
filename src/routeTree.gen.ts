@@ -17,7 +17,7 @@ import { Route as DemoRouteImport } from './routes/demo'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TrackTokenRouteImport } from './routes/track.$token'
-import { Route as QuoteTokenRouteImport } from './routes/quote.$token'
+import { Route as QTokenRouteImport } from './routes/q.$token'
 import { Route as ApiFxRouteImport } from './routes/api/fx'
 import { Route as AppTeamRouteImport } from './routes/_app.team'
 import { Route as AppSuppliersRouteImport } from './routes/_app.suppliers'
@@ -84,9 +84,9 @@ const TrackTokenRoute = TrackTokenRouteImport.update({
   path: '/track/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const QuoteTokenRoute = QuoteTokenRouteImport.update({
-  id: '/quote/$token',
-  path: '/quote/$token',
+const QTokenRoute = QTokenRouteImport.update({
+  id: '/q/$token',
+  path: '/q/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFxRoute = ApiFxRouteImport.update({
@@ -244,7 +244,7 @@ export interface FileRoutesByFullPath {
   '/suppliers': typeof AppSuppliersRoute
   '/team': typeof AppTeamRoute
   '/api/fx': typeof ApiFxRoute
-  '/quote/$token': typeof QuoteTokenRoute
+  '/q/$token': typeof QTokenRoute
   '/track/$token': typeof TrackTokenRoute
   '/invoices/$id': typeof AppInvoicesIdRoute
   '/orders/$id': typeof AppOrdersIdRoute
@@ -280,7 +280,7 @@ export interface FileRoutesByTo {
   '/suppliers': typeof AppSuppliersRoute
   '/team': typeof AppTeamRoute
   '/api/fx': typeof ApiFxRoute
-  '/quote/$token': typeof QuoteTokenRoute
+  '/q/$token': typeof QTokenRoute
   '/track/$token': typeof TrackTokenRoute
   '/invoices/$id': typeof AppInvoicesIdRoute
   '/orders/$id': typeof AppOrdersIdRoute
@@ -318,7 +318,7 @@ export interface FileRoutesById {
   '/_app/suppliers': typeof AppSuppliersRoute
   '/_app/team': typeof AppTeamRoute
   '/api/fx': typeof ApiFxRoute
-  '/quote/$token': typeof QuoteTokenRoute
+  '/q/$token': typeof QTokenRoute
   '/track/$token': typeof TrackTokenRoute
   '/_app/invoices/$id': typeof AppInvoicesIdRoute
   '/_app/orders/$id': typeof AppOrdersIdRoute
@@ -356,7 +356,7 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/team'
     | '/api/fx'
-    | '/quote/$token'
+    | '/q/$token'
     | '/track/$token'
     | '/invoices/$id'
     | '/orders/$id'
@@ -392,7 +392,7 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/team'
     | '/api/fx'
-    | '/quote/$token'
+    | '/q/$token'
     | '/track/$token'
     | '/invoices/$id'
     | '/orders/$id'
@@ -429,7 +429,7 @@ export interface FileRouteTypes {
     | '/_app/suppliers'
     | '/_app/team'
     | '/api/fx'
-    | '/quote/$token'
+    | '/q/$token'
     | '/track/$token'
     | '/_app/invoices/$id'
     | '/_app/orders/$id'
@@ -451,7 +451,7 @@ export interface RootRouteChildren {
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
   ApiFxRoute: typeof ApiFxRoute
-  QuoteTokenRoute: typeof QuoteTokenRoute
+  QTokenRoute: typeof QTokenRoute
   TrackTokenRoute: typeof TrackTokenRoute
   ApiCronArRoute: typeof ApiCronArRoute
   ApiPublicInboundEmailRoute: typeof ApiPublicInboundEmailRoute
@@ -516,11 +516,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrackTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/quote/$token': {
-      id: '/quote/$token'
-      path: '/quote/$token'
-      fullPath: '/quote/$token'
-      preLoaderRoute: typeof QuoteTokenRouteImport
+    '/q/$token': {
+      id: '/q/$token'
+      path: '/q/$token'
+      fullPath: '/q/$token'
+      preLoaderRoute: typeof QTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/fx': {
@@ -769,7 +769,7 @@ const rootRouteChildren: RootRouteChildren = {
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
   ApiFxRoute: ApiFxRoute,
-  QuoteTokenRoute: QuoteTokenRoute,
+  QTokenRoute: QTokenRoute,
   TrackTokenRoute: TrackTokenRoute,
   ApiCronArRoute: ApiCronArRoute,
   ApiPublicInboundEmailRoute: ApiPublicInboundEmailRoute,
