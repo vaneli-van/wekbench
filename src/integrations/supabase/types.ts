@@ -207,6 +207,7 @@ export type Database = {
         Row: {
           authorisation_ref: string | null
           brand: string | null
+          category: string | null
           created_at: string
           currency: string | null
           description: string
@@ -223,6 +224,7 @@ export type Database = {
           spec: Json
           stock_qty: number | null
           supplier_id: string | null
+          unit: string | null
           unit_price: number | null
           updated_at: string
           warehouse_location: string | null
@@ -231,6 +233,7 @@ export type Database = {
         Insert: {
           authorisation_ref?: string | null
           brand?: string | null
+          category?: string | null
           created_at?: string
           currency?: string | null
           description: string
@@ -247,6 +250,7 @@ export type Database = {
           spec?: Json
           stock_qty?: number | null
           supplier_id?: string | null
+          unit?: string | null
           unit_price?: number | null
           updated_at?: string
           warehouse_location?: string | null
@@ -255,6 +259,7 @@ export type Database = {
         Update: {
           authorisation_ref?: string | null
           brand?: string | null
+          category?: string | null
           created_at?: string
           currency?: string | null
           description?: string
@@ -271,6 +276,7 @@ export type Database = {
           spec?: Json
           stock_qty?: number | null
           supplier_id?: string | null
+          unit?: string | null
           unit_price?: number | null
           updated_at?: string
           warehouse_location?: string | null
@@ -2079,11 +2085,14 @@ export type Database = {
           auto_approve_threshold: number
           country: string | null
           created_at: string
+          first_quote_at: string | null
           id: string
           name: string
           notify_email: string | null
           onboarding_completed_at: string | null
           owner_id: string
+          plan: string
+          plan_trial_ends_at: string | null
           review_notify_email: string | null
           seeded_demo: boolean
           updated_at: string
@@ -2094,11 +2103,14 @@ export type Database = {
           auto_approve_threshold?: number
           country?: string | null
           created_at?: string
+          first_quote_at?: string | null
           id?: string
           name?: string
           notify_email?: string | null
           onboarding_completed_at?: string | null
           owner_id: string
+          plan?: string
+          plan_trial_ends_at?: string | null
           review_notify_email?: string | null
           seeded_demo?: boolean
           updated_at?: string
@@ -2109,11 +2121,14 @@ export type Database = {
           auto_approve_threshold?: number
           country?: string | null
           created_at?: string
+          first_quote_at?: string | null
           id?: string
           name?: string
           notify_email?: string | null
           onboarding_completed_at?: string | null
           owner_id?: string
+          plan?: string
+          plan_trial_ends_at?: string | null
           review_notify_email?: string | null
           seeded_demo?: boolean
           updated_at?: string
