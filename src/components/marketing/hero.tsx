@@ -86,7 +86,7 @@ export function Hero() {
             </div>
           </div>
 
-          <div className="absolute -bottom-7 -left-5 hidden rounded-lg border border-border bg-card px-4 py-3 shadow-md lg:block">
+          <div className="absolute -bottom-7 -left-5 hidden lg:block rounded-lg border border-border bg-card px-4 py-3 shadow-md lg:block">
             <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">14×</p>
             <p className="text-xs text-muted-foreground">faster turnaround</p>
           </div>
