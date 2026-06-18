@@ -31,6 +31,9 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/foundations/empty-state";
 import { PageHeader } from "@/components/page-header";
+import { BreadcrumbsDisplay } from "@/components/breadcrumbs-display";
+import { generateBreadcrumbs } from "@/lib/breadcrumbs";
+import { PageTransition } from "@/components/page-transition";
 import { FormSection } from "@/components/form-section";
 import { QuoteAttachmentsCard } from "@/components/quote-attachments-card";
 import { QuoteShippingCard } from "@/components/quote-shipping-card";
@@ -478,7 +481,9 @@ function QuoteDetailPage() {
   const rfq = q.rfqs;
   const editable = q.status === "draft";
 
+  const breadcrumbs = generateBreadcrumbs("quote", quote?.id?.slice(-6));
   return (
+    <PageTransition>
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-8">
       <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
         {q.rfq_id && (
@@ -849,6 +854,7 @@ function StockBadge({ li }: { li: LI }) {
         <span className="text-[10px] text-muted-foreground">Lead {c.lead_time_days}d</span>
       )}
     </div>
+    </PageTransition>
   );
 }
 

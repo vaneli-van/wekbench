@@ -6,6 +6,9 @@ import { toast } from "sonner";
 import { ArrowLeft, Copy, Truck, Plus, FileQuestion } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
+import { BreadcrumbsDisplay } from "@/components/breadcrumbs-display";
+import { generateBreadcrumbs } from "@/lib/breadcrumbs";
+import { PageTransition } from "@/components/page-transition";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,7 +88,9 @@ function OrderDetailPage() {
   const currentIndex = STAGES.indexOf(order.status);
   const trackUrl = typeof window !== "undefined" ? `${window.location.origin}/track/${order.share_token}` : `/track/${order.share_token}`;
 
+  const breadcrumbs = generateBreadcrumbs("order", order?.id?.slice(-6));
   return (
+    <PageTransition>
     <div className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-8">
       <Link to="/orders" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-3.5" /> Back to orders
@@ -263,6 +268,7 @@ function OrderDetailPage() {
         </Card>
       </div>
     </div>
+    </PageTransition>
   );
 }
 

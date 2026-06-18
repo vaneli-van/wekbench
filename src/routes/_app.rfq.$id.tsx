@@ -24,6 +24,9 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/foundations/empty-state";
 import { PageHeader } from "@/components/page-header";
+import { BreadcrumbsDisplay } from "@/components/breadcrumbs-display";
+import { generateBreadcrumbs } from "@/lib/breadcrumbs";
+import { PageTransition } from "@/components/page-transition";
 import { getRfq, ensureQuoteForRfq } from "@/lib/api/quotes.functions";
 
 
@@ -98,7 +101,9 @@ function RfqDetailPage() {
   const email = r.extracted_documents?.inbound_emails;
   const subject = email?.subject ?? "(no subject)";
 
+  const breadcrumbs = generateBreadcrumbs("rfq", rfq?.id?.slice(-6));
   return (
+    <PageTransition>
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-8">
       <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
         <Link to="/review-queue" className="inline-flex items-center gap-1 hover:text-foreground">
@@ -216,6 +221,7 @@ function RfqDetailPage() {
         )}
       </Card>
     </div>
+    </PageTransition>
   );
 }
 
