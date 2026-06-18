@@ -1,107 +1,83 @@
-// Stock in the Channel (SITC) Catalogue API sourcing adapter. SERVER ONLY.
+// Stock in the Channel sourcing adapter. SERVER ONLY.
 //
-// Auth: OAuth 2.0 client credentials. Get a Bearer token from the token endpoint,
-// cache it (valid 60 min), reuse until near expiry.
-//   Required env: SITC_CLIENT_ID, SITC_CLIENT_SECRET
-//
-// Data: GraphQL `products` query returns paginated IT products with stock + cost
-// + sell price. We map each product to one NormalizedOffer (the SITC best cost).
+// Backed by our own `sitc_catalogue` table (a cloud-hosted copy of SITC's catalogue
+// feed, refreshed by the scheduled FTP→Supabase sync — scripts/sync-sitc.mjs). We query
+// that table instead of the live OAuth GraphQL API, so no per-call key/quota is needed
+// and lookups are fast. Each product's 1st–5th cheapest distributors become offers.
 import process from "node:process";
+import { createClient } from "@supabase/supabase-js";
 
-import type { NormalizedPart, SourcingAdapter, SourcingMatchInput, SourcingSearchInput } from "./types";
+import type { NormalizedOffer, NormalizedPart, SourcingAdapter, SourcingMatchInput, SourcingSearchInput } from "./types";
 
-const TOKEN_URL = "https://accounts.stockinthechannel.co.uk/connect/token";
-const GRAPHQL_URL = "https://catalogues.stockinthechannel.co.uk/api/graphql/";
-const CURRENCY = "GBP"; // SITC is a UK platform; cost/price are GBP.
+const CURRENCY = "GBP"; // SITC is a UK platform; price/cost are GBP.
 
-let tokenCache: { token: string; expiresAt: number } | null = null;
-
-async function getToken(): Promise<string> {
-  const clientId = process.env.SITC_CLIENT_ID;
-  const clientSecret = process.env.SITC_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error(
-      "Stock in the Channel credentials missing. Set SITC_CLIENT_ID and SITC_CLIENT_SECRET in the server environment.",
-    );
+function client() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("SITC catalogue lookup needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the server env.");
   }
-  // Reuse cached token until 60s before expiry.
-  if (tokenCache && tokenCache.expiresAt > Date.now() + 60_000) return tokenCache.token;
-
-  const res = await fetch(TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      grant_type: "client_credentials",
-      scope: "catalogue",
-    }).toString(),
-  });
-  if (!res.ok) {
-    const t = await res.text().catch(() => "");
-    throw new Error(`SITC auth failed (${res.status})${t ? `: ${t.slice(0, 160)}` : ""}`);
-  }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const json = (await res.json()) as any;
-  const token = json?.access_token;
-  if (!token) throw new Error("SITC auth returned no access_token");
-  const expiresIn = Number(json?.expires_in ?? 3600);
-  tokenCache = { token, expiresAt: Date.now() + expiresIn * 1000 };
-  return token;
+  return createClient(url, key, { auth: { persistSession: false } });
 }
 
 function num(v: unknown): number | null {
-  if (v == null) return null;
+  if (v == null || v === "") return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
 
-async function queryProducts(term: string, limit: number): Promise<NormalizedPart[]> {
-  const token = await getToken();
-  const pageSize = Math.max(1, Math.min(limit || 10, 50));
-  // Inline GraphQL request; JSON.stringify produces a safe GraphQL string literal.
-  const gql =
-    `query { products(request: { page: 1, pageSize: ${pageSize}, query: ${JSON.stringify(term)} }) ` +
-    `{ count data { id sku brand title shortDescription imageUrl totalStock selectedCost calculatedPrice } } }`;
+// Strip characters that would break a PostgREST ilike/or filter.
+function sanitize(q: string): string {
+  return q.replace(/[,%()*]/g, " ").trim();
+}
 
-  const res = await fetch(GRAPHQL_URL, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ query: gql }),
-  });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const json = (await res.json().catch(() => null)) as any;
-  if (!res.ok) throw new Error(`SITC search failed (${res.status})`);
-  if (json?.errors?.length) throw new Error(`SITC: ${json.errors[0]?.message ?? "GraphQL error"}`);
+const SELECT = "sitc_id, sku, brand, name, stock, price, image_url, distributors";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapRow(r: any): NormalizedPart {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rows = (json?.data?.products?.data ?? []) as any[];
-  return rows.map((p) => {
-    const cost = num(p.selectedCost);
-    return {
-      externalPartId: p.id != null ? String(p.id) : null,
-      mpn: p.sku ?? null,
-      manufacturer: p.brand ?? null,
-      lifecycleStatus: null,
-      datasheetUrl: null,
-      imageUrl: p.imageUrl ?? null,
-      offers: [
-        {
-          distributorName: "Stock in the Channel",
-          distributorExternalId: null,
-          distributorSku: p.sku ?? null,
-          stockQty: num(p.totalStock),
+  const dists: any[] = Array.isArray(r.distributors) ? r.distributors : [];
+  const offers: NormalizedOffer[] = dists.length
+    ? dists.map((d) => {
+        const price = num(d.price);
+        return {
+          distributorName: d.name ?? "Stock in the Channel",
+          distributorExternalId: d.id != null ? String(d.id) : null,
+          distributorSku: d.sku ?? r.sku ?? null,
+          stockQty: num(d.stock),
           moq: null,
           orderMultiple: null,
           packaging: null,
           leadTimeDays: null,
-          priceBreaks: cost != null && cost > 0 ? [{ quantity: 1, price: cost, currency: CURRENCY }] : [],
+          priceBreaks: price != null && price > 0 ? [{ quantity: 1, price, currency: CURRENCY }] : [],
+          buyUrl: null,
+          isAuthorised: null,
+        } satisfies NormalizedOffer;
+      })
+    : [
+        {
+          distributorName: "Stock in the Channel",
+          distributorExternalId: null,
+          distributorSku: r.sku ?? null,
+          stockQty: num(r.stock),
+          moq: null,
+          orderMultiple: null,
+          packaging: null,
+          leadTimeDays: null,
+          priceBreaks: num(r.price) != null && num(r.price)! > 0 ? [{ quantity: 1, price: num(r.price)!, currency: CURRENCY }] : [],
           buyUrl: null,
           isAuthorised: null,
         },
-      ],
-    } satisfies NormalizedPart;
-  });
+      ];
+  return {
+    externalPartId: r.sitc_id != null ? String(r.sitc_id) : null,
+    mpn: r.sku ?? null,
+    manufacturer: r.brand ?? null,
+    lifecycleStatus: null,
+    datasheetUrl: null,
+    imageUrl: r.image_url ?? null,
+    offers,
+  } satisfies NormalizedPart;
 }
 
 export const stockInTheChannelAdapter: SourcingAdapter = {
@@ -110,10 +86,19 @@ export const stockInTheChannelAdapter: SourcingAdapter = {
   categories: ["it_hardware"],
   async matchByMpn(input: SourcingMatchInput): Promise<NormalizedPart[]> {
     if (!input.mpn) return [];
-    return queryProducts(input.mpn, input.limit ?? 10);
+    const sku = sanitize(input.mpn);
+    if (!sku) return [];
+    const { data } = await client().from("sitc_catalogue").select(SELECT).ilike("sku", sku).limit(input.limit ?? 10);
+    return (data ?? []).map(mapRow);
   },
   async search(input: SourcingSearchInput): Promise<NormalizedPart[]> {
-    if (!input.query) return [];
-    return queryProducts(input.query, input.limit ?? 10);
+    const q = sanitize(input.query ?? "");
+    if (!q) return [];
+    const { data } = await client()
+      .from("sitc_catalogue")
+      .select(SELECT)
+      .or(`sku.ilike.%${q}%,name.ilike.%${q}%,brand.ilike.%${q}%`)
+      .limit(input.limit ?? 10);
+    return (data ?? []).map(mapRow);
   },
 };

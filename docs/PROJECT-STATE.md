@@ -29,6 +29,15 @@ Wekbench is a B2B procurement web app (RFQ → quote → sourcing → order → 
 - **Quotes**: real DB-backed quotes, 7-stage pipeline, line items, FX conversion,
   margin; multi-provider **sourcing** (Nexar + OEMsecrets adapters, router,
   cache) with an offer drawer.
+- **SITC cloud catalogue (IT hardware)**: instead of SITC's live OAuth API (keys we
+  couldn't get), SITC's catalogue feed is hosted in our own DB. Table
+  `sitc_catalogue` (global **shared reference data** — authenticated-read RLS, service
+  role writes; NOT workspace-scoped by design). A scheduled GitHub Action
+  (`.github/workflows/sitc-sync.yml`) pulls `Products.csv` (~117MB) over FTP and
+  `scripts/sync-sitc.mjs` stream-parses + batch-upserts it. The `stockinthechannel`
+  adapter now **queries this table** (sku/name search; 1st–5th distributor columns →
+  offers) and plugs into the sourcing router like any provider. Migration
+  `20260618160000_sitc_catalogue.sql`.
 - **Shipping**: courier rate comparison in the quote builder (Terminal Africa
   adapter; freight/Freightos is phase 2). See `docs/shipping-rates-integration-plan.md`.
 - **Orders**: real orders + line items, status stepper, public tracking page
@@ -83,10 +92,12 @@ Wekbench is a B2B procurement web app (RFQ → quote → sourcing → order → 
 
 ## Secrets the app expects (set in Lovable Cloud → Secrets)
 `NEXAR_*`, `OEMSECRETS_API_KEY`, `TERMINAL_AFRICA_API_KEY`, `RESEND_API_KEY`,
-`EMAIL_FROM`, `CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `SITC_CLIENT_ID`/
-`SITC_CLIENT_SECRET`, and optional `SALES_EMAIL` (upgrade requests; falls back to
-`EMAIL_FROM`). (Momentic uses a GitHub Actions secret `MOMENTIC_API_KEY`, plus
-`WEKBENCH_EMAIL`/`WEKBENCH_PASSWORD` for the signed-in E2E tests.)
+`EMAIL_FROM`, `CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, and optional `SALES_EMAIL`
+(upgrade requests; falls back to `EMAIL_FROM`). The SITC live-OAuth path is retired in
+favour of the FTP sync, so `SITC_CLIENT_ID`/`SECRET` are no longer needed.
+**GitHub Actions secrets:** `MOMENTIC_API_KEY`, `WEKBENCH_EMAIL`/`WEKBENCH_PASSWORD`
+(E2E tests), and for the SITC sync: `SITC_FTP_HOST`, `SITC_FTP_USER`, `SITC_FTP_PASS`,
+`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
 
 ## Open follow-ups
 - Verify/enable the parked Momentic signup test (check the post-confirm screen).

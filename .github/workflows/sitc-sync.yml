@@ -1,0 +1,43 @@
+name: SITC catalogue sync
+
+# Pulls SITC's Products.csv over FTP and upserts it into the sitc_catalogue table.
+# Runs daily, and can be triggered manually (optionally capped via max_rows for a test).
+on:
+  workflow_dispatch:
+    inputs:
+      max_rows:
+        description: "Cap rows for a test run (leave blank for the full catalogue)"
+        required: false
+        default: ""
+  schedule:
+    - cron: "0 3 * * *" # daily at 03:00 UTC
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Download catalogue from SITC FTP
+        run: |
+          curl -sS --fail -u "$SITC_FTP_USER:$SITC_FTP_PASS" \
+            -o Products.csv "ftp://${SITC_FTP_HOST}/Products.csv"
+          ls -lh Products.csv
+        env:
+          SITC_FTP_HOST: ${{ secrets.SITC_FTP_HOST }}
+          SITC_FTP_USER: ${{ secrets.SITC_FTP_USER }}
+          SITC_FTP_PASS: ${{ secrets.SITC_FTP_PASS }}
+
+      - name: Install deps
+        run: npm i --no-save csv-parse @supabase/supabase-js
+
+      - name: Sync to Supabase
+        run: node scripts/sync-sitc.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SITC_MAX_ROWS: ${{ github.event.inputs.max_rows }}
