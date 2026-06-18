@@ -403,6 +403,7 @@ function TermsField({
 }
 
 function QuoteDetailPage() {
+  const [editMode, setEditMode] = useState(false);
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const getQuoteFn = useServerFn(getQuote);
