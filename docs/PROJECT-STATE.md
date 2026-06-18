@@ -53,6 +53,17 @@ Wekbench is a B2B procurement web app (RFQ → quote → sourcing → order → 
   workspaces) — the supporting metric for the north star **active paid companies**.
 - **Dashboard**: real KPIs, pipeline, top buyers, revenue-by-year, receivables;
   first-quote activation banner until the workspace has a quote.
+- **Plans / freemium (Phase 1)**: `workspaces.plan` (`starter`|`pro`) +
+  `plan_trial_ends_at`. Effective entitlement = pro OR in-trial; one helper
+  `getEntitlement()` + `getMyEntitlement` fn drive every gate. New workspaces get a
+  14-day Pro trial (column DEFAULT, no trigger change); existing workspaces grandfathered
+  to pro. Boundary: Starter = 10 active quotes/mo, 1 seat, 1 basic source, no AR; Pro =
+  unlimited + seats + deep sourcing + AR. **Live gate so far: the quote cap** in
+  `createQuote` (throws `UPGRADE_REQUIRED:quotes`). Shared protocol in `src/lib/plans.ts`
+  (`upgradeError`/`parseUpgrade`/`FEATURE_COPY`); reusable `<UpgradeDialog>`; topbar
+  `PlanBadge` (trial countdown / Starter usage). `requestUpgrade` fn emails the team
+  (best-effort) — **no in-app payment** (founder-led; Phase 5). Seats/sourcing/AR gates =
+  Phases 2–4. See `docs/wekbench-packaging.md`.
 - **Data**: 103 real Western Premium sales orders (2024–2026, GH₵9.33M) imported
   with line items + 14 buyers.
 - **Testing**: Momentic wired (`momentic.config.yaml`, `.github/workflows/momentic.yml`).
@@ -65,8 +76,10 @@ Wekbench is a B2B procurement web app (RFQ → quote → sourcing → order → 
 
 ## Secrets the app expects (set in Lovable Cloud → Secrets)
 `NEXAR_*`, `OEMSECRETS_API_KEY`, `TERMINAL_AFRICA_API_KEY`, `RESEND_API_KEY`,
-`EMAIL_FROM`, `CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`. (Momentic uses a
-GitHub Actions secret `MOMENTIC_API_KEY`, not an app secret.)
+`EMAIL_FROM`, `CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `SITC_CLIENT_ID`/
+`SITC_CLIENT_SECRET`, and optional `SALES_EMAIL` (upgrade requests; falls back to
+`EMAIL_FROM`). (Momentic uses a GitHub Actions secret `MOMENTIC_API_KEY`, plus
+`WEKBENCH_EMAIL`/`WEKBENCH_PASSWORD` for the signed-in E2E tests.)
 
 ## Open follow-ups
 - Verify/enable the parked Momentic signup test (check the post-confirm screen).

@@ -25,6 +25,8 @@ import {
 import { createQuote } from "@/lib/api/quotes.functions"
 import { listBuyers, createBuyer } from "@/lib/api/buyers.functions"
 import { ASSIGNEES, SECTORS } from "@/lib/pipeline"
+import { parseUpgrade, type UpgradeFeature } from "@/lib/plans"
+import { UpgradeDialog } from "@/components/upgrade-dialog"
 import { toast } from "sonner"
 
 const CREATE_NEW_BUYER = "__create_new_buyer__"
@@ -51,6 +53,7 @@ export function NewQuoteDialog({
   const [showNewBuyer, setShowNewBuyer] = useState(false)
   const [newBuyerName, setNewBuyerName] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [upgradeFeature, setUpgradeFeature] = useState<UpgradeFeature | null>(null)
 
   const createQuoteFn = useServerFn(createQuote)
   const listBuyersFn = useServerFn(listBuyers)
@@ -107,6 +110,14 @@ export function NewQuoteDialog({
       setOpen(false)
       navigate({ to: "/quote/$id", params: { id } })
     } catch (err) {
+      const feat = parseUpgrade(err)
+      if (feat) {
+        // Hit a plan limit — close the form and show the paywall instead of an error.
+        reset()
+        setOpen(false)
+        setUpgradeFeature(feat)
+        return
+      }
       toast.error("Could not create quote", {
         description: err instanceof Error ? err.message : "Please try again.",
       })
@@ -116,6 +127,7 @@ export function NewQuoteDialog({
   }
 
   return (
+    <>
     <Dialog
       open={open}
       onOpenChange={(o) => {
@@ -226,5 +238,12 @@ export function NewQuoteDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <UpgradeDialog
+      feature={upgradeFeature}
+      onOpenChange={(o) => {
+        if (!o) setUpgradeFeature(null)
+      }}
+    />
+    </>
   )
 }

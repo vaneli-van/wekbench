@@ -6,7 +6,8 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { priceAtQty } from "@/lib/sourcing/pricing";
 import { createOrderForQuote } from "./orders.functions";
-import { resolveWorkspaceId } from "./workspace.functions";
+import { resolveWorkspaceId, getEntitlement, startOfMonthIso } from "./workspace.functions";
+import { STARTER_QUOTE_CAP, upgradeError } from "@/lib/plans";
 import { convertAmount } from "@/lib/fx.server";
 import { sendEmail, escapeHtml } from "@/lib/email.server";
 import { findOrCreateBuyer } from "./buyers.functions";
@@ -763,6 +764,18 @@ export const createQuote = createServerFn({ method: "POST" })
 
     const workspaceId = await resolveWorkspaceId(supabase, context.userId);
     if (!workspaceId) throw new Error("No workspace found for this user");
+
+    // Freemium gate: Starter is capped at STARTER_QUOTE_CAP quotes per calendar
+    // month. Pro (or in-trial) is unlimited. Throws a structured upgrade error.
+    const ent = await getEntitlement(supabase, workspaceId);
+    if (!ent.isPro) {
+      const { count } = await supabase
+        .from("quotes")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId)
+        .gte("created_at", startOfMonthIso());
+      if ((count ?? 0) >= STARTER_QUOTE_CAP) throw upgradeError("quotes");
+    }
 
     // Resolve the buyer to a real record (create on the fly if needed).
     const buyerId =

@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
   Bell,
+  Sparkles,
   Menu,
   LayoutDashboard,
   Inbox,
@@ -34,6 +37,41 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { getMyEntitlement } from "@/lib/api/workspace.functions";
+
+/** Plan/trial pill: hidden for paid Pro, shows trial countdown or a Starter upgrade nudge. */
+function PlanBadge() {
+  const entFn = useServerFn(getMyEntitlement);
+  const { data } = useQuery({ queryKey: ["entitlement"], queryFn: () => entFn() });
+  if (!data) return null;
+
+  // Paid Pro (not a trial): keep the header clean.
+  if (data.plan === "pro" && !data.inTrial) return null;
+
+  const base =
+    "hidden sm:inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors";
+
+  if (data.inTrial && data.trialEndsAt) {
+    const days = Math.max(
+      0,
+      Math.ceil((new Date(data.trialEndsAt).getTime() - Date.now()) / 86400000),
+    );
+    return (
+      <Link to="/settings" className={cn(base, "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15")}>
+        <Sparkles className="size-3.5" />
+        Pro trial · {days}d left
+      </Link>
+    );
+  }
+
+  // Starter: nudge with this month's quote usage.
+  return (
+    <Link to="/settings" className={cn(base, "border-border bg-secondary text-foreground hover:bg-secondary/70")}>
+      <Sparkles className="size-3.5 text-primary" />
+      {data.quotesThisMonth}/{data.quoteCap} quotes · Upgrade
+    </Link>
+  );
+}
 
 const mobileNav = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -164,7 +202,8 @@ export function Topbar() {
 
       <h1 className="min-w-0 flex-1 truncate text-base font-semibold tracking-tight text-foreground md:text-lg">{title}</h1>
 
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex items-center gap-2">
+        <PlanBadge />
         <NotificationsButton />
         <UserMenu />
       </div>

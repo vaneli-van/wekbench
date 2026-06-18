@@ -1,7 +1,40 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import process from "node:process";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { sendEmail, escapeHtml } from "@/lib/email.server";
+import { STARTER_QUOTE_CAP } from "@/lib/plans";
+
+export type Entitlement = {
+  plan: "starter" | "pro";
+  isPro: boolean;
+  trialEndsAt: string | null;
+  inTrial: boolean;
+};
+
+/**
+ * The single source of truth for what a workspace is entitled to. Pro if the paid
+ * plan is 'pro' OR the workspace is still inside its trial window. Every gate
+ * (quote cap, seats, sourcing depth, AR) derives from this.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getEntitlement(supabase: any, workspaceId: string): Promise<Entitlement> {
+  const { data } = await supabase
+    .from("workspaces")
+    .select("plan, plan_trial_ends_at")
+    .eq("id", workspaceId)
+    .maybeSingle();
+  const plan = (data?.plan === "pro" ? "pro" : "starter") as "starter" | "pro";
+  const trialEndsAt = (data?.plan_trial_ends_at as string | null) ?? null;
+  const inTrial = !!trialEndsAt && new Date(trialEndsAt).getTime() > Date.now();
+  return { plan, isPro: plan === "pro" || inTrial, trialEndsAt, inTrial };
+}
+
+/** Start-of-current-calendar-month, ISO (UTC) — for the monthly quote cap. */
+export function startOfMonthIso(now = new Date()): string {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+}
 
 const VENDOR_TYPES = ["distributor", "system_integrator", "vendor"] as const;
 export type VendorType = (typeof VENDOR_TYPES)[number];
@@ -150,4 +183,45 @@ export const updateWorkspaceVendorTypes = createServerFn({ method: "POST" })
       .eq("owner_id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true, vendorTypes: unique };
+  });
+
+/** The caller's plan + trial + this month's quote usage (for the badge + paywall UI). */
+export const getMyEntitlement = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const wsId = await resolveWorkspaceId(context.supabase, context.userId);
+    if (!wsId) return { plan: "starter", isPro: false, trialEndsAt: null, inTrial: false, quotesThisMonth: 0, quoteCap: STARTER_QUOTE_CAP };
+    const ent = await getEntitlement(context.supabase, wsId);
+    const { count } = await context.supabase
+      .from("quotes")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", wsId)
+      .gte("created_at", startOfMonthIso());
+    return { ...ent, quotesThisMonth: count ?? 0, quoteCap: STARTER_QUOTE_CAP };
+  });
+
+/** Record an upgrade request (best-effort email to the team). No payment handled here. */
+export const requestUpgrade = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ feature: z.string().max(40).optional(), note: z.string().max(500).optional() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const wsId = await resolveWorkspaceId(context.supabase, context.userId);
+    const { data: ws } = wsId
+      ? await context.supabase.from("workspaces").select("name").eq("id", wsId).maybeSingle()
+      : { data: null };
+    const to = process.env.SALES_EMAIL || process.env.EMAIL_FROM;
+    if (to) {
+      await sendEmail({
+        to,
+        subject: `Wekbench upgrade request — ${escapeHtml(ws?.name ?? "a workspace")}`,
+        html: `<p>A workspace requested a Pro upgrade.</p>
+          <p><b>Workspace:</b> ${escapeHtml(ws?.name ?? "(unknown)")} (${escapeHtml(wsId ?? "")})<br/>
+          <b>User:</b> ${escapeHtml(context.userId)}<br/>
+          <b>Feature:</b> ${escapeHtml(data.feature ?? "(general)")}</p>
+          ${data.note ? `<p><b>Note:</b> ${escapeHtml(data.note)}</p>` : ""}`,
+      }).catch(() => undefined);
+    }
+    return { ok: true };
   });
