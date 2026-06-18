@@ -788,6 +788,15 @@ export const createQuote = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error || !created) throw new Error(error?.message ?? "Could not create quote");
+
+    // Activation marker: stamp the workspace's first-quote moment (best-effort,
+    // only sets when still null) — drives the freemium activation metric.
+    await supabase
+      .from("workspaces")
+      .update({ first_quote_at: new Date().toISOString() })
+      .eq("id", workspaceId)
+      .is("first_quote_at", null);
+
     return { id: created.id as string };
   });
 

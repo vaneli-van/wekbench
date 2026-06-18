@@ -7,12 +7,10 @@ import {
   ArrowUpRight,
   PartyPopper,
   Loader2,
-  Sparkles,
   FileText,
   Store,
   ShoppingCart,
   Users,
-  Percent,
   Package,
   Wrench,
   Briefcase,
@@ -41,7 +39,6 @@ export const Route = createFileRoute("/onboarding")({
 });
 
 type AccountType = "vendor" | "buyer";
-type DemoChoice = "demo" | "fresh";
 type VendorType = "distributor" | "system_integrator" | "vendor";
 type RoleOption =
   | "Procurement Manager"
@@ -69,26 +66,23 @@ function OnboardingPage() {
   const [company, setCompany] = useState("");
   const [role, setRole] = useState<RoleOption | "">("");
   const [country, setCountry] = useState("");
-  const [demoChoice, setDemoChoice] = useState<DemoChoice | null>(null);
 
-  // Dynamic step list — vendors get a "What kind of vendor?" step
+  // Dynamic step list — vendors get a "What kind of vendor?" step. The flow ends
+  // on the profile step and then guides the user straight to their first quote.
   const STEPS = accountType === "vendor"
     ? [
         { id: 1, title: "Your role" },
         { id: 2, title: "Vendor type" },
         { id: 3, title: "About you" },
-        { id: 4, title: "Starting point" },
       ]
     : [
         { id: 1, title: "Your role" },
         { id: 2, title: "About you" },
-        { id: 3, title: "Starting point" },
       ];
   const isVendorFlow = accountType === "vendor";
   const STEP_ROLE = 1;
   const STEP_VENDOR_TYPE = isVendorFlow ? 2 : -1;
   const STEP_PROFILE = isVendorFlow ? 3 : 2;
-  const STEP_DEMO = isVendorFlow ? 4 : 3;
 
   // Redirect away if not signed in
   useEffect(() => {
@@ -138,8 +132,7 @@ function OnboardingPage() {
   const canContinue =
     step === STEP_ROLE ? accountType !== null
     : step === STEP_VENDOR_TYPE ? vendorTypes.length > 0
-    : step === STEP_PROFILE ? fullName.trim().length > 0 && company.trim().length > 0 && role !== "" && country !== ""
-    : demoChoice !== null;
+    : fullName.trim().length > 0 && company.trim().length > 0 && role !== "" && country !== "";
 
   const handleNext = async () => {
     if (step < STEPS.length) {
@@ -162,7 +155,7 @@ function OnboardingPage() {
             account_type: accountType ?? "vendor",
             country,
             vendor_types: isVendorFlow && vendorTypes.length > 0 ? vendorTypes : [],
-            seeded_demo: demoChoice === "demo",
+            seeded_demo: false,
             onboarding_completed_at: new Date().toISOString(),
           })
           .eq("owner_id", user.id),
@@ -189,7 +182,7 @@ function OnboardingPage() {
     return (
       <Confirmation
         accountType={accountType ?? "vendor"}
-        seeded={demoChoice === "demo"}
+        onCreateQuote={() => navigate({ to: "/quotes", search: { new: true } })}
         onDashboard={() => navigate({ to: "/dashboard" })}
       />
     );
@@ -255,13 +248,6 @@ function OnboardingPage() {
               onCompany={setCompany}
               onRole={setRole}
               onCountry={setCountry}
-            />
-          )}
-          {step === STEP_DEMO && (
-            <StepDemoChoice
-              choice={demoChoice}
-              accountType={accountType ?? "vendor"}
-              onSelect={setDemoChoice}
             />
           )}
         </div>
@@ -464,128 +450,27 @@ function StepProfile({
   );
 }
 
-function StepDemoChoice({
-  choice,
-  accountType,
-  onSelect,
-}: {
-  choice: DemoChoice | null;
-  accountType: AccountType;
-  onSelect: (c: DemoChoice) => void;
-}) {
-  const options: {
-    id: DemoChoice;
-    icon: typeof Sparkles;
-    title: string;
-    body: string;
-    bullets: string[];
-  }[] = [
-    {
-      id: "demo",
-      icon: Sparkles,
-      title: "Start with sample data",
-      body: "Explore every screen instantly with a fully populated workspace.",
-      bullets: [
-        accountType === "vendor"
-          ? "Sample RFQs, quotes, and orders in motion"
-          : "Sample suppliers, requests, and open POs",
-        "Ready-made buyers and supplier profiles",
-        "You can clear it from Settings anytime",
-      ],
-    },
-    {
-      id: "fresh",
-      icon: FileText,
-      title: "Start fresh",
-      body: "An empty workspace, ready for your real data on day one.",
-      bullets: [
-        "Guided empty states on every screen",
-        "Add your own suppliers, buyers, and RFQs",
-        "Load sample data later from Settings",
-      ],
-    },
-  ];
-
-  return (
-    <div className="mx-auto w-full max-w-2xl text-center">
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">
-        How do you want to start?
-      </h1>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground text-pretty">
-        Either way, you'll land on your dashboard next.
-      </p>
-
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        {options.map((opt) => {
-          const Icon = opt.icon;
-          const selected = choice === opt.id;
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => onSelect(opt.id)}
-              className={cn(
-                "flex flex-col items-start gap-3 rounded-xl border p-5 text-left transition-all",
-                selected
-                  ? "border-primary bg-primary/5 ring-2 ring-primary/30"
-                  : "border-border bg-card hover:border-primary/40 hover:bg-secondary/40",
-              )}
-            >
-              <span
-                className={cn(
-                  "flex size-10 items-center justify-center rounded-lg transition-colors",
-                  selected ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground",
-                )}
-              >
-                <Icon className="size-5" />
-              </span>
-              <span className="flex items-center gap-2 text-base font-semibold text-foreground">
-                {opt.title}
-                {selected && <Check className="size-4 text-primary" />}
-              </span>
-              <span className="text-sm leading-relaxed text-muted-foreground">{opt.body}</span>
-              <ul className="mt-1 flex flex-col gap-1.5 text-xs text-muted-foreground">
-                {opt.bullets.map((b) => (
-                  <li key={b} className="flex items-start gap-1.5">
-                    <Check className="mt-0.5 size-3 shrink-0 text-primary" />
-                    <span>{b}</span>
-                  </li>
-                ))}
-              </ul>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function Confirmation({
   accountType,
-  seeded,
+  onCreateQuote,
   onDashboard,
 }: {
   accountType: AccountType;
-  seeded: boolean;
+  onCreateQuote: () => void;
   onDashboard: () => void;
 }) {
-  const nextUp = seeded
-    ? [
-        { icon: FileText, label: "Explore the sample inbox" },
-        { icon: Percent, label: "Set your margin & FX defaults" },
-        { icon: Users, label: "Invite your team" },
-      ]
-    : accountType === "vendor"
-    ? [
-        { icon: FileText, label: "Upload your first RFQ" },
-        { icon: Store, label: "Add your supplier catalog" },
-        { icon: Users, label: "Invite your team" },
-      ]
-    : [
-        { icon: FileText, label: "Raise your first request" },
-        { icon: Store, label: "Browse the supplier network" },
-        { icon: Users, label: "Invite your team" },
-      ];
+  // The activation moment: lead everyone straight to their first quote — the
+  // single action that turns a signup into an active workspace.
+  const nextUp =
+    accountType === "vendor"
+      ? [
+          { icon: Store, label: "Add your supplier catalog" },
+          { icon: Users, label: "Invite your team" },
+        ]
+      : [
+          { icon: Store, label: "Browse the supplier network" },
+          { icon: Users, label: "Invite your team" },
+        ];
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background px-6 text-center">
@@ -593,17 +478,32 @@ function Confirmation({
         <PartyPopper className="size-7" />
       </div>
       <h1 className="mt-6 text-2xl font-semibold tracking-tight text-foreground text-balance">
-        You&apos;re all set.
+        Your workspace is ready.
       </h1>
       <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground text-pretty">
-        {seeded
-          ? "Your workspace is loaded with sample data so you can explore right away."
-          : "Your workspace is ready. Start adding your own data whenever you like."}
+        The fastest way to see Wekbench work is to build your first quote. It takes a
+        couple of minutes — you can source parts and set margin as you go.
       </p>
 
-      <div className="mt-8 w-full max-w-sm rounded-xl border border-border bg-card p-4 text-left">
-        <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          A few things to do next
+      <div className="mt-8 w-full max-w-sm rounded-xl border border-primary/30 bg-primary/5 p-5 text-left">
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <FileText className="size-4.5" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">Create your first quote</p>
+            <p className="text-xs text-muted-foreground">Add a buyer and a few line items.</p>
+          </div>
+        </div>
+        <Button onClick={onCreateQuote} size="lg" className="mt-4 w-full gap-1.5">
+          Create your first quote
+          <ArrowRight className="size-4" />
+        </Button>
+      </div>
+
+      <div className="mt-6 w-full max-w-sm text-left">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          Then, when you&apos;re ready
         </p>
         <ul className="flex flex-col gap-2.5">
           {nextUp.map((item) => {
@@ -621,10 +521,13 @@ function Confirmation({
         </ul>
       </div>
 
-      <Button onClick={onDashboard} size="lg" className="mt-8 gap-1.5">
-        Go to dashboard
-        <ArrowRight className="size-4" />
-      </Button>
+      <button
+        type="button"
+        onClick={onDashboard}
+        className="mt-6 text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+      >
+        Skip for now — go to dashboard
+      </button>
     </div>
   );
 }

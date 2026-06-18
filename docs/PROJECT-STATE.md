@@ -43,7 +43,16 @@ Wekbench is a B2B procurement web app (RFQ → quote → sourcing → order → 
 - **Public quote acceptance**: `/quote/$token` — buyer reviews, accepts & e-signs;
   acceptance auto-creates the order and **emails the seller** (Resend).
 - **Membership/Team**: member-based RLS, invites.
-- **Dashboard**: real KPIs, pipeline, top buyers, revenue-by-year, receivables.
+- **Onboarding / activation (freemium funnel)**: signup trigger (`handle_new_user`)
+  creates profile + workspace + owner role; `_app` guard routes new users to
+  `/onboarding`. Onboarding wizard now ends honestly (the fake "sample data" step was
+  removed — it never seeded anything) and **guides straight to the first quote**.
+  `/quotes?new=1` deep-links the New Quote dialog open (used by onboarding + the
+  dashboard empty-state banner shown when `kpis.totalQuotes === 0`). Activation marker
+  `workspaces.first_quote_at` is stamped on first `createQuote` (backfilled for existing
+  workspaces) — the supporting metric for the north star **active paid companies**.
+- **Dashboard**: real KPIs, pipeline, top buyers, revenue-by-year, receivables;
+  first-quote activation banner until the workspace has a quote.
 - **Data**: 103 real Western Premium sales orders (2024–2026, GH₵9.33M) imported
   with line items + 14 buyers.
 - **Testing**: Momentic wired (`momentic.config.yaml`, `.github/workflows/momentic.yml`).

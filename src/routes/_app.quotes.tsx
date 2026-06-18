@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useServerFn } from "@tanstack/react-start"
@@ -105,6 +105,13 @@ function QuotesPage() {
   const listFn = useServerFn(listQuotes)
   const stageFn = useServerFn(updateQuoteStage)
 
+  // Deep-link support: open the New Quote dialog when arriving with ?new=1.
+  const search = Route.useSearch()
+  const [newQuoteOpen, setNewQuoteOpen] = useState(false)
+  useEffect(() => {
+    if (search.new) setNewQuoteOpen(true)
+  }, [search.new])
+
   const { data, isLoading } = useQuery({
     queryKey: ["quotes-board"],
     queryFn: () => listFn(),
@@ -206,7 +213,14 @@ function QuotesPage() {
               {filtered.length} quotes · {formatCedi(filtered.reduce((s, q) => s + q.value, 0))} total value
             </p>
           </div>
-          <NewQuoteDialog />
+          <NewQuoteDialog
+            open={newQuoteOpen}
+            onOpenChange={(o) => {
+              setNewQuoteOpen(o)
+              // Clear the deep-link param once handled so refreshes don't reopen it.
+              if (!o && search.new) navigate({ to: "/quotes", search: {}, replace: true })
+            }}
+          />
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -580,4 +594,12 @@ function BoardEmptyState() {
 
 export const Route = createFileRoute("/_app/quotes")({
   component: QuotesPage,
+  // Accept ?new=1 (or ?new=true) to deep-link the New Quote dialog open — used
+  // by onboarding and the dashboard empty state to guide the first quote.
+  validateSearch: (search: Record<string, unknown>): { new?: boolean } => ({
+    new:
+      search.new === true || search.new === "1" || search.new === "true"
+        ? true
+        : undefined,
+  }),
 });

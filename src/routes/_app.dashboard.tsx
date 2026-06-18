@@ -253,6 +253,30 @@ function DashboardPage() {
         </div>
       </div>
 
+      {/* Activation banner: show until the workspace has its first quote. */}
+      {k && k.totalQuotes === 0 && (
+        <Link
+          to="/quotes"
+          search={{ new: true }}
+          className="mt-5 flex flex-col gap-4 rounded-xl border border-primary/30 bg-primary/5 p-5 transition-colors hover:bg-primary/10 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-start gap-3.5">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <FileText className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-base font-semibold text-foreground">Create your first quote</p>
+              <p className="mt-0.5 text-sm text-muted-foreground text-pretty">
+                Add a buyer and a few line items — source parts and set margin as you go. It&apos;s the fastest way to see Wekbench work.
+              </p>
+            </div>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-md bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground sm:self-center">
+            Start now <ArrowRight className="size-4" />
+          </span>
+        </Link>
+      )}
+
       {/* Row 2: KPI strip */}
       <section aria-label="Key metrics" className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((kpi) => {

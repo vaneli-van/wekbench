@@ -1,0 +1,21 @@
+{
+  "gitProtectedBranches": [],
+  "ciProvider": "none",
+  "gitCommitSha": "8ba464f93139e26e52dba46258e0451816078af2",
+  "gitCommitShaShort": "8ba464f",
+  "gitBranchName": "main",
+  "gitOriginUrl": "https://github.com/vaneli-van/wekbench.git",
+  "gitCommitTimestamp": "2026-06-17T15:03:47.000Z",
+  "gitCommitMessage": "Momentic: fix test format (UUID id + version) and root glob",
+  "gitCommitAuthorName": "Van",
+  "githubRepository": "vaneli-van/wekbench",
+  "id": "b7275666-7eaf-41d6-a489-33f085f54213",
+  "trigger": "CLI",
+  "startedAt": "2026-06-17T17:19:47.547Z",
+  "status": "FAILED",
+  "cliVersion": "2.141.1",
+  "labels": [],
+  "ai": {},
+  "updatedAt": "2026-06-17T17:22:48.933Z",
+  "finishedAt": "2026-06-17T17:22:48.933Z"
+}
