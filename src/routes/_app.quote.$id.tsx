@@ -565,14 +565,14 @@ function QuoteDetailPage() {
               variant="outline"
               size="sm"
               onClick={() => {
-                const url = `${typeof window !== "undefined" ? window.location.origin : ""}/quote/${q.share_token}`;
+                const url = `${typeof window !== "undefined" ? window.location.origin : ""}/q/${q.share_token}`;
                 navigator.clipboard?.writeText(url);
                 toast.success("Buyer link copied");
               }}
             >
               <Copy className="size-3.5" /> Copy link
             </Button>
-            <a href={`/quote/${q.share_token}`} target="_blank" rel="noreferrer">
+            <a href={`/q/${q.share_token}`} target="_blank" rel="noreferrer">
               <Button size="sm" variant="ghost">Preview</Button>
             </a>
           </div>
