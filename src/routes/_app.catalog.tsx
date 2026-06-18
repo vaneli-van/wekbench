@@ -552,6 +552,8 @@ function NewItemDialog({ workspaceId }: { workspaceId: string }) {
         sku: "",
         brand: "",
         model: "",
+        category: "",
+        unit: "",
         description: "",
         unit_price: "",
         currency: "USD",
