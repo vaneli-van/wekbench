@@ -6,7 +6,7 @@ import { Package, ArrowUpRight, Truck, Search, X } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { RichEmptyState } from "@/components/rich-empty-state";
-import { Package } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/foundations/empty-state";
 import { listOrders } from "@/lib/api/orders.functions";

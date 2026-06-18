@@ -823,6 +823,7 @@ function QuoteDetailPage() {
 
       <QuoteAttachmentsCard quoteId={q.id} workspaceId={q.workspace_id} editable={editable} />
     </div>
+    </PageTransition>
   );
 }
 
@@ -856,7 +857,6 @@ function StockBadge({ li }: { li: LI }) {
         <span className="text-[10px] text-muted-foreground">Lead {c.lead_time_days}d</span>
       )}
     </div>
-    </PageTransition>
   );
 }
 

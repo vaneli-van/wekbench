@@ -1226,7 +1226,9 @@ export type Database = {
           external_part_id: string | null
           extracted_line_item_id: string | null
           fx_rate: number | null
+          height_cm: number | null
           id: string
+          length_cm: number | null
           line_no: number
           line_type: Database["public"]["Enums"]["quote_line_type"]
           manufacturer: string | null
@@ -1248,6 +1250,8 @@ export type Database = {
           unit_cost: number | null
           unit_price: number | null
           updated_at: string
+          weight_kg: number | null
+          width_cm: number | null
           workspace_id: string
         }
         Insert: {
@@ -1259,7 +1263,9 @@ export type Database = {
           external_part_id?: string | null
           extracted_line_item_id?: string | null
           fx_rate?: number | null
+          height_cm?: number | null
           id?: string
+          length_cm?: number | null
           line_no: number
           line_type?: Database["public"]["Enums"]["quote_line_type"]
           manufacturer?: string | null
@@ -1281,6 +1287,8 @@ export type Database = {
           unit_cost?: number | null
           unit_price?: number | null
           updated_at?: string
+          weight_kg?: number | null
+          width_cm?: number | null
           workspace_id: string
         }
         Update: {
@@ -1292,7 +1300,9 @@ export type Database = {
           external_part_id?: string | null
           extracted_line_item_id?: string | null
           fx_rate?: number | null
+          height_cm?: number | null
           id?: string
+          length_cm?: number | null
           line_no?: number
           line_type?: Database["public"]["Enums"]["quote_line_type"]
           manufacturer?: string | null
@@ -1314,6 +1324,8 @@ export type Database = {
           unit_cost?: number | null
           unit_price?: number | null
           updated_at?: string
+          weight_kg?: number | null
+          width_cm?: number | null
           workspace_id?: string
         }
         Relationships: [
@@ -1763,6 +1775,78 @@ export type Database = {
           },
         ]
       }
+      sitc_catalogue: {
+        Row: {
+          brand: string | null
+          category: string | null
+          cost: number | null
+          currency: string
+          distributors: Json
+          ean: string | null
+          height_cm: number | null
+          image_url: string | null
+          length_cm: number | null
+          name: string | null
+          price: number | null
+          short_description: string | null
+          sitc_id: string
+          sku: string | null
+          specs: string | null
+          stock: number | null
+          sub_category: string | null
+          unspsc: string | null
+          updated_at: string
+          weight_kg: number | null
+          width_cm: number | null
+        }
+        Insert: {
+          brand?: string | null
+          category?: string | null
+          cost?: number | null
+          currency?: string
+          distributors?: Json
+          ean?: string | null
+          height_cm?: number | null
+          image_url?: string | null
+          length_cm?: number | null
+          name?: string | null
+          price?: number | null
+          short_description?: string | null
+          sitc_id: string
+          sku?: string | null
+          specs?: string | null
+          stock?: number | null
+          sub_category?: string | null
+          unspsc?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          width_cm?: number | null
+        }
+        Update: {
+          brand?: string | null
+          category?: string | null
+          cost?: number | null
+          currency?: string
+          distributors?: Json
+          ean?: string | null
+          height_cm?: number | null
+          image_url?: string | null
+          length_cm?: number | null
+          name?: string | null
+          price?: number | null
+          short_description?: string | null
+          sitc_id?: string
+          sku?: string | null
+          specs?: string | null
+          stock?: number | null
+          sub_category?: string | null
+          unspsc?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+          width_cm?: number | null
+        }
+        Relationships: []
+      }
       sourcing_providers: {
         Row: {
           categories: string[]
@@ -2171,6 +2255,8 @@ export type Database = {
           user_id: string
         }[]
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       app_role: "owner" | "admin" | "member"
