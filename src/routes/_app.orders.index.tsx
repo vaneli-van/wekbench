@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Package, ArrowUpRight, Truck } from "lucide-react";
+import { Package, ArrowUpRight, Truck, Search, X } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -45,12 +46,22 @@ function groupByYear(orders: any[]) {
 }
 
 function OrdersPage() {
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const listFn = useServerFn(listOrders);
   const { data, isLoading } = useQuery({ queryKey: ["orders"], queryFn: () => listFn() });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orders = ((data as any)?.orders ?? []) as any[];
-  const groups = groupByYear(orders);
-  const grandTotal = orders.reduce((s, o) => s + Number(o.value ?? 0), 0);
+  const filteredOrders = orders.filter(order => {
+    const matchesStatus = !statusFilter || String(order.status).replace("_", " ") === statusFilter;
+    const matchesSearch = !searchTerm || 
+      String(order.order_number).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.buyer_company ?? order.buyer_name ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.buyer_po_ref ?? "").toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+  const groups = groupByYear(filteredOrders);
+  const grandTotal = filteredOrders.reduce((s, o) => s + Number(o.value ?? 0), 0);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
@@ -58,6 +69,38 @@ function OrdersPage() {
         title="Orders"
         description="Sales orders grouped by year. Track fulfillment end to end."
       />
+
+      {/* Filters and search */}
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search by order number, buyer, or PO…"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full rounded-lg border border-border bg-card px-3 py-2 pl-9 text-sm text-foreground placeholder-muted-foreground focus:border-primary/50 focus:outline-none"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+        </div>
+        <select
+          value={statusFilter ?? ""}
+          onChange={(e) => setStatusFilter(e.target.value || null)}
+          className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none"
+        >
+          <option value="">All statuses</option>
+          {["confirmed", "production", "shipping", "delivered", "cancelled"].map(status => (
+            <option key={status} value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</option>
+          ))}
+        </select>
+      </div>
 
       {isLoading ? (
         <p className="mt-6 text-sm text-muted-foreground">Loading orders…</p>

@@ -35,17 +35,17 @@ export function QuoteCard({
       onClick={onOpen}
       onDoubleClick={onOpenFull}
       className={cn(
-        "group cursor-pointer rounded-lg border border-border bg-card p-3 shadow-sm transition-all hover:border-foreground/20 hover:shadow-md",
-        dragging && "opacity-40",
+        "group rounded-lg border border-border bg-card p-3 shadow-sm transition-all hover:border-foreground/20 hover:shadow-md",
+        dragging ? "cursor-grabbing opacity-50" : "cursor-grab hover:cursor-grab",
       )}
     >
       {/* Header: buyer + menu */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground" title={quote.buyer}>
             {initials(quote.buyer)}
           </span>
-          <span className="truncate text-xs font-medium text-foreground">{quote.buyer}</span>
+          <span className="truncate text-xs font-medium text-foreground" title={quote.buyer}>{quote.buyer}</span>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

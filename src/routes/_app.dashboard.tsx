@@ -279,19 +279,29 @@ function DashboardPage() {
 
       {/* Row 2: KPI strip */}
       <section aria-label="Key metrics" className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {kpis.map((kpi) => {
+        {kpis.map((kpi, idx) => {
           const Icon = kpi.icon
+          const isPrimary = idx === 0
           return (
             <Link
               key={kpi.label}
               to={kpi.href}
-              className="group rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-secondary/40"
+              className={cn(
+                "group rounded-lg p-4 transition-all",
+                isPrimary
+                  ? "border border-primary/40 bg-primary/5 hover:border-primary/60 hover:bg-primary/10"
+                  : "border border-border bg-card hover:border-primary/30 hover:bg-secondary/40"
+              )}
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{kpi.label}</span>
-                <Icon className="size-4 text-muted-foreground" />
+                <span className={cn("text-xs font-medium uppercase tracking-wide", isPrimary ? "text-primary" : "text-muted-foreground")}>
+                  {kpi.label}
+                </span>
+                <Icon className={cn("size-4", isPrimary ? "text-primary" : "text-muted-foreground")} />
               </div>
-              <p className="mt-3 text-3xl font-semibold tabular-nums tracking-tight text-foreground">{kpi.value}</p>
+              <p className={cn("mt-3 text-3xl font-semibold tabular-nums tracking-tight", isPrimary ? "text-primary" : "text-foreground")}>
+                {kpi.value}
+              </p>
               <div className="mt-1.5 flex items-center gap-1 text-xs">
                 <DeltaIcon dir={kpi.delta.dir} />
                 <span className={cn("font-medium", "alert" in kpi.delta && kpi.delta.alert ? "text-destructive" : "text-muted-foreground")}>
@@ -369,12 +379,14 @@ function DashboardPage() {
             ) : (
               activity.map((e) => {
                 const Icon = activityIcon[e.type]
+                const href = e.type === "rfq" ? `/inbox` : e.type === "quote" ? `/quotes` : "#"
                 return (
                   <li key={e.id} className="relative flex gap-3 pb-3.5 last:pb-0">
-                    <span className={cn("z-10 flex size-7 shrink-0 items-center justify-center rounded-full ring-4 ring-card", activityTone[e.type])}>
+                    <Link to={href} className="absolute inset-0 z-0" aria-hidden />
+                    <span className={cn("relative z-10 flex size-7 shrink-0 items-center justify-center rounded-full ring-4 ring-card cursor-pointer hover:ring-primary/40", activityTone[e.type])}>
                       <Icon className="size-3.5" />
                     </span>
-                    <div className="min-w-0 flex-1 pt-0.5">
+                    <div className="relative z-10 min-w-0 flex-1 pt-0.5">
                       <p className="text-xs font-medium leading-snug text-foreground">{e.text}</p>
                       <p className="truncate text-xs text-muted-foreground">{e.meta}</p>
                     </div>
