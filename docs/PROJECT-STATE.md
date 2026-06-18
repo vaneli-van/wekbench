@@ -48,6 +48,13 @@ Wekbench is a B2B procurement web app (RFQ → quote → sourcing → order → 
   slice was hand-loaded to validate the adapter end to end.
 - **Shipping**: courier rate comparison in the quote builder (Terminal Africa
   adapter; freight/Freightos is phase 2). See `docs/shipping-rates-integration-plan.md`.
+  **Auto-weight (no double entry):** the SITC catalogue + `quote_line_items` now carry
+  `weight_kg` + `length/width/height_cm` (+ `specs`); `applyOfferToLine` copies them from
+  the catalogue by SKU; `getQuoteParcel` computes chargeable weight = max(actual,
+  volumetric@÷5000) per unit × qty; the shipping card auto-fills it (override-able) and
+  shows the source + missing-weight count. Weight is clean from the feed; **dimensions are
+  best-effort parsed from `specs`** (parser may need tuning after inspecting real specs).
+  Requires a **re-sync** to populate weight/dims for already-loaded products.
 - **Orders**: real orders + line items, status stepper, public tracking page
   (`/track/$token`), buyer **PO reference + acknowledgement** ("sign & revert"),
   grouped by year on the list.

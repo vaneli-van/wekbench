@@ -39,6 +39,11 @@ function cleanRow(r: any) {
     sub_category: r.sub_category ?? null,
     unspsc: r.unspsc ?? null,
     distributors: Array.isArray(r.distributors) ? r.distributors : [],
+    weight_kg: r.weight_kg ?? null,
+    length_cm: r.length_cm ?? null,
+    width_cm: r.width_cm ?? null,
+    height_cm: r.height_cm ?? null,
+    specs: r.specs ?? null,
     updated_at: new Date().toISOString(),
   };
 }

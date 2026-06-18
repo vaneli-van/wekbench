@@ -58,7 +58,26 @@ function distributors(rec) {
   }
   return out;
 }
+// Best-effort dimension parse from free-text specs: finds the first "L x W x H (unit)"
+// pattern and normalises to cm. Conservative — returns nulls when nothing clear is found.
+function parseDims(text) {
+  if (!text) return { length_cm: null, width_cm: null, height_cm: null };
+  const m = String(text).match(
+    /(\d+(?:\.\d+)?)\s*[x×*]\s*(\d+(?:\.\d+)?)\s*[x×*]\s*(\d+(?:\.\d+)?)\s*(mm|cm|m)?/i,
+  );
+  if (!m) return { length_cm: null, width_cm: null, height_cm: null };
+  const unit = (m[4] || "cm").toLowerCase();
+  const f = unit === "mm" ? 0.1 : unit === "m" ? 100 : 1; // → cm
+  const conv = (v) => {
+    const n = Number(v) * f;
+    return Number.isFinite(n) && n > 0 && n < 100000 ? Number(n.toFixed(2)) : null;
+  };
+  return { length_cm: conv(m[1]), width_cm: conv(m[2]), height_cm: conv(m[3]) };
+}
+
 function mapRow(rec) {
+  const specs = clean(rec.Specifications);
+  const dims = parseDims(specs);
   return {
     sitc_id: String(rec.ID),
     sku: clean(rec.SKU),
@@ -75,6 +94,11 @@ function mapRow(rec) {
     sub_category: clean(rec.SubCategoryName),
     unspsc: clean(rec.UNSPSC),
     distributors: distributors(rec),
+    weight_kg: num(rec.Weight),
+    specs: specs ? specs.slice(0, 2000) : null,
+    length_cm: dims.length_cm,
+    width_cm: dims.width_cm,
+    height_cm: dims.height_cm,
   };
 }
 

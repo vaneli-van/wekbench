@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Truck, Search, Check, Trash2, ShieldCheck } from "lucide-react";
+import { Truck, Search, Check, Trash2, ShieldCheck, Sparkles } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import {
   getShippingRates,
+  getQuoteParcel,
   applyShipmentToQuote,
   listQuoteShipments,
   deleteQuoteShipment,
@@ -53,6 +54,7 @@ export function QuoteShippingCard({
   const applyFn = useServerFn(applyShipmentToQuote);
   const listFn = useServerFn(listQuoteShipments);
   const delFn = useServerFn(deleteQuoteShipment);
+  const parcelFn = useServerFn(getQuoteParcel);
 
   const [originCountry, setOriginCountry] = useState("CN");
   const [originCity, setOriginCity] = useState("");
@@ -70,6 +72,21 @@ export function QuoteShippingCard({
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const current: any = (shipData as any)?.shipments?.[0] ?? null;
+
+  // Auto-derive the parcel weight from the quote's line items (catalogue weight +
+  // volumetric from dimensions) so it doesn't have to be re-keyed. The user can override.
+  const userEditedWeight = useRef(false);
+  const { data: parcelData } = useQuery({
+    queryKey: ["quote-parcel", quoteId],
+    queryFn: () => parcelFn({ data: { quoteId } }),
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const parcel: any = parcelData ?? null;
+  useEffect(() => {
+    if (parcel && parcel.chargeableKg > 0 && !userEditedWeight.current) {
+      setWeight(String(parcel.chargeableKg));
+    }
+  }, [parcel?.chargeableKg]);
 
   const ratesMut = useMutation({
     mutationFn: () =>
@@ -197,9 +214,29 @@ export function QuoteShippingCard({
               <Input value={destCity} onChange={(e) => setDestCity(e.target.value)} placeholder="Accra" className="h-9" />
             </LaneField>
             <LaneField label="Weight (kg)">
-              <Input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} className="h-9" />
+              <Input
+                type="number"
+                value={weight}
+                onChange={(e) => {
+                  userEditedWeight.current = true;
+                  setWeight(e.target.value);
+                }}
+                className="h-9"
+              />
             </LaneField>
           </div>
+
+          {parcel && parcel.chargeableKg > 0 && (
+            <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+              <Sparkles className="size-3.5 text-primary" />
+              Auto-filled from {parcel.lines} item{parcel.lines === 1 ? "" : "s"}:
+              <span className="font-medium text-foreground">{parcel.chargeableKg} kg chargeable</span>
+              {parcel.volumetricKg > parcel.actualKg
+                ? ` (volumetric ${parcel.volumetricKg} kg &gt; actual ${parcel.actualKg} kg)`
+                : ` (actual ${parcel.actualKg} kg)`}
+              {parcel.missing > 0 ? ` · ${parcel.missing} item${parcel.missing === 1 ? "" : "s"} missing weight` : ""}
+            </p>
+          )}
 
           <div className="mt-3">
             <Button size="sm" onClick={() => ratesMut.mutate()} disabled={ratesMut.isPending}>

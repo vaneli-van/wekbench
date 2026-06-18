@@ -29,6 +29,49 @@ const parcelSchema = z.object({
   valueCurrency: z.string().optional(),
 });
 
+const VOLUMETRIC_DIVISOR = 5000; // cm³ per kg — standard air-courier dimensional factor
+
+/**
+ * Derive a parcel's chargeable weight from a quote's line items so the shipping card can
+ * auto-fill it. Chargeable = max(actual, volumetric) per unit × qty, summed. Reports how
+ * many lines have no weight/dimensions so the UI can flag gaps.
+ */
+export const getQuoteParcel = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ quoteId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: lines } = await context.supabase
+      .from("quote_line_items")
+      .select("qty, weight_kg, length_cm, width_cm, height_cm")
+      .eq("quote_id", data.quoteId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rows = (lines ?? []) as any[];
+    let actualKg = 0;
+    let volumetricKg = 0;
+    let chargeableKg = 0;
+    let missing = 0;
+    for (const r of rows) {
+      const qty = Number(r.qty) || 1;
+      const w = Number(r.weight_kg) || 0;
+      const vol =
+        r.length_cm && r.width_cm && r.height_cm
+          ? (Number(r.length_cm) * Number(r.width_cm) * Number(r.height_cm)) / VOLUMETRIC_DIVISOR
+          : 0;
+      if (!w && !vol) missing += 1;
+      actualKg += w * qty;
+      volumetricKg += vol * qty;
+      chargeableKg += Math.max(w, vol) * qty;
+    }
+    const round = (n: number) => Number(n.toFixed(2));
+    return {
+      lines: rows.length,
+      missing,
+      actualKg: round(actualKg),
+      volumetricKg: round(volumetricKg),
+      chargeableKg: round(chargeableKg),
+    };
+  });
+
 /** Fan out to enabled courier providers and return merged, sorted rates. */
 export const getShippingRates = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

@@ -532,6 +532,19 @@ export const applyOfferToLine = createServerFn({ method: "POST" })
     const fxRate = conv?.rate ?? 1;
     const unitPrice = computeUnitPrice(unitCost, line.margin_pct ?? 0);
 
+    // Pull weight + dimensions from the catalogue by SKU so shipping can auto-calculate
+    // without re-keying. Best-effort: leaves nulls if the product isn't in the catalogue.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let cat: any = null;
+    if (offer.identifier) {
+      const { data: catRows } = await supabase
+        .from("sitc_catalogue")
+        .select("weight_kg, length_cm, width_cm, height_cm")
+        .ilike("sku", offer.identifier)
+        .limit(1);
+      cat = catRows?.[0] ?? null;
+    }
+
     const { error } = await supabase
       .from("quote_line_items")
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -545,6 +558,10 @@ export const applyOfferToLine = createServerFn({ method: "POST" })
         source_distributor: offer.distributor_name,
         mpn: offer.identifier,
         external_part_id: offer.external_part_id,
+        weight_kg: cat?.weight_kg ?? null,
+        length_cm: cat?.length_cm ?? null,
+        width_cm: cat?.width_cm ?? null,
+        height_cm: cat?.height_cm ?? null,
         price_fetched_at: new Date().toISOString(),
       } as any)
       .eq("id", data.lineItemId);
