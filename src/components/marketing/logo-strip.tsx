@@ -9,7 +9,7 @@ const companies = [
 export function LogoStrip() {
   return (
     <section className="border-y border-border bg-secondary/30">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
         <p className="text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
           Trusted by vendors quoting the world&apos;s largest buyers
         </p>
