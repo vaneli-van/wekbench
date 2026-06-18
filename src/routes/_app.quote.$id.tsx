@@ -823,6 +823,7 @@ function QuoteDetailPage() {
 
       <QuoteAttachmentsCard quoteId={q.id} workspaceId={q.workspace_id} editable={editable} />
     </div>
+    </PageTransition>
   );
 }
 
