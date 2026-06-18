@@ -1,36 +1,46 @@
-// Stream-parse SITC's Products.csv and upsert it into the `sitc_catalogue` table.
+// Stream-parse SITC's Products.csv and load it into the sitc_catalogue table.
 // Run by .github/workflows/sitc-sync.yml after the workflow downloads the file over FTP.
 //
-// Env:
-//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  (required — service role bypasses RLS)
-//   SITC_FILE      (default "Products.csv")
-//   SITC_MAX_ROWS  (optional cap, for a test run; blank = full catalogue)
+// TWO MODES (auto-selected from env):
+//   • Endpoint mode (recommended): set WEKBENCH_SYNC_URL (+ SITC_SYNC_SECRET). POSTs
+//     batches to the app's /api/sync/sitc, which writes them with the app's own DB key —
+//     so no Supabase service key is needed in GitHub.
+//   • Direct mode: set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to upsert straight to the DB.
 //
-// Memory-safe: streams the file and upserts in batches, so the 100MB+ feed never sits
-// in memory at once.
+// Other env:
+//   SITC_FILE      (default "Products.csv")
+//   SITC_MAX_ROWS  (optional cap for a test run; blank = full catalogue)
+//
+// The feed lists each product on multiple rows, so we de-dupe by sitc_id within each
+// batch (the same id twice in one upsert is a hard error). Memory-safe streaming.
 import { createReadStream } from "node:fs";
 import process from "node:process";
 import { parse } from "csv-parse";
-import { createClient } from "@supabase/supabase-js";
 
 const FILE = process.env.SITC_FILE || "Products.csv";
 const MAX_ROWS = process.env.SITC_MAX_ROWS ? parseInt(process.env.SITC_MAX_ROWS, 10) : Infinity;
 const BATCH = 500;
 
-const url = process.env.SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!url || !serviceKey) {
-  console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+const SYNC_URL = process.env.WEKBENCH_SYNC_URL;
+const SYNC_SECRET = process.env.SITC_SYNC_SECRET || process.env.CRON_SECRET;
+const SB_URL = process.env.SUPABASE_URL;
+const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const mode = SYNC_URL ? "endpoint" : SB_URL && SB_KEY ? "direct" : null;
+if (!mode) {
+  console.error("Configure either WEKBENCH_SYNC_URL (+SITC_SYNC_SECRET) or SUPABASE_URL+SUPABASE_SERVICE_ROLE_KEY");
   process.exit(1);
 }
-const sb = createClient(url, serviceKey, { auth: { persistSession: false } });
+console.log("sync mode:", mode);
 
 function num(v) {
   if (v == null || v === "") return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
-
+function clean(v) {
+  return v == null ? null : String(v).replace(/\r|\n/g, " ").trim() || null;
+}
 function distributors(rec) {
   const out = [];
   for (const i of ["1st", "2nd", "3rd", "4th", "5th"]) {
@@ -39,7 +49,7 @@ function distributors(rec) {
     if (!name && price == null) continue;
     out.push({
       id: rec[`${i}CheapestDistributorID`] || null,
-      name: name || null,
+      name: clean(name),
       price,
       stock: num(rec[`${i}CheapestDistributorStock`]),
       deliveryCost: num(rec[`${i}CheapestDistributorDeliveryCost`]),
@@ -48,37 +58,56 @@ function distributors(rec) {
   }
   return out;
 }
-
 function mapRow(rec) {
   return {
     sitc_id: String(rec.ID),
-    sku: rec.SKU || null,
-    brand: rec.BrandName || null,
-    name: rec.Name || null,
-    short_description: rec.ShortDescription || null,
+    sku: clean(rec.SKU),
+    brand: clean(rec.BrandName),
+    name: clean(rec.Name),
+    short_description: clean(rec.ShortDescription),
     stock: num(rec.Stock),
     price: num(rec.Price),
     cost: num(rec.Cost),
     currency: "GBP",
-    ean: rec.EANCodes || null,
-    image_url: rec.MainImageURL || null,
-    category: rec.CategoryName || null,
-    sub_category: rec.SubCategoryName || null,
-    unspsc: rec.UNSPSC || null,
+    ean: clean(rec.EANCodes),
+    image_url: clean(rec.MainImageURL),
+    category: clean(rec.CategoryName),
+    sub_category: clean(rec.SubCategoryName),
+    unspsc: clean(rec.UNSPSC),
     distributors: distributors(rec),
-    updated_at: new Date().toISOString(),
   };
 }
 
-let batch = [];
-let total = 0;
-
-async function flush() {
-  if (!batch.length) return;
-  const rows = batch;
-  batch = [];
+// Lazily create the direct-mode client only when needed.
+let sb = null;
+async function directUpsert(rows) {
+  if (!sb) {
+    const { createClient } = await import("@supabase/supabase-js");
+    sb = createClient(SB_URL, SB_KEY, { auth: { persistSession: false } });
+  }
   const { error } = await sb.from("sitc_catalogue").upsert(rows, { onConflict: "sitc_id" });
-  if (error) throw new Error(`upsert failed at ${total}: ${error.message}`);
+  if (error) throw new Error("upsert failed: " + error.message);
+}
+async function endpointUpsert(rows) {
+  const res = await fetch(`${SYNC_URL.replace(/\/$/, "")}/api/sync/sitc?key=${encodeURIComponent(SYNC_SECRET || "")}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rows }),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`endpoint ${res.status}: ${t.slice(0, 200)}`);
+  }
+}
+
+let pending = new Map(); // sitc_id -> row (de-dupes within a batch)
+let total = 0;
+async function flush() {
+  if (pending.size === 0) return;
+  const rows = Array.from(pending.values());
+  pending = new Map();
+  if (mode === "endpoint") await endpointUpsert(rows);
+  else await directUpsert(rows);
   total += rows.length;
   if (total % 5000 < BATCH) console.log("upserted", total);
 }
@@ -86,12 +115,13 @@ async function flush() {
 const parser = createReadStream(FILE).pipe(
   parse({ columns: true, relax_quotes: true, relax_column_count: true, skip_records_with_error: true }),
 );
-
+let scanned = 0;
 for await (const rec of parser) {
-  if (total + batch.length >= MAX_ROWS) break;
+  if (scanned >= MAX_ROWS) break;
+  scanned += 1;
   if (!rec.ID) continue;
-  batch.push(mapRow(rec));
-  if (batch.length >= BATCH) await flush();
+  pending.set(String(rec.ID), mapRow(rec));
+  if (pending.size >= BATCH) await flush();
 }
 await flush();
-console.log("DONE — total upserted:", total);
+console.log("DONE — rows upserted:", total);

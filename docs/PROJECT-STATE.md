@@ -34,10 +34,18 @@ Wekbench is a B2B procurement web app (RFQ → quote → sourcing → order → 
   `sitc_catalogue` (global **shared reference data** — authenticated-read RLS, service
   role writes; NOT workspace-scoped by design). A scheduled GitHub Action
   (`.github/workflows/sitc-sync.yml`) pulls `Products.csv` (~117MB) over FTP and
-  `scripts/sync-sitc.mjs` stream-parses + batch-upserts it. The `stockinthechannel`
-  adapter now **queries this table** (sku/name search; 1st–5th distributor columns →
-  offers) and plugs into the sourcing router like any provider. Migration
-  `20260618160000_sitc_catalogue.sql`.
+  `scripts/sync-sitc.mjs` stream-parses + batch-upserts it (de-dupes by sitc_id within
+  each batch — the feed repeats products). The `stockinthechannel` adapter now **queries
+  this table** (sku/name search; 1st–5th distributor columns → offers) and plugs into the
+  sourcing router like any provider. Migration `20260618160000_sitc_catalogue.sql`.
+  **Two sync modes** (the script auto-selects): *direct* (needs Supabase service key) or
+  *endpoint* (recommended) — the workflow POSTs batches to **`/api/sync/sitc`**
+  (`src/routes/api/sync.sitc.ts`, secured by `SITC_SYNC_SECRET`/`CRON_SECRET`), which
+  writes with the app's own service key so the DB key never has to be put in GitHub.
+  Endpoint-mode GitHub secrets: `WEKBENCH_SYNC_URL` (app base URL) + `SITC_SYNC_SECRET`
+  (plus the existing `SITC_FTP_*`). App env needs `SUPABASE_URL`,
+  `SUPABASE_SERVICE_ROLE_KEY`, `SITC_SYNC_SECRET` (or `CRON_SECRET`). A 30-product HP
+  slice was hand-loaded to validate the adapter end to end.
 - **Shipping**: courier rate comparison in the quote builder (Terminal Africa
   adapter; freight/Freightos is phase 2). See `docs/shipping-rates-integration-plan.md`.
 - **Orders**: real orders + line items, status stepper, public tracking page

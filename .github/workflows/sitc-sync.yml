@@ -33,11 +33,14 @@ jobs:
           SITC_FTP_PASS: ${{ secrets.SITC_FTP_PASS }}
 
       - name: Install deps
-        run: npm i --no-save csv-parse @supabase/supabase-js
+        run: npm i --no-save csv-parse
 
-      - name: Sync to Supabase
+      # Endpoint mode: pushes batches through the app's /api/sync/sitc, which writes them
+      # with the app's own DB key — so no Supabase service key is needed here. The app env
+      # (Lovable Cloud) holds SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and SITC_SYNC_SECRET.
+      - name: Sync via app endpoint
         run: node scripts/sync-sitc.mjs
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          WEKBENCH_SYNC_URL: ${{ secrets.WEKBENCH_SYNC_URL }}
+          SITC_SYNC_SECRET: ${{ secrets.SITC_SYNC_SECRET }}
           SITC_MAX_ROWS: ${{ github.event.inputs.max_rows }}
