@@ -38,6 +38,7 @@ import { Route as AppOrdersIndexRouteImport } from './routes/_app.orders.index'
 import { Route as AppInvoicesIndexRouteImport } from './routes/_app.invoices.index'
 import { Route as ApiPublicInboundEmailRouteImport } from './routes/api/public/inbound-email'
 import { Route as ApiCronArRouteImport } from './routes/api/cron.ar'
+import { Route as ApiSyncSitcRouteImport } from './routes/api/sync.sitc'
 import { Route as AppRfqIdRouteImport } from './routes/_app.rfq.$id'
 import { Route as AppQuoteIdRouteImport } from './routes/_app.quote.$id'
 import { Route as AppOrdersIdRouteImport } from './routes/_app.orders.$id'
@@ -185,6 +186,11 @@ const ApiPublicInboundEmailRoute = ApiPublicInboundEmailRouteImport.update({
 const ApiCronArRoute = ApiCronArRouteImport.update({
   id: '/api/cron/ar',
   path: '/api/cron/ar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSyncSitcRoute = ApiSyncSitcRouteImport.update({
+  id: '/api/sync/sitc',
+  path: '/api/sync/sitc',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRfqIdRoute = AppRfqIdRouteImport.update({
@@ -429,6 +435,7 @@ export interface RootRouteChildren {
   QuoteTokenRoute: typeof QuoteTokenRoute
   TrackTokenRoute: typeof TrackTokenRoute
   ApiCronArRoute: typeof ApiCronArRoute
+  ApiSyncSitcRoute: typeof ApiSyncSitcRoute
   ApiPublicInboundEmailRoute: typeof ApiPublicInboundEmailRoute
 }
 
@@ -637,6 +644,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronArRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/sync/sitc': {
+      id: '/api/sync/sitc'
+      path: '/api/sync/sitc'
+      fullPath: '/api/sync/sitc'
+      preLoaderRoute: typeof ApiSyncSitcRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/rfq/$id': {
       id: '/_app/rfq/$id'
       path: '/rfq/$id'
@@ -731,6 +745,7 @@ const rootRouteChildren: RootRouteChildren = {
   QuoteTokenRoute: QuoteTokenRoute,
   TrackTokenRoute: TrackTokenRoute,
   ApiCronArRoute: ApiCronArRoute,
+  ApiSyncSitcRoute: ApiSyncSitcRoute,
   ApiPublicInboundEmailRoute: ApiPublicInboundEmailRoute,
 }
 export const routeTree = rootRouteImport
