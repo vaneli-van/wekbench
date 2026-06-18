@@ -16,6 +16,8 @@ import {
 import {
   listTeam, inviteMember, revokeInvite, removeMember,
 } from "@/lib/api/workspace.functions";
+import { parseUpgrade, type UpgradeFeature } from "@/lib/plans";
+import { UpgradeDialog } from "@/components/upgrade-dialog";
 
 function TeamPage() {
   const qc = useQueryClient();
@@ -35,11 +37,16 @@ function TeamPage() {
 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"member" | "admin">("member");
+  const [upgradeFeature, setUpgradeFeature] = useState<UpgradeFeature | null>(null);
 
   const inviteMut = useMutation({
     mutationFn: () => inviteFn({ data: { email: email.trim(), role } }),
     onSuccess: () => { toast.success("Invite sent"); setEmail(""); invalidate(); },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not invite"),
+    onError: (e) => {
+      const feat = parseUpgrade(e);
+      if (feat) { setUpgradeFeature(feat); return; }
+      toast.error(e instanceof Error ? e.message : "Could not invite");
+    },
   });
   const revokeMut = useMutation({
     mutationFn: (id: string) => revokeFn({ data: { inviteId: id } }),
@@ -138,6 +145,13 @@ function TeamPage() {
           </ul>
         </Card>
       )}
+
+      <UpgradeDialog
+        feature={upgradeFeature}
+        onOpenChange={(o) => {
+          if (!o) setUpgradeFeature(null);
+        }}
+      />
     </div>
   );
 }

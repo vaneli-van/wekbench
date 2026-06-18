@@ -9,6 +9,7 @@
 import { classifyItem, type ClassifyInput } from "./classify";
 import { getAdapter } from "./registry.server";
 import type { NormalizedOffer, NormalizedPart } from "./types";
+import { getEntitlement } from "@/lib/api/workspace.functions";
 
 const DEFAULT_FRESHNESS_HOURS = 6;
 
@@ -220,11 +221,20 @@ export async function routeItems(
   ctx: RouteCtx,
 ): Promise<{ items: ItemRouting[] }> {
   const providers = await loadEnabledProviders(ctx);
+  // Freemium gate: Starter sources from a single basic provider; Pro (or in-trial)
+  // gets the full multi-provider fan-out.
+  const ent = await getEntitlement(ctx.supabase, ctx.workspaceId);
 
   const results = await Promise.all(
     items.map(async (item) => {
       const classified = classifyItem(item);
-      const forCategory = providers.filter((p) => p.categories.includes(classified.category));
+      let forCategory = providers.filter((p) => p.categories.includes(classified.category));
+      if (!ent.isPro && forCategory.length > 1) {
+        // Keep one provider — the workspace's preferred one if set, else highest priority.
+        forCategory = [...forCategory]
+          .sort((a, b) => Number(b.preferred) - Number(a.preferred))
+          .slice(0, 1);
+      }
       // Fan out to this category's providers in parallel.
       const outcomes = await Promise.all(
         forCategory.map((p) => runProvider(ctx, p, classified, item)),

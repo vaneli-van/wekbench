@@ -4,7 +4,7 @@ import process from "node:process";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { sendEmail, escapeHtml } from "@/lib/email.server";
-import { STARTER_QUOTE_CAP } from "@/lib/plans";
+import { STARTER_QUOTE_CAP, STARTER_SEAT_CAP, upgradeError } from "@/lib/plans";
 
 export type Entitlement = {
   plan: "starter" | "pro";
@@ -120,6 +120,22 @@ export const inviteMember = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const wsId = await resolveWorkspaceId(context.supabase, context.userId);
     if (!wsId) throw new Error("No workspace found");
+
+    // Freemium gate: Starter is capped at STARTER_SEAT_CAP user(s). Count current
+    // members + pending invites; Pro (or in-trial) is unlimited.
+    const ent = await getEntitlement(context.supabase, wsId);
+    if (!ent.isPro) {
+      const [{ count: members }, { count: pending }] = await Promise.all([
+        context.supabase.from("user_roles").select("id", { count: "exact", head: true }).eq("workspace_id", wsId),
+        context.supabase
+          .from("workspace_invites")
+          .select("id", { count: "exact", head: true })
+          .eq("workspace_id", wsId)
+          .eq("status", "pending"),
+      ]);
+      if ((members ?? 0) + (pending ?? 0) >= STARTER_SEAT_CAP) throw upgradeError("seats");
+    }
+
     const email = data.email.trim().toLowerCase();
     const { error } = await context.supabase
       .from("workspace_invites")

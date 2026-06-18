@@ -58,12 +58,15 @@ Wekbench is a B2B procurement web app (RFQ → quote → sourcing → order → 
   `getEntitlement()` + `getMyEntitlement` fn drive every gate. New workspaces get a
   14-day Pro trial (column DEFAULT, no trigger change); existing workspaces grandfathered
   to pro. Boundary: Starter = 10 active quotes/mo, 1 seat, 1 basic source, no AR; Pro =
-  unlimited + seats + deep sourcing + AR. **Live gate so far: the quote cap** in
-  `createQuote` (throws `UPGRADE_REQUIRED:quotes`). Shared protocol in `src/lib/plans.ts`
-  (`upgradeError`/`parseUpgrade`/`FEATURE_COPY`); reusable `<UpgradeDialog>`; topbar
-  `PlanBadge` (trial countdown / Starter usage). `requestUpgrade` fn emails the team
-  (best-effort) — **no in-app payment** (founder-led; Phase 5). Seats/sourcing/AR gates =
-  Phases 2–4. See `docs/wekbench-packaging.md`.
+  unlimited + seats + deep sourcing + AR. **Live gates: quote cap** (`createQuote` →
+  `UPGRADE_REQUIRED:quotes`), **seats** (`inviteMember` → `:seats`, Starter = 1 user),
+  and **sourcing depth** (the sourcing `router` caps Starter to one provider — preferred,
+  else highest-priority). Shared protocol in `src/lib/plans.ts`
+  (`upgradeError`/`parseUpgrade`/`FEATURE_COPY`); reusable `<UpgradeDialog>` wired into the
+  New Quote dialog + Team page; topbar `PlanBadge` (trial countdown / Starter usage).
+  `requestUpgrade` fn emails the team (best-effort) — **no in-app payment** (founder-led;
+  Phase 5). **Remaining: Phase 4 = AR gating** (reminders/statements/cron skip Starter —
+  money-path, do with QA). See `docs/wekbench-packaging.md`.
 - **Data**: 103 real Western Premium sales orders (2024–2026, GH₵9.33M) imported
   with line items + 14 buyers.
 - **Testing**: Momentic wired (`momentic.config.yaml`, `.github/workflows/momentic.yml`).
