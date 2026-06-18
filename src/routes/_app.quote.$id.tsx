@@ -419,9 +419,13 @@ function QuoteDetailPage() {
   const updateStatus = useServerFn(updateQuoteStatus);
   const updateHeader = useServerFn(updateQuoteHeader);
 
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["quote", id],
     queryFn: () => getQuoteFn({ data: { id } }),
+    enabled: isUuid,
+    retry: false,
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["quote", id] });
@@ -455,7 +459,7 @@ function QuoteDetailPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
-  if (isLoading) {
+  if (isUuid && isLoading) {
     return (
       <div className="mx-auto max-w-6xl space-y-4 px-4 py-8 md:px-8">
         <Skeleton className="h-8 w-64" />
@@ -464,13 +468,13 @@ function QuoteDetailPage() {
       </div>
     );
   }
-  if (error || !data?.quote) {
+  if (!isUuid || error || !data?.quote) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-12 md:px-8">
         <EmptyState
           icon={FileQuestion}
           title="Quote not found"
-          description={error instanceof Error ? error.message : `No quote with id "${id}".`}
+          description="We couldn't find that quote. It may have been deleted, or the link is invalid."
           action={{ label: "Back to quotes", href: "/quotes" }}
         />
       </div>
