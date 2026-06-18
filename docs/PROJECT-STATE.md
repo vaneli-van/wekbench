@@ -64,9 +64,13 @@ Wekbench is a B2B procurement web app (RFQ → quote → sourcing → order → 
   else highest-priority). Shared protocol in `src/lib/plans.ts`
   (`upgradeError`/`parseUpgrade`/`FEATURE_COPY`); reusable `<UpgradeDialog>` wired into the
   New Quote dialog + Team page; topbar `PlanBadge` (trial countdown / Starter usage).
-  `requestUpgrade` fn emails the team (best-effort) — **no in-app payment** (founder-led;
-  Phase 5). **Remaining: Phase 4 = AR gating** (reminders/statements/cron skip Starter —
-  money-path, do with QA). See `docs/wekbench-packaging.md`.
+  and **AR collections** (`sendInvoiceReminder` + `sendBuyerStatement` throw `:ar` on
+  Starter via `requireProAr`; the AR cron skips Starter workspaces for reminder emails but
+  still auto-overdues for everyone so aging/viewing stays correct and free). Paywall wired
+  into New Quote, Team, invoice reminder, and buyer-statement dialogs. `requestUpgrade` fn
+  emails the team (best-effort) — **no in-app payment** (founder-led; **Phase 5 =
+  billing**, the only remaining piece). All four gates verified zero-impact on current
+  workspaces (all grandfathered to pro). See `docs/wekbench-packaging.md`.
 - **Data**: 103 real Western Premium sales orders (2024–2026, GH₵9.33M) imported
   with line items + 14 buyers.
 - **Testing**: Momentic wired (`momentic.config.yaml`, `.github/workflows/momentic.yml`).

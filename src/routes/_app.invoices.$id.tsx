@@ -18,6 +18,8 @@ import {
   getInvoice, updateInvoiceStatus, recordPayment, deletePayment, updateInvoice,
   sendInvoiceReminder, INVOICE_STATUSES, PAYMENT_TERMS, computeDueDate,
 } from "@/lib/api/invoices.functions";
+import { parseUpgrade, type UpgradeFeature } from "@/lib/plans";
+import { UpgradeDialog } from "@/components/upgrade-dialog";
 
 function money(v: number | null | undefined, c: string | null | undefined) {
   return `${c ?? ""} ${Number(v ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`.trim();
@@ -155,6 +157,7 @@ function InvoiceDetailPage() {
     onSuccess: () => { toast.success("Billing email saved"); refresh(); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
+  const [upgradeFeature, setUpgradeFeature] = useState<UpgradeFeature | null>(null);
   const reminderFn = useServerFn(sendInvoiceReminder);
   const reminderMut = useMutation({
     mutationFn: () => reminderFn({ data: { invoiceId: id } }),
@@ -165,7 +168,11 @@ function InvoiceDetailPage() {
       else toast.error(r?.error ?? "Could not send reminder");
       refresh();
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+    onError: (e) => {
+      const f = parseUpgrade(e);
+      if (f) { setUpgradeFeature(f); return; }
+      toast.error(e instanceof Error ? e.message : "Failed");
+    },
   });
 
   if (isLoading) {
@@ -364,6 +371,13 @@ function InvoiceDetailPage() {
           )}
         </Card>
       )}
+
+      <UpgradeDialog
+        feature={upgradeFeature}
+        onOpenChange={(o) => {
+          if (!o) setUpgradeFeature(null);
+        }}
+      />
     </div>
   );
 }

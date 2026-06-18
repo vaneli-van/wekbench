@@ -87,7 +87,7 @@ async function runArJobs(): Promise<Response> {
   const { data: candidates } = await (supabase as any)
     .from("invoices")
     .select(
-      "id, invoice_number, buyer_name, buyer_company, buyer_email, billing_email, currency, total, amount_paid, due_date, reminder_sent_at, reminder_count, orders(buyer_id, buyers(billing_email, email)), workspaces(name)",
+      "id, invoice_number, buyer_name, buyer_company, buyer_email, billing_email, currency, total, amount_paid, due_date, reminder_sent_at, reminder_count, orders(buyer_id, buyers(billing_email, email)), workspaces(name, plan, plan_trial_ends_at)",
     )
     .in("status", ["sent", "partial", "overdue"])
     .not("due_date", "is", null);
@@ -98,6 +98,14 @@ async function runArJobs(): Promise<Response> {
     if (sent >= MAX_PER_RUN) break;
     const outstanding = Number(inv.total ?? 0) - Number(inv.amount_paid ?? 0);
     if (outstanding <= 0) continue;
+    // AR collections (automated reminders) are a Pro feature — skip Starter workspaces.
+    const ws = inv.workspaces;
+    const wsInTrial = ws?.plan_trial_ends_at && new Date(ws.plan_trial_ends_at).getTime() > Date.now();
+    const wsIsPro = ws?.plan === "pro" || !!wsInTrial;
+    if (!wsIsPro) {
+      skipped.push({ invoice: inv.invoice_number, reason: "starter plan" });
+      continue;
+    }
     const due = new Date(`${inv.due_date}T00:00:00Z`);
     const daysOverdue = daysBetween(today, due);
     if (!REMINDER_DAYS.has(daysOverdue)) continue;

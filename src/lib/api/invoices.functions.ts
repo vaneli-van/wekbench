@@ -2,8 +2,18 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { resolveWorkspaceId } from "./workspace.functions";
+import { resolveWorkspaceId, getEntitlement } from "./workspace.functions";
 import { sendEmail, escapeHtml } from "@/lib/email.server";
+import { upgradeError } from "@/lib/plans";
+
+/** AR (reminders + statements) is a Pro feature. Throws UPGRADE_REQUIRED:ar on Starter. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function requireProAr(supabase: any, userId: string): Promise<void> {
+  const wsId = await resolveWorkspaceId(supabase, userId);
+  if (!wsId) return;
+  const ent = await getEntitlement(supabase, wsId);
+  if (!ent.isPro) throw upgradeError("ar");
+}
 
 export const INVOICE_STATUSES = ["draft", "sent", "partial", "paid", "overdue", "disputed", "void"] as const;
 
@@ -372,6 +382,7 @@ export const sendInvoiceReminder = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ invoiceId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const supabase = context.supabase;
+    await requireProAr(supabase, context.userId);
     const { data: inv } = await supabase
       .from("invoices")
       .select("id, order_id, invoice_number, buyer_name, buyer_company, buyer_email, billing_email, currency, total, amount_paid, due_date, workspaces(name)")
@@ -489,6 +500,7 @@ export const sendBuyerStatement = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ buyerId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const supabase = context.supabase;
+    await requireProAr(supabase, context.userId);
     const { data: buyer } = await supabase
       .from("buyers")
       .select("id, name, email, billing_email, workspace_id")

@@ -9,9 +9,12 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
 import { getBuyerStatement, sendBuyerStatement } from "@/lib/api/invoices.functions";
+import { parseUpgrade, type UpgradeFeature } from "@/lib/plans";
+import { UpgradeDialog } from "@/components/upgrade-dialog";
 
 export function BuyerStatementDialog({ buyerId, buyerName }: { buyerId: string; buyerName: string }) {
   const [open, setOpen] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState<UpgradeFeature | null>(null);
   const getFn = useServerFn(getBuyerStatement);
   const sendFn = useServerFn(sendBuyerStatement);
 
@@ -39,7 +42,11 @@ export function BuyerStatementDialog({ buyerId, buyerName }: { buyerId: string; 
       else if (r?.skipped) toast.message(`Email not configured (${r.skipped}). Recipient would be ${r.recipient}.`);
       else toast.error(r?.error ?? "Could not send statement");
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+    onError: (e) => {
+      const f = parseUpgrade(e);
+      if (f) { setOpen(false); setUpgradeFeature(f); return; }
+      toast.error(e instanceof Error ? e.message : "Failed");
+    },
   });
 
   function printStatement() {
@@ -71,6 +78,7 @@ export function BuyerStatementDialog({ buyerId, buyerName }: { buyerId: string; 
   ];
 
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
@@ -137,5 +145,12 @@ export function BuyerStatementDialog({ buyerId, buyerName }: { buyerId: string; 
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <UpgradeDialog
+      feature={upgradeFeature}
+      onOpenChange={(o) => {
+        if (!o) setUpgradeFeature(null);
+      }}
+    />
+    </>
   );
 }
