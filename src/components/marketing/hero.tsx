@@ -33,7 +33,7 @@ export function Hero() {
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link to="/dashboard">View live demo</Link>
+              <Link to="/demo">View live demo</Link>
             </Button>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
@@ -69,6 +69,8 @@ export function Hero() {
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                     {row.item}
                   </span>
+                  <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">USD</span>
+                  <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded whitespace-nowrap">USD</span>
                   <span className="shrink-0 text-xs tabular-nums text-muted-foreground">×{row.qty}</span>
                   <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-primary">
                     {row.match}%
@@ -76,17 +78,23 @@ export function Hero() {
                 </div>
               ))}
 
-              <div className="mt-3 flex items-center justify-between rounded-lg bg-secondary/60 px-3 py-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Clock className="size-4 text-primary" />
-                  <span className="font-medium text-foreground">Quote drafted</span>
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between rounded-lg bg-primary/5 px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">Supplier pricing (USD)</span>
+                  <span className="font-medium text-foreground">$12,450</span>
                 </div>
-                <span className="font-mono text-sm font-semibold tabular-nums text-foreground">8.2s</span>
+                <div className="flex items-center justify-between rounded-lg bg-secondary/60 px-3 py-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="size-4 text-primary" />
+                    <span className="font-medium text-foreground">Quote in GH₵ (8.2s)</span>
+                  </div>
+                  <span className="font-mono text-sm font-semibold tabular-nums text-foreground">₵198,320</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="absolute -bottom-7 -left-5 hidden rounded-lg border border-border bg-card px-4 py-3 shadow-md lg:block">
+          <div className="absolute -bottom-7 -left-5 hidden lg:block rounded-lg border border-border bg-card px-4 py-3 shadow-md lg:block">
             <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">14×</p>
             <p className="text-xs text-muted-foreground">faster turnaround</p>
           </div>

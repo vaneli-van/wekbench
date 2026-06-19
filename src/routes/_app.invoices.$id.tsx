@@ -6,6 +6,10 @@ import { toast } from "sonner";
 import { ArrowLeft, Download, FileQuestion, Package, Plus, Send, Trash2, Wallet } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
+import { BreadcrumbsDisplay } from "@/components/breadcrumbs-display";
+import { generateBreadcrumbs } from "@/lib/breadcrumbs";
+import { PageTransition } from "@/components/page-transition";
+import { CopyButton } from "@/components/copy-button";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -186,7 +190,9 @@ function InvoiceDetailPage() {
     );
   }
 
+  const breadcrumbs = generateBreadcrumbs("invoice", inv?.id?.slice(-6));
   return (
+    <PageTransition>
     <div className="mx-auto max-w-3xl px-4 py-6 md:px-8 md:py-8">
       <Link to="/invoices" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-3.5" /> Back to invoices
@@ -379,6 +385,7 @@ function InvoiceDetailPage() {
         }}
       />
     </div>
+    </PageTransition>
   );
 }
 

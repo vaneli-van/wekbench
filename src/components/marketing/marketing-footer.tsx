@@ -38,7 +38,7 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
 export function MarketingFooter() {
   return (
     <footer className="border-t border-border bg-secondary/30">
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr]">
           <div className="max-w-xs">
             <Link to="/" className="flex items-center gap-2.5">

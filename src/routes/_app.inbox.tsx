@@ -67,12 +67,12 @@ type InboxRow = {
   extracted_documents: ExtractedDoc[] | null
 }
 
-const typeMeta: Record<InboxType, { label: string; tone: string }> = {
-  rfq: { label: "RFQ Detected", tone: "info" },
-  amendment: { label: "Amendment Detected", tone: "warning" },
-  po: { label: "PO Detected", tone: "accent" },
-  general: { label: "No Action Detected", tone: "neutral" },
-  pending: { label: "Awaiting Extraction", tone: "neutral" },
+const typeMeta: Record<InboxType, { label: string; tone: string; priority: "high" | "medium" | "low" }> = {
+  rfq: { label: "RFQ Detected", tone: "info", priority: "high" },
+  amendment: { label: "Amendment Detected", tone: "warning", priority: "high" },
+  po: { label: "PO Detected", tone: "accent", priority: "high" },
+  general: { label: "No Action Detected", tone: "neutral", priority: "low" },
+  pending: { label: "Awaiting Extraction", tone: "neutral", priority: "medium" },
 }
 
 const typeToneClass: Record<string, string> = {
@@ -277,8 +277,8 @@ function InboxPage() {
                         <p className="mt-1 truncate text-sm text-foreground">{email.subject ?? "(no subject)"}</p>
                         <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{doc?.summary ?? previewFor(email)}</p>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <span className={cn("inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium", typeToneClass[meta.tone])}>
-                            <Sparkles className="size-3" />
+                          <span className={cn("inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold", typeToneClass[meta.tone], meta.priority === "high" && "ring-1 ring-offset-0")}>
+                            <Sparkles className="size-3.5" />
                             {meta.label}
                           </span>
                           {doc?.buyer_ref && <span className="font-mono text-[11px] text-muted-foreground">{doc.buyer_ref}</span>}

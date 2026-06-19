@@ -13,10 +13,11 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as DemoRouteImport } from './routes/demo'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TrackTokenRouteImport } from './routes/track.$token'
-import { Route as QuoteTokenRouteImport } from './routes/quote.$token'
+import { Route as QTokenRouteImport } from './routes/q.$token'
 import { Route as ApiFxRouteImport } from './routes/api/fx'
 import { Route as AppTeamRouteImport } from './routes/_app.team'
 import { Route as AppSuppliersRouteImport } from './routes/_app.suppliers'
@@ -36,9 +37,9 @@ import { Route as AppCatalogRouteImport } from './routes/_app.catalog'
 import { Route as AppBuyersRouteImport } from './routes/_app.buyers'
 import { Route as AppOrdersIndexRouteImport } from './routes/_app.orders.index'
 import { Route as AppInvoicesIndexRouteImport } from './routes/_app.invoices.index'
+import { Route as ApiSyncSitcRouteImport } from './routes/api/sync.sitc'
 import { Route as ApiPublicInboundEmailRouteImport } from './routes/api/public/inbound-email'
 import { Route as ApiCronArRouteImport } from './routes/api/cron.ar'
-import { Route as ApiSyncSitcRouteImport } from './routes/api/sync.sitc'
 import { Route as AppRfqIdRouteImport } from './routes/_app.rfq.$id'
 import { Route as AppQuoteIdRouteImport } from './routes/_app.quote.$id'
 import { Route as AppOrdersIdRouteImport } from './routes/_app.orders.$id'
@@ -64,6 +65,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
@@ -78,9 +84,9 @@ const TrackTokenRoute = TrackTokenRouteImport.update({
   path: '/track/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const QuoteTokenRoute = QuoteTokenRouteImport.update({
-  id: '/quote/$token',
-  path: '/quote/$token',
+const QTokenRoute = QTokenRouteImport.update({
+  id: '/q/$token',
+  path: '/q/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFxRoute = ApiFxRouteImport.update({
@@ -178,6 +184,11 @@ const AppInvoicesIndexRoute = AppInvoicesIndexRouteImport.update({
   path: '/invoices/',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiSyncSitcRoute = ApiSyncSitcRouteImport.update({
+  id: '/api/sync/sitc',
+  path: '/api/sync/sitc',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicInboundEmailRoute = ApiPublicInboundEmailRouteImport.update({
   id: '/api/public/inbound-email',
   path: '/api/public/inbound-email',
@@ -186,11 +197,6 @@ const ApiPublicInboundEmailRoute = ApiPublicInboundEmailRouteImport.update({
 const ApiCronArRoute = ApiCronArRouteImport.update({
   id: '/api/cron/ar',
   path: '/api/cron/ar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiSyncSitcRoute = ApiSyncSitcRouteImport.update({
-  id: '/api/sync/sitc',
-  path: '/api/sync/sitc',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRfqIdRoute = AppRfqIdRouteImport.update({
@@ -216,6 +222,7 @@ const AppInvoicesIdRoute = AppInvoicesIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/demo': typeof DemoRoute
   '/onboarding': typeof OnboardingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
@@ -237,7 +244,7 @@ export interface FileRoutesByFullPath {
   '/suppliers': typeof AppSuppliersRoute
   '/team': typeof AppTeamRoute
   '/api/fx': typeof ApiFxRoute
-  '/quote/$token': typeof QuoteTokenRoute
+  '/q/$token': typeof QTokenRoute
   '/track/$token': typeof TrackTokenRoute
   '/invoices/$id': typeof AppInvoicesIdRoute
   '/orders/$id': typeof AppOrdersIdRoute
@@ -245,11 +252,13 @@ export interface FileRoutesByFullPath {
   '/rfq/$id': typeof AppRfqIdRoute
   '/api/cron/ar': typeof ApiCronArRoute
   '/api/public/inbound-email': typeof ApiPublicInboundEmailRoute
+  '/api/sync/sitc': typeof ApiSyncSitcRoute
   '/invoices/': typeof AppInvoicesIndexRoute
   '/orders/': typeof AppOrdersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/demo': typeof DemoRoute
   '/onboarding': typeof OnboardingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
@@ -271,7 +280,7 @@ export interface FileRoutesByTo {
   '/suppliers': typeof AppSuppliersRoute
   '/team': typeof AppTeamRoute
   '/api/fx': typeof ApiFxRoute
-  '/quote/$token': typeof QuoteTokenRoute
+  '/q/$token': typeof QTokenRoute
   '/track/$token': typeof TrackTokenRoute
   '/invoices/$id': typeof AppInvoicesIdRoute
   '/orders/$id': typeof AppOrdersIdRoute
@@ -279,6 +288,7 @@ export interface FileRoutesByTo {
   '/rfq/$id': typeof AppRfqIdRoute
   '/api/cron/ar': typeof ApiCronArRoute
   '/api/public/inbound-email': typeof ApiPublicInboundEmailRoute
+  '/api/sync/sitc': typeof ApiSyncSitcRoute
   '/invoices': typeof AppInvoicesIndexRoute
   '/orders': typeof AppOrdersIndexRoute
 }
@@ -286,6 +296,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/demo': typeof DemoRoute
   '/onboarding': typeof OnboardingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
@@ -307,7 +318,7 @@ export interface FileRoutesById {
   '/_app/suppliers': typeof AppSuppliersRoute
   '/_app/team': typeof AppTeamRoute
   '/api/fx': typeof ApiFxRoute
-  '/quote/$token': typeof QuoteTokenRoute
+  '/q/$token': typeof QTokenRoute
   '/track/$token': typeof TrackTokenRoute
   '/_app/invoices/$id': typeof AppInvoicesIdRoute
   '/_app/orders/$id': typeof AppOrdersIdRoute
@@ -315,6 +326,7 @@ export interface FileRoutesById {
   '/_app/rfq/$id': typeof AppRfqIdRoute
   '/api/cron/ar': typeof ApiCronArRoute
   '/api/public/inbound-email': typeof ApiPublicInboundEmailRoute
+  '/api/sync/sitc': typeof ApiSyncSitcRoute
   '/_app/invoices/': typeof AppInvoicesIndexRoute
   '/_app/orders/': typeof AppOrdersIndexRoute
 }
@@ -322,6 +334,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/demo'
     | '/onboarding'
     | '/reset-password'
     | '/signin'
@@ -343,7 +356,7 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/team'
     | '/api/fx'
-    | '/quote/$token'
+    | '/q/$token'
     | '/track/$token'
     | '/invoices/$id'
     | '/orders/$id'
@@ -351,11 +364,13 @@ export interface FileRouteTypes {
     | '/rfq/$id'
     | '/api/cron/ar'
     | '/api/public/inbound-email'
+    | '/api/sync/sitc'
     | '/invoices/'
     | '/orders/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/demo'
     | '/onboarding'
     | '/reset-password'
     | '/signin'
@@ -377,7 +392,7 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/team'
     | '/api/fx'
-    | '/quote/$token'
+    | '/q/$token'
     | '/track/$token'
     | '/invoices/$id'
     | '/orders/$id'
@@ -385,12 +400,14 @@ export interface FileRouteTypes {
     | '/rfq/$id'
     | '/api/cron/ar'
     | '/api/public/inbound-email'
+    | '/api/sync/sitc'
     | '/invoices'
     | '/orders'
   id:
     | '__root__'
     | '/'
     | '/_app'
+    | '/demo'
     | '/onboarding'
     | '/reset-password'
     | '/signin'
@@ -412,7 +429,7 @@ export interface FileRouteTypes {
     | '/_app/suppliers'
     | '/_app/team'
     | '/api/fx'
-    | '/quote/$token'
+    | '/q/$token'
     | '/track/$token'
     | '/_app/invoices/$id'
     | '/_app/orders/$id'
@@ -420,6 +437,7 @@ export interface FileRouteTypes {
     | '/_app/rfq/$id'
     | '/api/cron/ar'
     | '/api/public/inbound-email'
+    | '/api/sync/sitc'
     | '/_app/invoices/'
     | '/_app/orders/'
   fileRoutesById: FileRoutesById
@@ -427,16 +445,17 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  DemoRoute: typeof DemoRoute
   OnboardingRoute: typeof OnboardingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
   ApiFxRoute: typeof ApiFxRoute
-  QuoteTokenRoute: typeof QuoteTokenRoute
+  QTokenRoute: typeof QTokenRoute
   TrackTokenRoute: typeof TrackTokenRoute
   ApiCronArRoute: typeof ApiCronArRoute
-  ApiSyncSitcRoute: typeof ApiSyncSitcRoute
   ApiPublicInboundEmailRoute: typeof ApiPublicInboundEmailRoute
+  ApiSyncSitcRoute: typeof ApiSyncSitcRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -469,6 +488,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app': {
       id: '/_app'
       path: ''
@@ -490,11 +516,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrackTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/quote/$token': {
-      id: '/quote/$token'
-      path: '/quote/$token'
-      fullPath: '/quote/$token'
-      preLoaderRoute: typeof QuoteTokenRouteImport
+    '/q/$token': {
+      id: '/q/$token'
+      path: '/q/$token'
+      fullPath: '/q/$token'
+      preLoaderRoute: typeof QTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/fx': {
@@ -630,6 +656,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInvoicesIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/sync/sitc': {
+      id: '/api/sync/sitc'
+      path: '/api/sync/sitc'
+      fullPath: '/api/sync/sitc'
+      preLoaderRoute: typeof ApiSyncSitcRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/inbound-email': {
       id: '/api/public/inbound-email'
       path: '/api/public/inbound-email'
@@ -642,13 +675,6 @@ declare module '@tanstack/react-router' {
       path: '/api/cron/ar'
       fullPath: '/api/cron/ar'
       preLoaderRoute: typeof ApiCronArRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/sync/sitc': {
-      id: '/api/sync/sitc'
-      path: '/api/sync/sitc'
-      fullPath: '/api/sync/sitc'
-      preLoaderRoute: typeof ApiSyncSitcRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/rfq/$id': {
@@ -737,16 +763,17 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  DemoRoute: DemoRoute,
   OnboardingRoute: OnboardingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
   ApiFxRoute: ApiFxRoute,
-  QuoteTokenRoute: QuoteTokenRoute,
+  QTokenRoute: QTokenRoute,
   TrackTokenRoute: TrackTokenRoute,
   ApiCronArRoute: ApiCronArRoute,
-  ApiSyncSitcRoute: ApiSyncSitcRoute,
   ApiPublicInboundEmailRoute: ApiPublicInboundEmailRoute,
+  ApiSyncSitcRoute: ApiSyncSitcRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

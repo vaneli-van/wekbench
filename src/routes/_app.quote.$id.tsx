@@ -31,6 +31,12 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/foundations/empty-state";
 import { PageHeader } from "@/components/page-header";
+import { BreadcrumbsDisplay } from "@/components/breadcrumbs-display";
+import { generateBreadcrumbs } from "@/lib/breadcrumbs";
+import { PageTransition } from "@/components/page-transition";
+import { CopyButton } from "@/components/copy-button";
+import { Tooltip } from "@/components/tooltip";
+import { FormSection } from "@/components/form-section";
 import { QuoteAttachmentsCard } from "@/components/quote-attachments-card";
 import { QuoteShippingCard } from "@/components/quote-shipping-card";
 import { CatalogPickerDialog } from "@/components/catalog-picker-dialog";
@@ -403,6 +409,7 @@ function TermsField({
 }
 
 function QuoteDetailPage() {
+  const [editMode, setEditMode] = useState(false);
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const getQuoteFn = useServerFn(getQuote);
@@ -412,9 +419,13 @@ function QuoteDetailPage() {
   const updateStatus = useServerFn(updateQuoteStatus);
   const updateHeader = useServerFn(updateQuoteHeader);
 
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["quote", id],
     queryFn: () => getQuoteFn({ data: { id } }),
+    enabled: isUuid,
+    retry: false,
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["quote", id] });
@@ -448,7 +459,7 @@ function QuoteDetailPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
-  if (isLoading) {
+  if (isUuid && isLoading) {
     return (
       <div className="mx-auto max-w-6xl space-y-4 px-4 py-8 md:px-8">
         <Skeleton className="h-8 w-64" />
@@ -457,13 +468,13 @@ function QuoteDetailPage() {
       </div>
     );
   }
-  if (error || !data?.quote) {
+  if (!isUuid || error || !data?.quote) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-12 md:px-8">
         <EmptyState
           icon={FileQuestion}
           title="Quote not found"
-          description={error instanceof Error ? error.message : `No quote with id "${id}".`}
+          description="We couldn't find that quote. It may have been deleted, or the link is invalid."
           action={{ label: "Back to quotes", href: "/quotes" }}
         />
       </div>
@@ -476,7 +487,9 @@ function QuoteDetailPage() {
   const rfq = q.rfqs;
   const editable = q.status === "draft";
 
+  const breadcrumbs = generateBreadcrumbs("quote", q?.id?.slice(-6));
   return (
+    <PageTransition>
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-8">
       <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
         {q.rfq_id && (
@@ -552,14 +565,14 @@ function QuoteDetailPage() {
               variant="outline"
               size="sm"
               onClick={() => {
-                const url = `${typeof window !== "undefined" ? window.location.origin : ""}/quote/${q.share_token}`;
+                const url = `${typeof window !== "undefined" ? window.location.origin : ""}/q/${q.share_token}`;
                 navigator.clipboard?.writeText(url);
                 toast.success("Buyer link copied");
               }}
             >
               <Copy className="size-3.5" /> Copy link
             </Button>
-            <a href={`/quote/${q.share_token}`} target="_blank" rel="noreferrer">
+            <a href={`/q/${q.share_token}`} target="_blank" rel="noreferrer">
               <Button size="sm" variant="ghost">Preview</Button>
             </a>
           </div>
@@ -814,6 +827,7 @@ function QuoteDetailPage() {
 
       <QuoteAttachmentsCard quoteId={q.id} workspaceId={q.workspace_id} editable={editable} />
     </div>
+    </PageTransition>
   );
 }
 

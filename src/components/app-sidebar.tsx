@@ -102,7 +102,7 @@ export function AppSidebar() {
                       className={cn(
                         "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors",
                         active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-3/4 before:w-0.5 before:bg-sidebar-primary before:rounded-full"
                           : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
                       )}
                     >
@@ -116,9 +116,9 @@ export function AppSidebar() {
                       {item.badgeKey && counts[item.badgeKey] > 0 ? (
                         <span
                           className={cn(
-                            "flex items-center justify-center min-w-5 h-5 px-1.5 rounded text-[10px] font-semibold tabular-nums",
+                            "flex items-center justify-center min-w-5 h-5 px-1.5 rounded text-[10px] font-semibold tabular-nums transition-all",
                             active
-                              ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                              ? "bg-sidebar-primary text-sidebar-primary-foreground ring-1 ring-sidebar-primary/30"
                               : "bg-sidebar-accent text-sidebar-foreground",
                           )}
                         >
