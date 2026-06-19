@@ -16,6 +16,11 @@ jobs:
     # GitHub repo → Settings → Secrets and variables → Actions.
     env:
       MOMENTIC_API_KEY: ${{ secrets.MOMENTIC_API_KEY }}
+      # Credentials for the signed-in E2E tests. Set these in repo Settings → Secrets →
+      # Actions to a REAL, email-confirmed, onboarding-complete account (e.g. the Western
+      # Premium owner). Without them the sign-in tests cannot authenticate.
+      WEKBENCH_EMAIL: ${{ secrets.WEKBENCH_EMAIL }}
+      WEKBENCH_PASSWORD: ${{ secrets.WEKBENCH_PASSWORD }}
 
     steps:
       - name: Check out code

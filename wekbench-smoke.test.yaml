@@ -1,7 +1,7 @@
 fileType: momentic/test/v2
 id: f68454e7-f092-468f-b926-ef98d9036f27
 version: 1.0.24
-url: https://wekbench.lovable.app
+url: https://wekbench.com
 description: Smoke test — the Wekbench app loads without error
 disabled: false
 retries: 1

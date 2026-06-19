@@ -1,7 +1,7 @@
 fileType: momentic/test/v2
 id: 7c3e1f08-9a2b-4d6e-b1c4-2f5a8e0d9b13
 version: 1.0.24
-url: https://wekbench.lovable.app/signin
+url: https://wekbench.com/signin
 description: Activation path — deep-link ?new=1 opens the New Quote dialog and a quote is created
 # Guards the self-serve activation slice: onboarding + the dashboard empty state both
 # route to /quotes?new=1, which must auto-open the New Quote dialog so a new company can
@@ -32,7 +32,7 @@ steps:
 
   # 3. Hit the deep link the onboarding + dashboard CTAs use. This is the behaviour
   #    we shipped: the New Quote dialog must auto-open from ?new=1.
-  - navigate: https://wekbench.lovable.app/quotes?new=1
+  - navigate: https://wekbench.com/quotes?new=1
   - wait: 2000
   - assert: >-
       The "New quote" dialog/modal is open — it shows a field for the quote title and
