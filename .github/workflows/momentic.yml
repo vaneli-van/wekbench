@@ -37,7 +37,9 @@ jobs:
         run: npx --yes momentic install-browsers --all
 
       - name: Run Momentic tests
-        run: npx --yes momentic run
+        # --env ci selects the inheritFromShell environment so the sign-in tests can read
+        # WEKBENCH_EMAIL / WEKBENCH_PASSWORD from the job env (set from repo secrets above).
+        run: npx --yes momentic run --env ci
 
       - name: Upload results
         if: always()

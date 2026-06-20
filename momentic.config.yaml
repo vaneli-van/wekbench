@@ -4,3 +4,11 @@ include:
   - "**/*.test.yaml"
   - "*.module.yaml"
   - "**/*.module.yaml"
+
+# CI environment: inheritFromShell pulls WEKBENCH_EMAIL / WEKBENCH_PASSWORD (set as
+# GitHub Actions secrets and exposed to the run step) into the tests' {{ env.* }}.
+# Momentic does NOT read shell env vars unless this is set. Select it with `--env ci`.
+environments:
+  - name: ci
+    baseUrl: https://wekbench.com
+    inheritFromShell: true
