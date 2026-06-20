@@ -33,7 +33,10 @@ steps:
   # 3. Hit the deep link the onboarding + dashboard CTAs use. This is the behaviour
   #    we shipped: the New Quote dialog must auto-open from ?new=1.
   - navigate: https://wekbench.com/quotes?new=1
-  - wait: 2000
+  # The Western Premium test account has a heavy quotes board (100+ rows) and the _app
+  # guard runs several auth/workspace round-trips before the page mounts, so give the
+  # deep-linked dialog ample time to open before asserting.
+  - wait: 8000
   - assert: >-
       The "New quote" dialog/modal is open — it shows a field for the quote title and
       a control for choosing or adding a buyer. (This confirms ?new=1 auto-opened it.)
