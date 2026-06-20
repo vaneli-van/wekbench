@@ -9,6 +9,6 @@ viewport: 1920, 1080
 browserType: Chromium
 steps:
   - assert: >-
-      The Wekbench web app loaded successfully — the page shows either the
-      sign-in screen or the dashboard, with no error page, blank screen, or
-      "something went wrong" message.
+      The Wekbench site loaded successfully — it shows real content (the marketing
+      landing page, the sign-in screen, or the dashboard), with no error page,
+      blank screen, or "something went wrong" message.
