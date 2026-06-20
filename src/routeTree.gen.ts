@@ -250,8 +250,8 @@ export interface FileRoutesByFullPath {
   '/suppliers': typeof AppSuppliersRoute
   '/team': typeof AppTeamRoute
   '/api/fx': typeof ApiFxRoute
-  '/q/$token': typeof QTokenRoute
   '/c/$token': typeof CTokenRoute
+  '/q/$token': typeof QTokenRoute
   '/track/$token': typeof TrackTokenRoute
   '/invoices/$id': typeof AppInvoicesIdRoute
   '/orders/$id': typeof AppOrdersIdRoute
@@ -287,8 +287,8 @@ export interface FileRoutesByTo {
   '/suppliers': typeof AppSuppliersRoute
   '/team': typeof AppTeamRoute
   '/api/fx': typeof ApiFxRoute
-  '/q/$token': typeof QTokenRoute
   '/c/$token': typeof CTokenRoute
+  '/q/$token': typeof QTokenRoute
   '/track/$token': typeof TrackTokenRoute
   '/invoices/$id': typeof AppInvoicesIdRoute
   '/orders/$id': typeof AppOrdersIdRoute
@@ -326,8 +326,8 @@ export interface FileRoutesById {
   '/_app/suppliers': typeof AppSuppliersRoute
   '/_app/team': typeof AppTeamRoute
   '/api/fx': typeof ApiFxRoute
-  '/q/$token': typeof QTokenRoute
   '/c/$token': typeof CTokenRoute
+  '/q/$token': typeof QTokenRoute
   '/track/$token': typeof TrackTokenRoute
   '/_app/invoices/$id': typeof AppInvoicesIdRoute
   '/_app/orders/$id': typeof AppOrdersIdRoute
@@ -365,8 +365,8 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/team'
     | '/api/fx'
-    | '/q/$token'
     | '/c/$token'
+    | '/q/$token'
     | '/track/$token'
     | '/invoices/$id'
     | '/orders/$id'
@@ -402,8 +402,8 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/team'
     | '/api/fx'
-    | '/q/$token'
     | '/c/$token'
+    | '/q/$token'
     | '/track/$token'
     | '/invoices/$id'
     | '/orders/$id'
@@ -440,8 +440,8 @@ export interface FileRouteTypes {
     | '/_app/suppliers'
     | '/_app/team'
     | '/api/fx'
-    | '/q/$token'
     | '/c/$token'
+    | '/q/$token'
     | '/track/$token'
     | '/_app/invoices/$id'
     | '/_app/orders/$id'
@@ -463,8 +463,8 @@ export interface RootRouteChildren {
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
   ApiFxRoute: typeof ApiFxRoute
-  QTokenRoute: typeof QTokenRoute
   CTokenRoute: typeof CTokenRoute
+  QTokenRoute: typeof QTokenRoute
   TrackTokenRoute: typeof TrackTokenRoute
   ApiCronArRoute: typeof ApiCronArRoute
   ApiPublicInboundEmailRoute: typeof ApiPublicInboundEmailRoute
@@ -789,8 +789,8 @@ const rootRouteChildren: RootRouteChildren = {
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
   ApiFxRoute: ApiFxRoute,
-  QTokenRoute: QTokenRoute,
   CTokenRoute: CTokenRoute,
+  QTokenRoute: QTokenRoute,
   TrackTokenRoute: TrackTokenRoute,
   ApiCronArRoute: ApiCronArRoute,
   ApiPublicInboundEmailRoute: ApiPublicInboundEmailRoute,
