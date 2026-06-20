@@ -39,6 +39,7 @@ import { Tooltip } from "@/components/tooltip";
 import { FormSection } from "@/components/form-section";
 import { QuoteAttachmentsCard } from "@/components/quote-attachments-card";
 import { QuoteShippingCard } from "@/components/quote-shipping-card";
+import { QuoteClarificationPanel } from "@/components/quote-clarification-panel";
 import { CatalogPickerDialog } from "@/components/catalog-picker-dialog";
 import {
   getQuote,
@@ -578,6 +579,8 @@ function QuoteDetailPage() {
           </div>
         </Card>
       )}
+
+      <QuoteClarificationPanel quoteId={id} onApplied={invalidate} />
 
       <Card className="mt-4 p-4">
         <div className="mb-3 flex items-center justify-between">

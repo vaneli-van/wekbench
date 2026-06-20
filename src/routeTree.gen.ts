@@ -18,6 +18,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TrackTokenRouteImport } from './routes/track.$token'
 import { Route as QTokenRouteImport } from './routes/q.$token'
+import { Route as CTokenRouteImport } from './routes/c.$token'
 import { Route as ApiFxRouteImport } from './routes/api/fx'
 import { Route as AppTeamRouteImport } from './routes/_app.team'
 import { Route as AppSuppliersRouteImport } from './routes/_app.suppliers'
@@ -87,6 +88,11 @@ const TrackTokenRoute = TrackTokenRouteImport.update({
 const QTokenRoute = QTokenRouteImport.update({
   id: '/q/$token',
   path: '/q/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CTokenRoute = CTokenRouteImport.update({
+  id: '/c/$token',
+  path: '/c/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFxRoute = ApiFxRouteImport.update({
@@ -245,6 +251,7 @@ export interface FileRoutesByFullPath {
   '/team': typeof AppTeamRoute
   '/api/fx': typeof ApiFxRoute
   '/q/$token': typeof QTokenRoute
+  '/c/$token': typeof CTokenRoute
   '/track/$token': typeof TrackTokenRoute
   '/invoices/$id': typeof AppInvoicesIdRoute
   '/orders/$id': typeof AppOrdersIdRoute
@@ -281,6 +288,7 @@ export interface FileRoutesByTo {
   '/team': typeof AppTeamRoute
   '/api/fx': typeof ApiFxRoute
   '/q/$token': typeof QTokenRoute
+  '/c/$token': typeof CTokenRoute
   '/track/$token': typeof TrackTokenRoute
   '/invoices/$id': typeof AppInvoicesIdRoute
   '/orders/$id': typeof AppOrdersIdRoute
@@ -319,6 +327,7 @@ export interface FileRoutesById {
   '/_app/team': typeof AppTeamRoute
   '/api/fx': typeof ApiFxRoute
   '/q/$token': typeof QTokenRoute
+  '/c/$token': typeof CTokenRoute
   '/track/$token': typeof TrackTokenRoute
   '/_app/invoices/$id': typeof AppInvoicesIdRoute
   '/_app/orders/$id': typeof AppOrdersIdRoute
@@ -357,6 +366,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/api/fx'
     | '/q/$token'
+    | '/c/$token'
     | '/track/$token'
     | '/invoices/$id'
     | '/orders/$id'
@@ -393,6 +403,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/api/fx'
     | '/q/$token'
+    | '/c/$token'
     | '/track/$token'
     | '/invoices/$id'
     | '/orders/$id'
@@ -430,6 +441,7 @@ export interface FileRouteTypes {
     | '/_app/team'
     | '/api/fx'
     | '/q/$token'
+    | '/c/$token'
     | '/track/$token'
     | '/_app/invoices/$id'
     | '/_app/orders/$id'
@@ -452,6 +464,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   ApiFxRoute: typeof ApiFxRoute
   QTokenRoute: typeof QTokenRoute
+  CTokenRoute: typeof CTokenRoute
   TrackTokenRoute: typeof TrackTokenRoute
   ApiCronArRoute: typeof ApiCronArRoute
   ApiPublicInboundEmailRoute: typeof ApiPublicInboundEmailRoute
@@ -521,6 +534,13 @@ declare module '@tanstack/react-router' {
       path: '/q/$token'
       fullPath: '/q/$token'
       preLoaderRoute: typeof QTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/c/$token': {
+      id: '/c/$token'
+      path: '/c/$token'
+      fullPath: '/c/$token'
+      preLoaderRoute: typeof CTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/fx': {
@@ -770,6 +790,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   ApiFxRoute: ApiFxRoute,
   QTokenRoute: QTokenRoute,
+  CTokenRoute: CTokenRoute,
   TrackTokenRoute: TrackTokenRoute,
   ApiCronArRoute: ApiCronArRoute,
   ApiPublicInboundEmailRoute: ApiPublicInboundEmailRoute,
