@@ -21,6 +21,9 @@ jobs:
       # Premium owner). Without them the sign-in tests cannot authenticate.
       WEKBENCH_EMAIL: ${{ secrets.WEKBENCH_EMAIL }}
       WEKBENCH_PASSWORD: ${{ secrets.WEKBENCH_PASSWORD }}
+      # Dedicated test account (clean Pro workspace) used by the full coverage suite.
+      WEKBENCH_EMAIL_TEST: ${{ secrets.WEKBENCH_EMAIL_TEST }}
+      WEKBENCH_PASSWORD_TEST: ${{ secrets.WEKBENCH_PASSWORD_TEST }}
 
     steps:
       - name: Check out code

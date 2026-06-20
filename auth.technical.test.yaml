@@ -1,0 +1,30 @@
+fileType: momentic/test/v2
+id: 6c3fab25-8d4e-4a92-b7c3-2f1e0d5b8a13
+version: 1.0.24
+url: https://wekbench.com/signin
+description: Auth technical — bad credentials rejected, protected routes require sign-in
+# P0. Guards the auth boundary.
+disabled: false
+retries: 1
+viewport: 1920, 1080
+browserType: Chromium
+steps:
+  # A. A wrong password is rejected — no app access.
+  - type:
+      text: "{{ env.WEKBENCH_EMAIL_TEST }}"
+      into: the work email field
+  - type:
+      text: this-is-not-the-correct-password-123
+      into: the password field
+  - click: the button to continue / sign in with work email
+  - wait: 3500
+  - assert: >-
+      Sign-in was REJECTED — the page is still the sign-in screen and/or an error such as
+      "That email and password don't match" is shown. The dashboard / app is NOT shown.
+
+  # B. A protected app route requires authentication (still not signed in).
+  - navigate: https://wekbench.com/quotes
+  - wait: 2500
+  - assert: >-
+      Because no one is signed in, the app does NOT show the quotes pipeline — it shows
+      the sign-in screen (or redirects to it). Protected data is not exposed.

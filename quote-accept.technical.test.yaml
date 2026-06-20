@@ -1,0 +1,71 @@
+fileType: momentic/test/v2
+id: a071ef69-c182-4ed6-fb27-6d5c4b9f2e57
+version: 1.0.24
+url: https://wekbench.com/q/q_invalidtokendoesnotexist000
+description: Quote accept technical — invalid token rejected; the decline path works (no login)
+# P0 buyer-facing page guarantees.
+disabled: false
+retries: 1
+viewport: 1920, 1080
+browserType: Chromium
+steps:
+  # A. Invalid token → friendly "not available", no login, no data leaked.
+  - wait: 2500
+  - assert: >-
+      A friendly "Quote not available" state is shown (invalid link or not yet sent) — NOT
+      an error page, a blank screen, a sign-in form, or any quote data.
+
+  # B. Real decline path. Sign in to create + send a quote first.
+  - navigate: https://wekbench.com/signin
+  - wait: 1500
+  - type:
+      text: "{{ env.WEKBENCH_EMAIL_TEST }}"
+      into: the work email field
+  - type:
+      text: "{{ env.WEKBENCH_PASSWORD_TEST }}"
+      into: the password field
+  - click: the button to continue / sign in with work email
+  - waitForUrlNotToMatch: signin
+  - wait: 2500
+
+  - javascript:
+      code: |-
+        const title = "QA Decline Quote " + Date.now();
+        setVariable("QUOTE_TITLE", title);
+        return title;
+      saveAs: QUOTE_TITLE_RET
+
+  - navigate: https://wekbench.com/quotes?new=1
+  - wait: 8000
+  - type:
+      text: "{{ env.QUOTE_TITLE }}"
+      into: the quote title / project name field
+  - act: >-
+      In the New Quote dialog set the buyer to "QA Accept Buyer" (create if needed) and
+      create the quote.
+  - wait: 3500
+  - act: Add a line item "QA Decline Item", quantity 1, unit price 50.
+  - wait: 2000
+  - act: >-
+      Send / issue the quote to the buyer so its status becomes "Sent" and the buyer
+      acceptance link is active.
+  - wait: 2500
+
+  - javascript:
+      code: |-
+        const a = document.querySelector('a[href^="/q/"]');
+        const path = a ? a.getAttribute('href') : '';
+        setVariable("QPATH", path);
+        return path;
+      saveAs: QPATH_RET
+
+  # Buyer opens the link and declines.
+  - navigate: https://wekbench.com{{ env.QPATH }}
+  - wait: 3000
+  - act: >-
+      Decline the quote: click the Decline option, optionally type a short reason, and
+      confirm the decline.
+  - wait: 3000
+  - assert: >-
+      The quote shows as declined (a "declined" confirmation/state). No order acceptance
+      occurred and no error is shown.

@@ -1,0 +1,42 @@
+# TEMPLATE — copy to the repo root as `<feature>.journey.test.yaml` and fill in.
+# The `.template` suffix keeps it out of the *.test.yaml run glob so it never executes.
+#
+# JOURNEY test = the happy path a real person walks through the UI to get the value.
+fileType: momentic/test/v2
+id: REPLACE-WITH-A-FRESH-UUID
+version: 1.0.24
+url: https://wekbench.com/signin
+description: "<feature> journey — sign in, do the flow, see the outcome"
+disabled: false
+retries: 1
+viewport: 1920, 1080
+browserType: Chromium
+steps:
+  # 1. Sign in with the provisioned test account.
+  - type:
+      text: "{{ env.WEKBENCH_EMAIL }}"
+      into: the work email field
+  - type:
+      text: "{{ env.WEKBENCH_PASSWORD }}"
+      into: the password field
+  - click: the button to continue / sign in with work email
+  - waitForUrlNotToMatch: signin
+  - wait: 2500
+
+  # 2. Make each run idempotent — a unique value so repeated runs never collide.
+  - javascript:
+      code: |-
+        const tag = "QA <feature> " + Date.now();
+        setVariable("RUN_TAG", tag);
+        return tag;
+      saveAs: RUN_TAG_RET
+
+  # 3. Walk the primary user journey through the UI.
+  #    e.g. navigate to the feature, perform the action, fill the form…
+  # - act: >-
+  #     <describe the main thing the user does, in plain language>
+
+  # 4. Assert on the OUTCOME the customer cares about (not incidental DOM).
+  # - assert: >-
+  #     <the customer-visible result is shown — the right page/data/confirmation —
+  #      and no error toast or validation error is visible>

@@ -1,0 +1,25 @@
+fileType: momentic/test/v2
+id: 5b2e9a14-7c3d-4f81-a6b2-1e0d9c4a7f02
+version: 1.0.24
+url: https://wekbench.com/signin
+description: Auth journey — a user signs in and lands in the app
+# P0. Uses the dedicated test account (WEKBENCH_EMAIL_TEST / WEKBENCH_PASSWORD_TEST):
+# a clean, onboarded, Pro workspace.
+disabled: false
+retries: 1
+viewport: 1920, 1080
+browserType: Chromium
+steps:
+  - type:
+      text: "{{ env.WEKBENCH_EMAIL_TEST }}"
+      into: the work email field
+  - type:
+      text: "{{ env.WEKBENCH_PASSWORD_TEST }}"
+      into: the password field
+  - click: the button to continue / sign in with work email
+  - waitForUrlNotToMatch: signin
+  - wait: 2500
+  - assert: >-
+      Sign-in succeeded — the user is in the Wekbench app (the dashboard or the app shell
+      with the left navigation is shown, NOT the sign-in form), and no error such as
+      "That email and password don't match" is visible.

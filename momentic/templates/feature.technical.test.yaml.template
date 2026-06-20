@@ -1,0 +1,36 @@
+# TEMPLATE — copy to the repo root as `<feature>.technical.test.yaml` and fill in.
+# The `.template` suffix keeps it out of the *.test.yaml run glob so it never executes.
+#
+# TECHNICAL test = the guarantees underneath the happy path: no-login pages, data that
+# round-trips, invalid tokens rejected, tenant boundaries, error/empty states.
+fileType: momentic/test/v2
+id: REPLACE-WITH-A-FRESH-UUID
+version: 1.0.24
+url: https://wekbench.com
+description: "<feature> technical — anonymous access, persistence, invalid input"
+disabled: false
+retries: 1
+viewport: 1920, 1080
+browserType: Chromium
+steps:
+  # A. Invalid / unauthorized input is rejected gracefully (no login).
+  # - navigate: https://wekbench.com/<public-path>/an-invalid-token
+  # - wait: 2000
+  # - assert: >-
+  #     A friendly "not available / invalid link" state is shown — NOT an error page,
+  #     blank screen, or any leaked data.
+
+  # B. A valid no-login flow works AND the data round-trips.
+  #    (If the token is created in-app, sign in first to generate it, then open the
+  #     public page; reuse the sign-in block from the journey template.)
+  # - navigate: https://wekbench.com/<public-path>/{{ env.SOME_TOKEN }}
+  # - act: >-
+  #     <submit the public form: answer/accept/etc.>
+  # - assert: <the submission was accepted>
+  # - navigate: https://wekbench.com/<public-path>/{{ env.SOME_TOKEN }}   # reload
+  # - assert: >-
+  #     The submitted data persisted and is shown on reload (it round-tripped).
+
+  # C. (Optional) Pair a DB/SQL check for pure database-level guarantees (RLS, etc.)
+  #    that a browser can't observe, and note it in the PR.
+  - assert: The Wekbench site is reachable.

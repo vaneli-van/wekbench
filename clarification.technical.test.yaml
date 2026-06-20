@@ -1,0 +1,88 @@
+fileType: momentic/test/v2
+id: 3a6f5e90-1d44-4b7c-8e22-9f0b7c61a2d8
+version: 1.0.24
+url: https://wekbench.com/c/c_invalidtokendoesnotexist000
+description: Clarification technical — invalid token rejected, and a real no-login round-trip persists
+# TECHNICAL: guards the public, tokenized clarification page — anonymous access, invalid
+# token handling, and that a buyer's answer round-trips (survives a reload).
+disabled: false
+retries: 1
+viewport: 1920, 1080
+browserType: Chromium
+steps:
+  # A. Invalid token → friendly "not available" with NO login and NO leaked data.
+  - wait: 2500
+  - assert: >-
+      A friendly "Clarification not available" state is shown (the link is invalid or not
+      yet shared) — NOT an error page, a blank screen, a sign-in form, or any quote /
+      clarification data.
+
+  # B. Real no-login round-trip. Sign in only to generate a clarification + token.
+  - navigate: https://wekbench.com/signin
+  - wait: 1500
+  - type:
+      text: "{{ env.WEKBENCH_EMAIL }}"
+      into: the work email field
+  - type:
+      text: "{{ env.WEKBENCH_PASSWORD }}"
+      into: the password field
+  - click: the button to continue / sign in with work email
+  - waitForUrlNotToMatch: signin
+  - wait: 2500
+
+  - javascript:
+      code: |-
+        const title = "QA Clar Tech " + Date.now();
+        setVariable("QUOTE_TITLE", title);
+        return title;
+      saveAs: QUOTE_TITLE_RET
+
+  # Create a fresh quote.
+  - navigate: https://wekbench.com/quotes?new=1
+  - wait: 8000
+  - type:
+      text: "{{ env.QUOTE_TITLE }}"
+      into: the quote title / project name field
+  - act: >-
+      In the New Quote dialog, set the buyer to "QA Clarification Buyer" — create the
+      buyer if needed, otherwise pick any existing buyer — then create the quote.
+  - wait: 3500
+
+  # Start a clarification, add a question, send to buyer.
+  - act: >-
+      In the "Buyer clarification" section, click "Start clarification", type the question
+      "Please confirm the required voltage rating." into the add-question input, click
+      "Add", then click "Send to buyer".
+  - wait: 2500
+
+  # Capture the public buyer link the panel rendered.
+  - javascript:
+      code: |-
+        const a = document.querySelector('a[href^="/c/"]');
+        const path = a ? a.getAttribute('href') : '';
+        setVariable("CLAR_PATH", path);
+        return path;
+      saveAs: CLAR_PATH_RET
+
+  # Open the public page (no login needed — it's a tokenized public route).
+  - navigate: https://wekbench.com{{ env.CLAR_PATH }}
+  - wait: 3000
+  - assert: >-
+      The public clarification page loads WITHOUT requiring sign-in, and shows the
+      question about the voltage rating with a box to type an answer.
+
+  # Buyer answers + submits.
+  - act: >-
+      Answer the clarification question with "Standard 230V single-phase is required.",
+      enter the name "QA Buyer" in the name field, then click the button to send / submit
+      the response.
+  - wait: 3000
+  - assert: A confirmation that the response was sent (a thank-you / submitted state) is shown.
+
+  # Reload the same public link → the answer must have persisted (round-trip).
+  - navigate: https://wekbench.com{{ env.CLAR_PATH }}
+  - wait: 3000
+  - assert: >-
+      On reload the page still reflects the submitted response — a "thank you / already
+      submitted (you can update)" state and/or the previously entered answer is shown —
+      confirming the buyer's answer round-tripped and persisted.

@@ -1,0 +1,70 @@
+fileType: momentic/test/v2
+id: 9d1c7b22-4e8a-4c1f-9b30-6a2f0c5d4e71
+version: 1.0.24
+url: https://wekbench.com/signin
+description: Clarification journey — a vendor starts a clarification, adds a question, and sends the buyer link
+# JOURNEY: the vendor's happy path for the RFQ clarification round-trip. Needs
+# WEKBENCH_EMAIL / WEKBENCH_PASSWORD (an onboarded test account). Creates a fresh quote
+# each run so the clarification panel always starts clean (idempotent).
+disabled: false
+retries: 1
+viewport: 1920, 1080
+browserType: Chromium
+steps:
+  # 1. Sign in.
+  - type:
+      text: "{{ env.WEKBENCH_EMAIL }}"
+      into: the work email field
+  - type:
+      text: "{{ env.WEKBENCH_PASSWORD }}"
+      into: the password field
+  - click: the button to continue / sign in with work email
+  - waitForUrlNotToMatch: signin
+  - wait: 2500
+
+  # 2. Unique title so repeated runs never collide.
+  - javascript:
+      code: |-
+        const title = "QA Clarification Quote " + Date.now();
+        setVariable("QUOTE_TITLE", title);
+        return title;
+      saveAs: QUOTE_TITLE_RET
+
+  # 3. Create a fresh quote via the new-quote deep link, then fill + create it.
+  - navigate: https://wekbench.com/quotes?new=1
+  - wait: 8000
+  - assert: >-
+      The "New quote" dialog/modal is open — it shows a field for the quote title and a
+      control for choosing or adding a buyer.
+  - type:
+      text: "{{ env.QUOTE_TITLE }}"
+      into: the quote title / project name field
+  - act: >-
+      In the New Quote dialog, set the buyer to a buyer named "QA Clarification Buyer" —
+      if there is an option to create a new buyer, use it and enter that name; otherwise
+      pick any existing buyer from the list.
+  - click: the button that creates / saves the new quote
+  - wait: 3500
+
+  # 4. Open the Buyer clarification panel on the quote and start a clarification.
+  - act: >-
+      Find the "Buyer clarification" section on the quote page (scroll down if needed)
+      and click the button to start a clarification (labelled "Start clarification").
+  - wait: 1500
+
+  # 5. Add a clarification question.
+  - type:
+      text: Please confirm the required voltage rating for this item.
+      into: the input for adding a clarification question
+  - click: the "Add" button next to the clarification question input
+  - wait: 1500
+
+  # 6. Send the buyer link.
+  - click: the "Send to buyer" button
+  - wait: 2500
+
+  # 7. Outcome the vendor cares about: clarification is out to the buyer with a shareable link.
+  - assert: >-
+      The clarification is now awaiting the buyer — the panel shows a status such as
+      "Awaiting buyer" and a shareable buyer link with a "Copy link" control (and a
+      "Preview" link). No error toast or validation error is visible.

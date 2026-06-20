@@ -1,0 +1,69 @@
+fileType: momentic/test/v2
+id: 9f60de58-b071-4dc5-ea16-5c4b3a8e1d46
+version: 1.0.24
+url: https://wekbench.com/signin
+description: Quote accept journey — buyer opens the link, accepts & e-signs, an order is created
+# P0 money-path + buyer-facing page. Vendor creates + sends a quote, then the buyer
+# accepts it on the no-login /q/<token> page, which must spin up an order.
+disabled: false
+retries: 1
+viewport: 1920, 1080
+browserType: Chromium
+steps:
+  - type:
+      text: "{{ env.WEKBENCH_EMAIL_TEST }}"
+      into: the work email field
+  - type:
+      text: "{{ env.WEKBENCH_PASSWORD_TEST }}"
+      into: the password field
+  - click: the button to continue / sign in with work email
+  - waitForUrlNotToMatch: signin
+  - wait: 2500
+
+  - javascript:
+      code: |-
+        const title = "QA Accept Quote " + Date.now();
+        setVariable("QUOTE_TITLE", title);
+        return title;
+      saveAs: QUOTE_TITLE_RET
+
+  # Create a quote with a priced line.
+  - navigate: https://wekbench.com/quotes?new=1
+  - wait: 8000
+  - type:
+      text: "{{ env.QUOTE_TITLE }}"
+      into: the quote title / project name field
+  - act: >-
+      In the New Quote dialog set the buyer to "QA Accept Buyer" (create if needed) and
+      create the quote.
+  - wait: 3500
+  - act: >-
+      Add a line item with description "QA Acceptance Item", quantity 2, unit price 100.
+  - wait: 2000
+
+  # Send the quote so the buyer acceptance link becomes active.
+  - act: >-
+      Send / issue this quote to the buyer so its status becomes "Sent" and the buyer
+      acceptance link is active (use the Send control on the quote).
+  - wait: 2500
+
+  # Capture the public buyer-acceptance link the page rendered.
+  - javascript:
+      code: |-
+        const a = document.querySelector('a[href^="/q/"]');
+        const path = a ? a.getAttribute('href') : '';
+        setVariable("QPATH", path);
+        return path;
+      saveAs: QPATH_RET
+
+  # Buyer opens the link (no login) and accepts + e-signs.
+  - navigate: https://wekbench.com{{ env.QPATH }}
+  - wait: 3000
+  - assert: The public quote page loads without sign-in and shows an option to accept & e-sign.
+  - act: >-
+      Accept the quote: enter the name "QA Buyer" and type "QA Buyer" as the signature,
+      then click the button to accept & sign.
+  - wait: 4000
+  - assert: >-
+      The quote is accepted — a confirmation is shown (accepted / signed, and an order has
+      been created). No error is visible.

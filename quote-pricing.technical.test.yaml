@@ -1,0 +1,49 @@
+fileType: momentic/test/v2
+id: 8e5fcd47-af60-4cb4-d9e5-4b3a2f7d0c35
+version: 1.0.24
+url: https://wekbench.com/signin
+description: Quote pricing technical — totals recompute live when quantity/price change
+# P0 money-path: the totals must always reflect the current line values.
+disabled: false
+retries: 1
+viewport: 1920, 1080
+browserType: Chromium
+steps:
+  - type:
+      text: "{{ env.WEKBENCH_EMAIL_TEST }}"
+      into: the work email field
+  - type:
+      text: "{{ env.WEKBENCH_PASSWORD_TEST }}"
+      into: the password field
+  - click: the button to continue / sign in with work email
+  - waitForUrlNotToMatch: signin
+  - wait: 2500
+
+  - javascript:
+      code: |-
+        const title = "QA Pricing Tech " + Date.now();
+        setVariable("QUOTE_TITLE", title);
+        return title;
+      saveAs: QUOTE_TITLE_RET
+
+  - navigate: https://wekbench.com/quotes?new=1
+  - wait: 8000
+  - type:
+      text: "{{ env.QUOTE_TITLE }}"
+      into: the quote title / project name field
+  - act: >-
+      In the New Quote dialog set the buyer to "QA Pricing Buyer" (create if needed) and
+      create the quote.
+  - wait: 3500
+
+  - act: >-
+      Add a line item with description "QA Recompute Widget", quantity 10, unit price 25.
+  - wait: 2000
+  - assert: The line total and quote subtotal are 250 (10 × 25).
+
+  # Change the quantity — the totals must recompute.
+  - act: Change the quantity of the "QA Recompute Widget" line from 10 to 20.
+  - wait: 2500
+  - assert: >-
+      The line total and the quote subtotal updated to 500 (20 × 25) — the totals
+      recomputed live from the new quantity, not left stale at 250.
