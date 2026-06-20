@@ -299,6 +299,182 @@ export type Database = {
           },
         ]
       }
+      clarification_changes: {
+        Row: {
+          applied_at: string | null
+          applied_by: string | null
+          clarification_id: string
+          created_at: string
+          id: string
+          kind: string
+          line_item_id: string | null
+          line_no: number | null
+          payload: Json
+          vendor_applied: boolean
+          workspace_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_by?: string | null
+          clarification_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          line_item_id?: string | null
+          line_no?: number | null
+          payload?: Json
+          vendor_applied?: boolean
+          workspace_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          applied_by?: string | null
+          clarification_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          line_item_id?: string | null
+          line_no?: number | null
+          payload?: Json
+          vendor_applied?: boolean
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clarification_changes_clarification_id_fkey"
+            columns: ["clarification_id"]
+            isOneToOne: false
+            referencedRelation: "quote_clarifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clarification_changes_line_item_id_fkey"
+            columns: ["line_item_id"]
+            isOneToOne: false
+            referencedRelation: "quote_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clarification_changes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clarification_events: {
+        Row: {
+          action: string
+          actor: string
+          at: string
+          clarification_id: string
+          detail: Json
+          id: string
+          workspace_id: string
+        }
+        Insert: {
+          action: string
+          actor: string
+          at?: string
+          clarification_id: string
+          detail?: Json
+          id?: string
+          workspace_id: string
+        }
+        Update: {
+          action?: string
+          actor?: string
+          at?: string
+          clarification_id?: string
+          detail?: Json
+          id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clarification_events_clarification_id_fkey"
+            columns: ["clarification_id"]
+            isOneToOne: false
+            referencedRelation: "quote_clarifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clarification_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clarification_questions: {
+        Row: {
+          answered_at: string | null
+          buyer_answer: string | null
+          clarification_id: string
+          created_at: string
+          id: string
+          included: boolean
+          line_item_id: string | null
+          line_no: number | null
+          question: string
+          sort: number
+          source: string
+          workspace_id: string
+        }
+        Insert: {
+          answered_at?: string | null
+          buyer_answer?: string | null
+          clarification_id: string
+          created_at?: string
+          id?: string
+          included?: boolean
+          line_item_id?: string | null
+          line_no?: number | null
+          question: string
+          sort?: number
+          source?: string
+          workspace_id: string
+        }
+        Update: {
+          answered_at?: string | null
+          buyer_answer?: string | null
+          clarification_id?: string
+          created_at?: string
+          id?: string
+          included?: boolean
+          line_item_id?: string | null
+          line_no?: number | null
+          question?: string
+          sort?: number
+          source?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clarification_questions_clarification_id_fkey"
+            columns: ["clarification_id"]
+            isOneToOne: false
+            referencedRelation: "quote_clarifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clarification_questions_line_item_id_fkey"
+            columns: ["line_item_id"]
+            isOneToOne: false
+            referencedRelation: "quote_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clarification_questions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           created_at: string
@@ -1209,6 +1385,79 @@ export type Database = {
           },
           {
             foreignKeyName: "quote_attachments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_clarifications: {
+        Row: {
+          answered_at: string | null
+          answered_by: string | null
+          buyer_comment: string | null
+          closed_at: string | null
+          created_at: string
+          id: string
+          opened_at: string | null
+          quote_id: string
+          rfq_id: string | null
+          sent_at: string | null
+          share_token: string
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          answered_at?: string | null
+          answered_by?: string | null
+          buyer_comment?: string | null
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          opened_at?: string | null
+          quote_id: string
+          rfq_id?: string | null
+          sent_at?: string | null
+          share_token?: string
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          answered_at?: string | null
+          answered_by?: string | null
+          buyer_comment?: string | null
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          opened_at?: string | null
+          quote_id?: string
+          rfq_id?: string | null
+          sent_at?: string | null
+          share_token?: string
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_clarifications_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_clarifications_rfq_id_fkey"
+            columns: ["rfq_id"]
+            isOneToOne: false
+            referencedRelation: "rfqs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_clarifications_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -2234,6 +2483,7 @@ export type Database = {
         Args: { p_note: string; p_token: string }
         Returns: Json
       }
+      get_clarification_public: { Args: { p_token: string }; Returns: Json }
       get_quote_public: { Args: { p_token: string }; Returns: Json }
       get_tracking: { Args: { p_token: string }; Returns: Json }
       has_role: {
@@ -2257,6 +2507,16 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      submit_clarification_public: {
+        Args: {
+          p_answers: Json
+          p_changes: Json
+          p_comment: string
+          p_name: string
+          p_token: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "owner" | "admin" | "member"
