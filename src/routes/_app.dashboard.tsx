@@ -40,7 +40,7 @@ import { GettingStartedTutorials } from "@/components/getting-started-tutorials"
 import { cn } from "@/lib/utils"
 import { useProfile } from "@/hooks/use-profile"
 import { useWorkspaceId } from "@/hooks/use-workspace"
-import { listActivity, listRfqs } from "@/lib/api/quotes.functions"
+import { listActivity, listRfqs, approveExtractionToRfq } from "@/lib/api/quotes.functions"
 import { listInboundHighlights } from "@/lib/api/emails.functions"
 import { getDashboardStats } from "@/lib/api/dashboard.functions"
 
@@ -104,6 +104,7 @@ function CreateQuoteButton() {
   const navigate = useNavigate()
   const { data: workspaceId } = useWorkspaceId()
   const ingestFn = useServerFn(ingestRfqUpload)
+  const approveFn = useServerFn(approveExtractionToRfq)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const [uploading, setUploading] = useState(false)
 
@@ -126,9 +127,21 @@ function CreateQuoteButton() {
         .from("rfq-uploads")
         .upload(path, file, { contentType: file.type || undefined, upsert: false })
       if (upErr) throw new Error(upErr.message)
-      await ingestFn({ data: { filePath: path, fileName: file.name, contentType: file.type || undefined } })
-      toast.success("Extracted — review the RFQ", { id: tid })
-      navigate({ to: "/review-queue" })
+      const { documentId } = await ingestFn({ data: { filePath: path, fileName: file.name, contentType: file.type || undefined } })
+      toast.loading("Creating your quote…", { id: tid })
+      try {
+        const { quoteId } = await approveFn({ data: { documentId, createQuote: true, defaultMarginPct: 20 } })
+        if (quoteId) {
+          toast.success("Quote created from your file", { id: tid })
+          navigate({ to: "/quote/$id", params: { id: quoteId } })
+          return
+        }
+      } catch (approveErr) {
+        // If auto-approve can't complete, fall back to the extractions list so nothing is lost.
+        console.error("[upload] auto-approve failed", approveErr)
+      }
+      toast.success("Extracted — review it", { id: tid })
+      navigate({ to: "/extractions" })
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed", { id: tid })
     } finally {
