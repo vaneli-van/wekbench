@@ -5,7 +5,7 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
 
-import { getExtractionModel } from "./ai-model.server";
+import { getExtractionModel, activeAiProvider } from "./ai-model.server";
 
 const LineItemSchema = z.object({
   description: z.string(),
@@ -100,20 +100,25 @@ export async function extractEmailContent(input: {
       "[extraction] structured output failed, falling back to JSON prompt:",
       err instanceof Error ? err.message : err,
     );
-    const { text } = await generateText({
-      model,
-      system:
-        SYSTEM_PROMPT +
-        "\n\nRespond ONLY with a single JSON object matching this TypeScript type — no prose, no markdown fences:\n" +
-        "{ doc_type: 'rfq'|'purchase_order'|'rfq_amendment'|'po_amendment'|'unknown', confidence: number, summary: string, buyer_ref: string|null, due_date: string|null, currency: string|null, incoterm: string|null, delivery_location: string|null, payment_terms: string|null, line_items: Array<{ description: string, brand: string|null, model: string|null, quantity: number|null, unit: string|null, target_price: number|null }> }",
-      messages: [{ role: "user", content }],
-    });
-    const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
-    const start = cleaned.indexOf("{");
-    const end = cleaned.lastIndexOf("}");
-    if (start === -1 || end === -1) throw new Error("Model returned no JSON object");
-    const parsed = JSON.parse(cleaned.slice(start, end + 1));
-    return ExtractionSchema.parse(parsed);
+    try {
+      const { text } = await generateText({
+        model,
+        system:
+          SYSTEM_PROMPT +
+          "\n\nRespond ONLY with a single JSON object matching this TypeScript type — no prose, no markdown fences:\n" +
+          "{ doc_type: 'rfq'|'purchase_order'|'rfq_amendment'|'po_amendment'|'unknown', confidence: number, summary: string, buyer_ref: string|null, due_date: string|null, currency: string|null, incoterm: string|null, delivery_location: string|null, payment_terms: string|null, line_items: Array<{ description: string, brand: string|null, model: string|null, quantity: number|null, unit: string|null, target_price: number|null }> }",
+        messages: [{ role: "user", content }],
+      });
+      const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+      const start = cleaned.indexOf("{");
+      const end = cleaned.lastIndexOf("}");
+      if (start === -1 || end === -1) throw new Error("Model returned no JSON object");
+      const parsed = JSON.parse(cleaned.slice(start, end + 1));
+      return ExtractionSchema.parse(parsed);
+    } catch (err2) {
+      const msg = err2 instanceof Error ? err2.message : String(err2);
+      throw new Error(`AI extraction failed via "${activeAiProvider()}" provider: ${msg}`);
+    }
   }
 }
 

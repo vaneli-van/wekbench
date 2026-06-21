@@ -25,3 +25,10 @@ export function getExtractionModel() {
   }
   return createLovableAiGatewayProvider(lovableKey)(process.env.LOVABLE_MODEL || "google/gemini-3-flash-preview");
 }
+
+/** Which provider getExtractionModel() will use, given the current env. For diagnostics. */
+export function activeAiProvider(): "anthropic" | "lovable" | "none" {
+  if (process.env.ANTHROPIC_API_KEY) return "anthropic";
+  if (process.env.LOVABLE_API_KEY) return "lovable";
+  return "none";
+}
