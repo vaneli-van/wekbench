@@ -3,8 +3,7 @@ id: 9f60de58-b071-4dc5-ea16-5c4b3a8e1d46
 version: 1.0.24
 url: https://wekbench.com/signin
 description: Quote accept journey — buyer opens the link, accepts & e-signs, an order is created
-# P0 money-path + buyer-facing page. Vendor creates + sends a quote, then the buyer
-# accepts it on the no-login /q/<token> page, which must spin up an order.
+# P0 money-path + buyer-facing page. Deterministic dialog + accept steps keep AI usage low.
 disabled: false
 retries: 1
 viewport: 1920, 1080
@@ -22,32 +21,37 @@ steps:
 
   - javascript:
       code: |-
-        const title = "QA Accept Quote " + Date.now();
-        setVariable("QUOTE_TITLE", title);
-        return title;
-      saveAs: QUOTE_TITLE_RET
+        const stamp = Date.now();
+        setVariable("QUOTE_TITLE", "QA Accept Quote " + stamp);
+        setVariable("BUYER_NAME", "QA Buyer " + stamp);
+        return stamp;
+      saveAs: STAMP_RET
 
-  # Create a quote with a priced line.
+  # Create a quote (deterministic dialog fill).
   - navigate: https://wekbench.com/quotes?new=1
   - wait: 8000
   - type:
       text: "{{ env.QUOTE_TITLE }}"
-      into: the quote title / project name field
-  - act: >-
-      In the New Quote dialog set the buyer to "QA Accept Buyer" (create if needed) and
-      create the quote.
+      into: the quote title field (placeholder "e.g. Office laptops for Q3")
+  - click: the "Select a buyer" dropdown
+  - click: the "Create new buyer" option in the dropdown
+  - type:
+      text: "{{ env.BUYER_NAME }}"
+      into: the "New buyer company name" field
+  - click: the "Add" button next to the new buyer name field
+  - wait: 1200
+  - click: the "Create & open" button
   - wait: 3500
+
   - act: >-
       Add a line item with description "QA Acceptance Item", quantity 2, unit price 100.
   - wait: 2000
-
-  # Send the quote so the buyer acceptance link becomes active.
   - act: >-
       Send / issue this quote to the buyer so its status becomes "Sent" and the buyer
-      acceptance link is active (use the Send control on the quote).
+      acceptance link is active.
   - wait: 2500
 
-  # Capture the public buyer-acceptance link the page rendered.
+  # Capture the public buyer-acceptance link.
   - javascript:
       code: |-
         const a = document.querySelector('a[href^="/q/"]');
@@ -56,13 +60,17 @@ steps:
         return path;
       saveAs: QPATH_RET
 
-  # Buyer opens the link (no login) and accepts + e-signs.
+  # Buyer opens the link (no login) and accepts + e-signs (deterministic).
   - navigate: https://wekbench.com{{ env.QPATH }}
   - wait: 3000
   - assert: The public quote page loads without sign-in and shows an option to accept & e-sign.
-  - act: >-
-      Accept the quote: enter the name "QA Buyer" and type "QA Buyer" as the signature,
-      then click the button to accept & sign.
+  - type:
+      text: QA Buyer
+      into: the "Your name" field (placeholder "Full name")
+  - type:
+      text: QA Buyer
+      into: the signature field (placeholder "Type full name to sign")
+  - click: the "Accept & sign" button
   - wait: 4000
   - assert: >-
       The quote is accepted — a confirmation is shown (accepted / signed, and an order has

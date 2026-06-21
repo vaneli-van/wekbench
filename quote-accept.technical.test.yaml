@@ -3,7 +3,7 @@ id: a071ef69-c182-4ed6-fb27-6d5c4b9f2e57
 version: 1.0.24
 url: https://wekbench.com/q/q_invalidtokendoesnotexist000
 description: Quote accept technical — invalid token rejected; the decline path works (no login)
-# P0 buyer-facing page guarantees.
+# P0 buyer-facing page guarantees. Deterministic steps keep AI usage low.
 disabled: false
 retries: 1
 viewport: 1920, 1080
@@ -30,20 +30,27 @@ steps:
 
   - javascript:
       code: |-
-        const title = "QA Decline Quote " + Date.now();
-        setVariable("QUOTE_TITLE", title);
-        return title;
-      saveAs: QUOTE_TITLE_RET
+        const stamp = Date.now();
+        setVariable("QUOTE_TITLE", "QA Decline Quote " + stamp);
+        setVariable("BUYER_NAME", "QA Buyer " + stamp);
+        return stamp;
+      saveAs: STAMP_RET
 
   - navigate: https://wekbench.com/quotes?new=1
   - wait: 8000
   - type:
       text: "{{ env.QUOTE_TITLE }}"
-      into: the quote title / project name field
-  - act: >-
-      In the New Quote dialog set the buyer to "QA Accept Buyer" (create if needed) and
-      create the quote.
+      into: the quote title field (placeholder "e.g. Office laptops for Q3")
+  - click: the "Select a buyer" dropdown
+  - click: the "Create new buyer" option in the dropdown
+  - type:
+      text: "{{ env.BUYER_NAME }}"
+      into: the "New buyer company name" field
+  - click: the "Add" button next to the new buyer name field
+  - wait: 1200
+  - click: the "Create & open" button
   - wait: 3500
+
   - act: Add a line item "QA Decline Item", quantity 1, unit price 50.
   - wait: 2000
   - act: >-
@@ -59,12 +66,12 @@ steps:
         return path;
       saveAs: QPATH_RET
 
-  # Buyer opens the link and declines.
+  # Buyer opens the link and declines (deterministic).
   - navigate: https://wekbench.com{{ env.QPATH }}
   - wait: 3000
-  - act: >-
-      Decline the quote: click the Decline option, optionally type a short reason, and
-      confirm the decline.
+  - click: the "Decline" button
+  - wait: 800
+  - click: the "Confirm decline" button
   - wait: 3000
   - assert: >-
       The quote shows as declined (a "declined" confirmation/state). No order acceptance
