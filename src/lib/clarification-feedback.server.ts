@@ -6,7 +6,7 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
 
-import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import { getExtractionModel } from "./ai-model.server";
 
 const FeedbackSchema = z.object({
   summary: z.string(),
@@ -27,8 +27,6 @@ const SYSTEM_PROMPT = `You are a bid engineer for a B2B procurement vendor. The 
 - next_action: the single most important next step for the vendor`;
 
 export async function extractClarificationFeedback(clarificationId: string): Promise<ClarificationFeedback> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   const { data: c } = await supabaseAdmin
@@ -69,8 +67,7 @@ export async function extractClarificationFeedback(clarificationId: string): Pro
   }
   const input = lines.join("\n").slice(0, 16000);
 
-  const gateway = createLovableAiGatewayProvider(apiKey);
-  const model = gateway("google/gemini-3-flash-preview");
+  const model = getExtractionModel();
 
   let feedback: ClarificationFeedback;
   try {

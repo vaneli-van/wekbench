@@ -5,7 +5,7 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
 
-import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import { getExtractionModel } from "./ai-model.server";
 
 const LineItemSchema = z.object({
   description: z.string(),
@@ -58,11 +58,7 @@ export async function extractEmailContent(input: {
   fromName: string | null;
   attachments?: Array<{ filename: string; contentType: string; data: Uint8Array }>;
 }): Promise<Extraction> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
-
-  const gateway = createLovableAiGatewayProvider(apiKey);
-  const model = gateway("google/gemini-3-flash-preview");
+  const model = getExtractionModel();
 
   const body = (input.textBody ?? stripHtml(input.htmlBody ?? "")).slice(0, 16000);
   const text = [
