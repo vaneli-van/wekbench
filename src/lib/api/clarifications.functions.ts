@@ -118,13 +118,14 @@ export const getQuoteClarification = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (!c) return { clarification: null, questions: [], changes: [], events: [], attachments: [] };
+    if (!c) return { clarification: null, questions: [], changes: [], events: [], attachments: [], messages: [] };
 
-    const [questionsRes, changesRes, eventsRes, attachmentsRes] = await Promise.all([
+    const [questionsRes, changesRes, eventsRes, attachmentsRes, messagesRes] = await Promise.all([
       supabase.from("clarification_questions").select("*").eq("clarification_id", c.id).order("sort").order("created_at"),
       supabase.from("clarification_changes").select("*").eq("clarification_id", c.id).order("created_at"),
       supabase.from("clarification_events").select("*").eq("clarification_id", c.id).order("at", { ascending: false }),
       supabase.from("clarification_attachments").select("*").eq("clarification_id", c.id).order("created_at"),
+      supabase.from("clarification_messages").select("*").eq("clarification_id", c.id).order("created_at"),
     ]);
     return {
       clarification: c,
@@ -132,6 +133,7 @@ export const getQuoteClarification = createServerFn({ method: "POST" })
       changes: changesRes.data ?? [],
       events: eventsRes.data ?? [],
       attachments: attachmentsRes.data ?? [],
+      messages: messagesRes.data ?? [],
     };
   });
 
@@ -201,6 +203,92 @@ export const addClarificationAttachmentPublic = createServerFn({ method: "POST" 
     const r = (result ?? {}) as any;
     if (!r.ok) throw new Error(r.error ?? "Could not record the attachment");
     return r;
+  });
+
+/* ---------- follow-up conversation thread ---------- */
+
+/** Vendor posts a follow-up message on the clarification thread. */
+export const postClarificationMessage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ clarificationId: z.string().uuid(), body: z.string().min(1).max(5000) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = context.supabase as any;
+    const userId = context.userId;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const authorName = ((context.claims as any)?.email as string | undefined) ?? null;
+    const { data: c } = await supabase
+      .from("quote_clarifications")
+      .select("workspace_id")
+      .eq("id", data.clarificationId)
+      .single();
+    if (!c) throw new Error("Clarification not found");
+    const { error } = await supabase.from("clarification_messages").insert({
+      clarification_id: data.clarificationId,
+      workspace_id: c.workspace_id,
+      author: "vendor",
+      author_name: authorName,
+      body: data.body.trim(),
+    });
+    if (error) throw new Error(error.message);
+    await logEvent(supabase, data.clarificationId, c.workspace_id, userId, "updated", { message: true, by: authorName });
+    return { ok: true };
+  });
+
+/** PUBLIC: buyer posts a follow-up message on the clarification thread. */
+export const postClarificationMessagePublic = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({ token: z.string().min(6), name: z.string().max(200).optional(), body: z.string().min(1).max(5000) })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const supabase = anonClient();
+    const { data: result, error } = await supabase.rpc("post_clarification_message_public", {
+      p_token: data.token,
+      p_name: data.name ?? null,
+      p_body: data.body,
+    });
+    if (error) throw new Error(error.message);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const r = (result ?? {}) as any;
+    if (!r.ok) throw new Error(r.error ?? "Could not post your message");
+    if (r.seller_email) {
+      try {
+        await sendEmail({
+          to: r.seller_email,
+          subject: `New clarification message — quote ${r.quote_number ?? ""}`.trim(),
+          html:
+            `<div style="font-family:system-ui,Arial,sans-serif;font-size:15px;color:#1a1a1a">` +
+            `<p>The buyer posted a follow-up message on the clarification for quote ` +
+            `<strong>${escapeHtml(String(r.quote_number ?? ""))}</strong>. Open wekbench to view and reply.</p></div>`,
+        });
+      } catch {
+        /* notify best-effort */
+      }
+    }
+    return r;
+  });
+
+/** Run (or re-run) the AI feedback extraction for a clarification — vendor side. */
+export const runClarificationFeedback = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ clarificationId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = context.supabase as any;
+    // Membership gate: RLS lets only members read the row.
+    const { data: c } = await supabase
+      .from("quote_clarifications")
+      .select("id")
+      .eq("id", data.clarificationId)
+      .single();
+    if (!c) throw new Error("Clarification not found");
+    const { extractClarificationFeedback } = await import("@/lib/clarification-feedback.server");
+    const feedback = await extractClarificationFeedback(data.clarificationId);
+    return { feedback };
   });
 
 /** Add a manual question to a clarification. */

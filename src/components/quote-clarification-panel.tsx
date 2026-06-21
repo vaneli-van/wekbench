@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -15,6 +15,8 @@ import {
   Paperclip,
   Upload,
   FileText,
+  Sparkles,
+  RefreshCw,
 } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
@@ -30,7 +32,23 @@ import {
   sendClarification,
   applyClarificationChange,
   recordClarificationAttachment,
+  postClarificationMessage,
+  runClarificationFeedback,
 } from "@/lib/api/clarifications.functions";
+
+function FeedbackList({ label, items }: { label: string; items: string[] }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <ul className="ml-4 list-disc">
+        {items.map((it, i) => (
+          <li key={i}>{it}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -79,6 +97,8 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
   const sendFn = useServerFn(sendClarification);
   const applyFn = useServerFn(applyClarificationChange);
   const recordAttachFn = useServerFn(recordClarificationAttachment);
+  const postMsgFn = useServerFn(postClarificationMessage);
+  const feedbackFn = useServerFn(runClarificationFeedback);
 
   const { data, isLoading } = useQuery({ queryKey: key, queryFn: () => getFn({ data: { quoteId } }) });
   const clar = (data as Any)?.clarification as Any;
@@ -86,10 +106,13 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
   const changes: Any[] = useMemo(() => (data as Any)?.changes ?? [], [data]);
   const events: Any[] = useMemo(() => (data as Any)?.events ?? [], [data]);
   const attachments: Any[] = useMemo(() => (data as Any)?.attachments ?? [], [data]);
+  const messages: Any[] = useMemo(() => (data as Any)?.messages ?? [], [data]);
+  const aiFeedback = (clar as Any)?.ai_feedback as Any;
 
   const [newQ, setNewQ] = useState("");
   const [showActivity, setShowActivity] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [newMessage, setNewMessage] = useState("");
 
   const createMut = useMutation({ mutationFn: () => createFn({ data: { quoteId } }), onSuccess: invalidate });
   const addQMut = useMutation({
@@ -115,6 +138,29 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
     onSuccess: () => { invalidate(); onApplied?.(); toast.success("Applied to quote"); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not apply"),
   });
+  const postMsgMut = useMutation({
+    mutationFn: () => postMsgFn({ data: { clarificationId: clar.id, body: newMessage.trim() } }),
+    onSuccess: () => { setNewMessage(""); invalidate(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not post message"),
+  });
+  const feedbackMut = useMutation({
+    mutationFn: () => feedbackFn({ data: { clarificationId: clar.id } }),
+    onSuccess: () => invalidate(),
+  });
+
+  // Auto-summarize the buyer's feedback when there's new buyer activity since the last run.
+  const lastBuyerAt = useMemo(() => {
+    const times: number[] = [];
+    if (clar?.answered_at) times.push(new Date(clar.answered_at).getTime());
+    for (const m of messages) if (m.author === "buyer" && m.created_at) times.push(new Date(m.created_at).getTime());
+    return times.length ? Math.max(...times) : 0;
+  }, [clar?.answered_at, messages]);
+  useEffect(() => {
+    if (!clar || clar.status === "draft") return;
+    const aiTime = clar.ai_feedback_at ? new Date(clar.ai_feedback_at).getTime() : 0;
+    if (lastBuyerAt > 0 && lastBuyerAt > aiTime && !feedbackMut.isPending) feedbackMut.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clar?.id, lastBuyerAt, clar?.ai_feedback_at]);
 
   const token = clar?.share_token as string | undefined;
   const link = token ? `${typeof window !== "undefined" ? window.location.origin : ""}/c/${token}` : "";
@@ -294,6 +340,38 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
         </div>
       )}
 
+      {/* AI buyer feedback */}
+      {!isDraft && (aiFeedback || feedbackMut.isPending) && (
+        <div className="mt-3 rounded-md border border-primary/20 bg-primary/5 p-3">
+          <div className="mb-1 flex items-center justify-between">
+            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
+              <Sparkles className="size-3.5" /> AI buyer feedback
+            </p>
+            <button
+              onClick={() => feedbackMut.mutate()}
+              disabled={feedbackMut.isPending}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+            >
+              <RefreshCw className={`size-3 ${feedbackMut.isPending ? "animate-spin" : ""}`} /> {feedbackMut.isPending ? "Summarizing…" : "Re-run"}
+            </button>
+          </div>
+          {aiFeedback ? (
+            <div className="space-y-1.5 text-sm">
+              <p>{aiFeedback.summary}</p>
+              <FeedbackList label="Confirmed" items={aiFeedback.confirmed_specs} />
+              <FeedbackList label="New requirements" items={aiFeedback.new_requirements} />
+              <FeedbackList label="Changes" items={aiFeedback.changes} />
+              <FeedbackList label="Risks" items={aiFeedback.risks} />
+              {aiFeedback.next_action && (
+                <p className="pt-0.5 text-xs"><span className="font-medium">Next:</span> {aiFeedback.next_action}</p>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Summarizing the buyer&apos;s response…</p>
+          )}
+        </div>
+      )}
+
       {/* Attachments — both directions (buyer pictures/datasheets + your reference files) */}
       <div className="mt-3">
         <p className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -328,6 +406,44 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
           />
         </label>
       </div>
+
+      {/* Follow-up conversation — both directions */}
+      {!isDraft && (
+        <div className="mt-3">
+          <p className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <MessageSquareText className="size-3.5" /> Conversation
+          </p>
+          {messages.length > 0 ? (
+            <ul className="space-y-1.5">
+              {messages.map((m, i) => (
+                <li key={i} className={`rounded-md border border-border p-2 text-sm ${m.author === "buyer" ? "bg-muted/40" : ""}`}>
+                  <div className="mb-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">{m.author === "buyer" ? m.author_name || "Buyer" : m.author_name || "You"}</span>
+                    <span>· {fmt(m.created_at)}</span>
+                  </div>
+                  <p className="whitespace-pre-wrap">{m.body}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-muted-foreground">No messages yet — ask the buyer a follow-up.</p>
+          )}
+          <div className="mt-2 flex gap-2">
+            <Input
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Reply to the buyer…"
+              className="h-8 text-sm"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newMessage.trim()) { e.preventDefault(); postMsgMut.mutate(); }
+              }}
+            />
+            <Button size="sm" variant="outline" onClick={() => postMsgMut.mutate()} disabled={postMsgMut.isPending || !newMessage.trim()}>
+              <Send className="size-3.5" /> Send
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Send / link */}
       <div className="mt-4 flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:items-center sm:justify-between">
@@ -381,7 +497,7 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
                 <li key={ev.id} className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="size-3" />
                   <span className="font-medium capitalize text-foreground">{ev.action}</span>
-                  <span>· {ev.actor === "buyer" ? "buyer" : "you"}</span>
+                  <span>· {ev.detail?.by || (ev.actor === "buyer" ? "buyer" : "you")}</span>
                   <span>· {fmt(ev.at)}</span>
                 </li>
               ))}

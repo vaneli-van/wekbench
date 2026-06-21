@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { ShieldCheck, CheckCircle2, MessageSquare, Plus, Trash2, HelpCircle, Paperclip, Upload, FileText } from "lucide-react";
+import { ShieldCheck, CheckCircle2, MessageSquare, Plus, Trash2, HelpCircle, Paperclip, Upload, FileText, Send } from "lucide-react";
 
-import { getClarificationPublic, submitClarificationPublic, addClarificationAttachmentPublic } from "@/lib/api/clarifications.functions";
+import { getClarificationPublic, submitClarificationPublic, addClarificationAttachmentPublic, postClarificationMessagePublic } from "@/lib/api/clarifications.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Wordmark } from "@/components/wordmark";
 
@@ -20,6 +20,12 @@ type Item = {
 };
 type AddRow = { description: string; qty: string; unit: string };
 type Attachment = { file_path: string; file_name: string; content_type: string | null; uploader: string };
+type Msg = { author: string; author_name: string | null; body: string; created_at: string };
+
+function msgTime(d: string) {
+  const t = new Date(d).getTime();
+  return Number.isNaN(t) ? "" : new Date(d).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
 
 const CLAR_BUCKET = "clarification-uploads";
 function publicUrl(path: string) {
@@ -48,6 +54,7 @@ function ClarifyPage() {
   const getFn = useServerFn(getClarificationPublic);
   const submitFn = useServerFn(submitClarificationPublic);
   const attachFn = useServerFn(addClarificationAttachmentPublic);
+  const postMsgFn = useServerFn(postClarificationMessagePublic);
 
   const { data, isLoading } = useQuery({
     queryKey: ["public-clarification", token],
@@ -59,6 +66,7 @@ function ClarifyPage() {
   const questions: Question[] = useMemo(() => payload?.questions ?? [], [payload]);
   const items: Item[] = useMemo(() => payload?.items ?? [], [payload]);
   const attachments: Attachment[] = useMemo(() => payload?.attachments ?? [], [payload]);
+  const messages: Msg[] = useMemo(() => payload?.messages ?? [], [payload]);
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [name, setName] = useState("");
@@ -86,6 +94,20 @@ function ClarifyPage() {
       qc.invalidateQueries({ queryKey: ["public-clarification", token] });
     } finally {
       setUploading(false);
+    }
+  }
+
+  const [newMessage, setNewMessage] = useState("");
+  const [posting, setPosting] = useState(false);
+  async function handlePostMessage() {
+    if (!newMessage.trim()) return;
+    setPosting(true);
+    try {
+      await postMsgFn({ data: { token, name: name.trim() || undefined, body: newMessage.trim() } });
+      setNewMessage("");
+      qc.invalidateQueries({ queryKey: ["public-clarification", token] });
+    } finally {
+      setPosting(false);
     }
   }
 
@@ -301,6 +323,43 @@ function ClarifyPage() {
         </label>
       </div>
 
+      {/* Follow-up conversation — both directions */}
+      <div className="mt-4 rounded-xl border border-border bg-card p-5">
+        <h2 className="flex items-center gap-2 text-sm font-semibold"><MessageSquare className="size-4" /> Conversation</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">Ask a follow-up question or add a note — the supplier can reply here too.</p>
+        {messages.length > 0 && (
+          <ul className="mt-3 space-y-2">
+            {messages.map((m, i) => (
+              <li key={i} className={`rounded-md border border-border p-2 text-sm ${m.author === "vendor" ? "bg-muted/40" : ""}`}>
+                <div className="mb-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">
+                    {m.author === "vendor" ? m.author_name || "Supplier" : m.author_name || "You"}
+                  </span>
+                  <span>· {msgTime(m.created_at)}</span>
+                </div>
+                <p className="whitespace-pre-wrap">{m.body}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="mt-3 flex gap-2">
+          <textarea
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            rows={2}
+            placeholder="Write a follow-up…"
+            className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+          />
+          <button
+            onClick={handlePostMessage}
+            disabled={posting || !newMessage.trim()}
+            className="inline-flex shrink-0 items-center gap-1.5 self-end rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50"
+          >
+            <Send className="size-3.5" /> {posting ? "Sending…" : "Send"}
+          </button>
+        </div>
+      </div>
+
       {/* Comment + identity + submit */}
       <div className="mt-4 rounded-xl border border-border bg-card p-5">
         <label className="text-sm font-medium">Anything else? (optional)</label>
@@ -312,12 +371,13 @@ function ClarifyPage() {
           className="mt-1.5 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
         />
         <div className="mt-3">
-          <label className="text-sm font-medium">Your name</label>
+          <label className="text-sm font-medium">Signature</label>
+          <p className="text-xs text-muted-foreground">Type your full name to sign — this confirms the answers above are correct.</p>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Full name"
-            className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring sm:w-72"
+            placeholder="Type your full name to sign"
+            className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm italic outline-none focus:border-ring sm:w-72"
           />
         </div>
         {submitMut.isError && (
@@ -331,7 +391,7 @@ function ClarifyPage() {
             disabled={submitMut.isPending}
             className="inline-flex items-center gap-1.5 rounded-md bg-success px-4 py-2 text-sm font-medium text-success-foreground disabled:opacity-50"
           >
-            <CheckCircle2 className="size-4" /> {submitMut.isPending ? "Sending…" : submitted ? "Update response" : "Send response"}
+            <CheckCircle2 className="size-4" /> {submitMut.isPending ? "Signing…" : submitted ? "Sign & update" : "Sign & send"}
           </button>
         </div>
       </div>
