@@ -120,7 +120,7 @@ BEGIN
         'line_item_id', li.id, 'line_no', li.line_no, 'description', li.description,
         'brand', li.brand, 'model', li.model, 'qty', li.qty, 'unit', li.unit
       ) ORDER BY li.line_no)
-      FROM public.quote_line_items li WHERE li.quote_id = c.quote_id AND COALESCE(li.line_type,'item') = 'item'
+      FROM public.quote_line_items li WHERE li.quote_id = c.quote_id
     ), '[]'::jsonb),
     'changes', COALESCE((
       SELECT jsonb_agg(jsonb_build_object('kind', ch.kind, 'line_no', ch.line_no, 'payload', ch.payload))
