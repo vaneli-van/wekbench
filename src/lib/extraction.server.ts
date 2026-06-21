@@ -364,3 +364,94 @@ export async function runExtractionForEmail(emailId: string): Promise<{ document
   return { documentId: doc.id };
 }
 
+/* --------------- direct file upload → extraction (no inbound email) --------------- */
+
+export async function ingestUploadedDocument(opts: {
+  workspaceId: string;
+  filePath: string;
+  fileName: string;
+  contentType: string;
+}): Promise<{ documentId: string }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const { data: blob, error: dlErr } = await supabaseAdmin.storage.from("rfq-uploads").download(opts.filePath);
+  if (dlErr || !blob) throw new Error(`Could not read upload: ${dlErr?.message ?? opts.filePath}`);
+  const buf = new Uint8Array(await blob.arrayBuffer());
+
+  const ct = opts.contentType || "";
+  const isPdfOrImage = ct === "application/pdf" || ct.startsWith("image/") || /\.(pdf|png|jpe?g|webp|gif)$/i.test(opts.fileName);
+  const isText = ct.startsWith("text/") || /\.(csv|txt|tsv)$/i.test(opts.fileName);
+
+  let textBody: string | null = null;
+  const attachments: Array<{ filename: string; contentType: string; data: Uint8Array }> = [];
+  if (isPdfOrImage) {
+    attachments.push({ filename: opts.fileName, contentType: ct || "application/pdf", data: buf });
+  } else if (isText) {
+    try {
+      textBody = new TextDecoder("utf-8").decode(buf).slice(0, 16000);
+    } catch {
+      textBody = null;
+    }
+  } else {
+    attachments.push({ filename: opts.fileName, contentType: ct || "application/octet-stream", data: buf });
+  }
+
+  const extraction = await extractEmailContent({
+    subject: opts.fileName,
+    textBody,
+    htmlBody: null,
+    fromAddress: "upload@wekbench.local",
+    fromName: "Manual upload",
+    attachments,
+  });
+
+  const { data: doc, error: docErr } = await supabaseAdmin
+    .from("extracted_documents")
+    .insert({
+      workspace_id: opts.workspaceId,
+      inbound_email_id: null,
+      doc_type: extraction.doc_type,
+      confidence: extraction.confidence,
+      summary: extraction.summary,
+      buyer_ref: extraction.buyer_ref ?? null,
+      due_date: extraction.due_date ?? null,
+      currency: extraction.currency ?? null,
+      raw_extraction: extraction as never,
+      status: "pending_review",
+    })
+    .select("id")
+    .single();
+  if (docErr || !doc) throw new Error(`Could not save extraction: ${docErr?.message}`);
+
+  if (extraction.line_items.length > 0) {
+    const rows = await Promise.all(
+      extraction.line_items.map(async (li, idx) => {
+        const match = await matchLineItem(supabaseAdmin, opts.workspaceId, {
+          description: li.description,
+          brand: li.brand ?? null,
+          model: li.model ?? null,
+        });
+        return {
+          document_id: doc.id,
+          workspace_id: opts.workspaceId,
+          line_no: idx + 1,
+          requested_description: li.description,
+          requested_brand: li.brand ?? null,
+          requested_model: li.model ?? null,
+          requested_qty: li.quantity ?? null,
+          requested_unit: li.unit ?? null,
+          target_price: li.target_price ?? null,
+          matched_catalog_item_id: match.catalog_item_id,
+          match_confidence: match.confidence,
+          match_status: match.status,
+          lookup_note: match.note,
+        };
+      }),
+    );
+    const { error: liErr } = await supabaseAdmin.from("extracted_line_items").insert(rows);
+    if (liErr) console.error("[upload-ingest] line items insert failed", liErr);
+  }
+
+  return { documentId: doc.id as string };
+}
+

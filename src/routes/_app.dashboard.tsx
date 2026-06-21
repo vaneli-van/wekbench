@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Link } from "@tanstack/react-router"
-import { useState } from "react"
+import { Link, useNavigate } from "@tanstack/react-router"
+import { useRef, useState } from "react"
+import { toast } from "sonner"
 import { useQuery } from "@tanstack/react-query"
 import { useServerFn } from "@tanstack/react-start"
 import {
@@ -18,6 +19,8 @@ import {
   ChevronDown,
   Mail,
   PenLine,
+  Upload,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,6 +30,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { NewQuoteDialog } from "@/components/new-quote-dialog"
+import { supabase } from "@/integrations/supabase/client"
+import { ingestRfqUpload } from "@/lib/api/uploads.functions"
 
 import { Badge } from "@/components/ui/badge"
 import { FxRatesCard } from "@/components/fx-rates-card"
@@ -96,12 +101,55 @@ function DeltaIcon({ dir }: { dir: "up" | "down" | "flat" }) {
 
 function CreateQuoteButton() {
   const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
+  const { data: workspaceId } = useWorkspaceId()
+  const ingestFn = useServerFn(ingestRfqUpload)
+  const fileRef = useRef<HTMLInputElement | null>(null)
+  const [uploading, setUploading] = useState(false)
+
+  async function handleFile(file: File | null | undefined) {
+    if (!file) return
+    if (!workspaceId) {
+      toast.error("Workspace not ready — please try again in a moment")
+      return
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("File exceeds 20MB")
+      return
+    }
+    setUploading(true)
+    const tid = toast.loading("Uploading and reading your file…")
+    try {
+      const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_")
+      const path = `${workspaceId}/${crypto.randomUUID()}-${safe}`
+      const { error: upErr } = await supabase.storage
+        .from("rfq-uploads")
+        .upload(path, file, { contentType: file.type || undefined, upsert: false })
+      if (upErr) throw new Error(upErr.message)
+      await ingestFn({ data: { filePath: path, fileName: file.name, contentType: file.type || undefined } })
+      toast.success("Extracted — review the RFQ", { id: tid })
+      navigate({ to: "/review-queue" })
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed", { id: tid })
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ""
+    }
+  }
+
   return (
     <>
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".pdf,.csv,.txt,.xls,.xlsx,image/*"
+        className="hidden"
+        onChange={(e) => handleFile(e.target.files?.[0])}
+      />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button size="sm" className="gap-1">
-            <Plus className="size-4" />
+          <Button size="sm" className="gap-1" disabled={uploading}>
+            {uploading ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
             New quote
             <ChevronDown className="size-3 opacity-60" />
           </Button>
@@ -111,10 +159,14 @@ function CreateQuoteButton() {
             <PenLine className="size-4" />
             Create manually
           </DropdownMenuItem>
+          <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setTimeout(() => fileRef.current?.click(), 0) }}>
+            <Upload className="size-4" />
+            Upload a file (PDF, CSV, image)
+          </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link to="/email-capture" className="gap-2">
               <Mail className="size-4" />
-              Upload PDF or Excel or CSV file
+              Connect email
             </Link>
           </DropdownMenuItem>
         </DropdownMenuContent>
