@@ -68,7 +68,7 @@ export const getMyWorkspace = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("workspaces")
       .select(
-        "id, name, account_type, country, vendor_types, onboarding_completed_at",
+        "id, name, account_type, country, vendor_types, onboarding_completed_at, default_tax_pct",
       )
       .eq("id", wsId)
       .maybeSingle();
@@ -199,6 +199,19 @@ export const updateWorkspaceVendorTypes = createServerFn({ method: "POST" })
       .eq("owner_id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true, vendorTypes: unique };
+  });
+
+/** Update the workspace's default tax rate (applied to new quotes). Owner only. */
+export const updateWorkspaceTaxDefault = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ defaultTaxPct: z.number().min(0).max(100) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("workspaces")
+      .update({ default_tax_pct: data.defaultTaxPct })
+      .eq("owner_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true, defaultTaxPct: data.defaultTaxPct };
   });
 
 /** The caller's plan + trial + this month's quote usage (for the badge + paywall UI). */

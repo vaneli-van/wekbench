@@ -162,6 +162,7 @@ function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="quoting" className="space-y-6">
+          <TaxDefaultCard />
           <Card>
             <CardHeader>
               <CardTitle>Quote defaults</CardTitle>
@@ -242,9 +243,60 @@ export const Route = createFileRoute("/_app/settings")({
 import { useMutation, useQuery, useQueryClient as useQC } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Check } from "lucide-react";
-import { getMyWorkspace, updateWorkspaceVendorTypes, type VendorType } from "@/lib/api/workspace.functions";
+import { getMyWorkspace, updateWorkspaceVendorTypes, updateWorkspaceTaxDefault, type VendorType } from "@/lib/api/workspace.functions";
 import { VENDOR_TYPE_LABEL, VENDOR_TYPE_DESCRIPTION } from "@/hooks/use-vendor-types";
 import { cn } from "@/lib/utils";
+
+function TaxDefaultCard() {
+  const qc = useQC();
+  const getWs = useServerFn(getMyWorkspace);
+  const saveFn = useServerFn(updateWorkspaceTaxDefault);
+  const { data, isLoading } = useQuery({ queryKey: ["my-workspace"], queryFn: () => getWs() });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ws = data?.workspace as any;
+  const [tax, setTax] = useState("");
+  useEffect(() => {
+    if (ws) setTax(ws.default_tax_pct != null ? String(ws.default_tax_pct) : "21.9");
+  }, [ws?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const mut = useMutation({
+    mutationFn: () => saveFn({ data: { defaultTaxPct: Number(tax) } }),
+    onSuccess: () => { toast.success("Default tax rate saved"); qc.invalidateQueries({ queryKey: ["my-workspace"] }); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not save"),
+  });
+
+  function save() {
+    const n = Number(tax);
+    if (!Number.isFinite(n) || n < 0 || n > 100) {
+      toast.error("Enter a tax rate between 0 and 100");
+      return;
+    }
+    mut.mutate();
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Default tax rate</CardTitle>
+        <CardDescription>Applied automatically to new quotes. You can still override the tax on any individual quote.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" /> Loading…</div>
+        ) : (
+          <>
+            <div className="grid gap-2 sm:max-w-xs">
+              <Label htmlFor="default-tax">Tax rate (%)</Label>
+              <Input id="default-tax" type="number" step="0.1" min="0" max="100" value={tax} onChange={(e) => setTax(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Ghana standard combined rate is 21.9% (VAT 15% + NHIL 2.5% + GETFund 2.5% + COVID 1%).</p>
+            </div>
+            <Button onClick={save} disabled={mut.isPending}>{mut.isPending ? "Saving…" : "Save tax rate"}</Button>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function VendorTypeCard() {
   const qc = useQC();
