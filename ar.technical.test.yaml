@@ -1,0 +1,82 @@
+fileType: momentic/test/v2
+id: e415c3ad-0526-4b1a-3f6b-0b9a8f3d6c9b
+version: 1.0.24
+url: https://wekbench.com/signin
+description: AR technical — a full payment clears the invoice balance to zero, amounts in cedi
+# P0 money-path (AR). Confirms the balance math: paying the full total marks the invoice
+# paid with a zero balance, and amounts are shown to 2 decimals (the cedi).
+disabled: false
+retries: 1
+viewport: 1920, 1080
+browserType: Chromium
+steps:
+  - type:
+      text: "{{ env.WEKBENCH_EMAIL_TEST }}"
+      into: the work email field
+  - type:
+      text: "{{ env.WEKBENCH_PASSWORD_TEST }}"
+      into: the password field
+  - click: the button to continue / sign in with work email
+  - waitForUrlNotToMatch: signin
+  - wait: 2500
+
+  - javascript:
+      code: |-
+        const stamp = Date.now();
+        setVariable("QUOTE_TITLE", "QA AR Full " + stamp);
+        setVariable("BUYER_NAME", "QA Buyer " + stamp);
+        return stamp;
+      saveAs: STAMP_RET
+
+  - navigate: https://wekbench.com/quotes?new=1
+  - wait: 8000
+  - type:
+      text: "{{ env.QUOTE_TITLE }}"
+      into: the quote title field (placeholder "e.g. Office laptops for Q3")
+  - click: the "Select a buyer" dropdown
+  - click: the "Create new buyer" option in the dropdown
+  - type:
+      text: "{{ env.BUYER_NAME }}"
+      into: the "New buyer company name" field
+  - click: the "Add" button next to the new buyer name field
+  - wait: 1200
+  - click: the "Create & open" button
+  - wait: 3500
+
+  - act: Add a line item with description "QA AR Full Item", quantity 1, unit price 100.
+  - wait: 2000
+  - act: >-
+      Send / issue the quote to the buyer so the buyer acceptance link is active.
+  - wait: 2500
+
+  - javascript:
+      code: |-
+        const a = document.querySelector('a[href^="/q/"]');
+        const path = a ? a.getAttribute('href') : '';
+        setVariable("QPATH", path);
+        return path;
+      saveAs: QPATH_RET
+
+  - navigate: https://wekbench.com{{ env.QPATH }}
+  - wait: 3000
+  - type:
+      text: QA Buyer
+      into: the "Your name" field (placeholder "Full name")
+  - type:
+      text: QA Buyer
+      into: the signature field (placeholder "Type full name to sign")
+  - click: the "Accept & sign" button
+  - wait: 4000
+
+  - navigate: https://wekbench.com/invoices
+  - wait: 3000
+  - act: Open the most recent invoice (top of the list).
+  - wait: 2500
+  - act: >-
+      Record a payment for the FULL outstanding amount of this invoice (pay the entire
+      invoice total).
+  - wait: 2500
+  - assert: >-
+      The invoice is now fully paid — the outstanding balance is 0.00 and the invoice is
+      marked paid / settled (no longer overdue). All amounts are shown to two decimals in
+      cedi (GH₵), correctly rounded, with no negative balance.

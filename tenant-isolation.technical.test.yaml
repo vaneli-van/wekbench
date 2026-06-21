@@ -1,0 +1,38 @@
+fileType: momentic/test/v2
+id: b182f07a-d293-4fe7-0c38-7e6d5c0a3f68
+version: 1.0.24
+url: https://wekbench.com/signin
+description: Tenant isolation — a workspace cannot open another workspace's quote or invoice by URL
+# P0. The one bug that can never ship. Signs in as the test workspace and tries to open
+# resources that belong to a DIFFERENT workspace (Western Premium) by direct URL.
+# Independent of ?new=1 / publishing — uses existing detail routes + RLS.
+disabled: false
+retries: 1
+viewport: 1920, 1080
+browserType: Chromium
+steps:
+  - type:
+      text: "{{ env.WEKBENCH_EMAIL_TEST }}"
+      into: the work email field
+  - type:
+      text: "{{ env.WEKBENCH_PASSWORD_TEST }}"
+      into: the password field
+  - click: the button to continue / sign in with work email
+  - waitForUrlNotToMatch: signin
+  - wait: 2500
+
+  # Another workspace's quote — must NOT be readable.
+  - navigate: https://wekbench.com/quote/1384f8c3-b4d3-49d8-a16d-402bd816de85
+  - wait: 3500
+  - assert: >-
+      The quote is NOT accessible to this workspace — the page shows a not‑found / empty /
+      error / loading‑forever state. No quote number, buyer name, line items or totals from
+      another workspace are displayed. Tenant data did not leak.
+
+  # Another workspace's invoice — must NOT be readable.
+  - navigate: https://wekbench.com/invoices/a2f42b9c-f391-4b87-9c3a-1f1fec52cd78
+  - wait: 3500
+  - assert: >-
+      The invoice is NOT accessible to this workspace — a not‑found / empty / error state is
+      shown, with no invoice amounts, payments, or buyer details from another workspace
+      visible.

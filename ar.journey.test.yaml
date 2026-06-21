@@ -1,0 +1,84 @@
+fileType: momentic/test/v2
+id: d304b29c-f415-4a09-2e5a-9a8f7e2c5b8a
+version: 1.0.24
+url: https://wekbench.com/signin
+description: AR journey — accept a quote, then record a payment on its invoice and balance updates
+# P0 money-path (AR). Full chain: quote → send → buyer accept (creates the invoice) →
+# record a payment → balance/aging update. Heaviest flow; some fuzzy controls stay as act.
+disabled: false
+retries: 1
+viewport: 1920, 1080
+browserType: Chromium
+steps:
+  - type:
+      text: "{{ env.WEKBENCH_EMAIL_TEST }}"
+      into: the work email field
+  - type:
+      text: "{{ env.WEKBENCH_PASSWORD_TEST }}"
+      into: the password field
+  - click: the button to continue / sign in with work email
+  - waitForUrlNotToMatch: signin
+  - wait: 2500
+
+  - javascript:
+      code: |-
+        const stamp = Date.now();
+        setVariable("QUOTE_TITLE", "QA AR Quote " + stamp);
+        setVariable("BUYER_NAME", "QA Buyer " + stamp);
+        return stamp;
+      saveAs: STAMP_RET
+
+  - navigate: https://wekbench.com/quotes?new=1
+  - wait: 8000
+  - type:
+      text: "{{ env.QUOTE_TITLE }}"
+      into: the quote title field (placeholder "e.g. Office laptops for Q3")
+  - click: the "Select a buyer" dropdown
+  - click: the "Create new buyer" option in the dropdown
+  - type:
+      text: "{{ env.BUYER_NAME }}"
+      into: the "New buyer company name" field
+  - click: the "Add" button next to the new buyer name field
+  - wait: 1200
+  - click: the "Create & open" button
+  - wait: 3500
+
+  - act: Add a line item with description "QA AR Item", quantity 1, unit price 100.
+  - wait: 2000
+  - act: >-
+      Send / issue the quote to the buyer so its status becomes "Sent" and the buyer
+      acceptance link is active.
+  - wait: 2500
+
+  - javascript:
+      code: |-
+        const a = document.querySelector('a[href^="/q/"]');
+        const path = a ? a.getAttribute('href') : '';
+        setVariable("QPATH", path);
+        return path;
+      saveAs: QPATH_RET
+
+  # Buyer accepts (creates the order + invoice).
+  - navigate: https://wekbench.com{{ env.QPATH }}
+  - wait: 3000
+  - type:
+      text: QA Buyer
+      into: the "Your name" field (placeholder "Full name")
+  - type:
+      text: QA Buyer
+      into: the signature field (placeholder "Type full name to sign")
+  - click: the "Accept & sign" button
+  - wait: 4000
+  - assert: The quote is accepted and an order has been created.
+
+  # Open the resulting invoice and record a partial payment.
+  - navigate: https://wekbench.com/invoices
+  - wait: 3000
+  - act: Open the most recent invoice (top of the list).
+  - wait: 2500
+  - act: Record a payment of 40 against this invoice (amount 40).
+  - wait: 2500
+  - assert: >-
+      The payment was recorded — the invoice shows 40 paid and the outstanding balance
+      decreased by 40 from the invoice total, and the status/aging reflects a partially
+      paid invoice. The AR math is correct (no negative or zero‑ed totals).

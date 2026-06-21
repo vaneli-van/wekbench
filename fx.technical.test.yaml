@@ -1,0 +1,57 @@
+fileType: momentic/test/v2
+id: c293a18b-e304-40f8-1d49-8f7e6d1b4a79
+version: 1.0.24
+url: https://wekbench.com/signin
+description: FX technical — a foreign-currency sourced offer converts to GH₵ at a fresh, non-zero rate
+# P0 money-path, highest-risk seam. Provider-dependent: relies on a sourcing offer being
+# returned for the line. May need tuning after the first live run (part number / provider).
+disabled: false
+retries: 1
+viewport: 1920, 1080
+browserType: Chromium
+steps:
+  - type:
+      text: "{{ env.WEKBENCH_EMAIL_TEST }}"
+      into: the work email field
+  - type:
+      text: "{{ env.WEKBENCH_PASSWORD_TEST }}"
+      into: the password field
+  - click: the button to continue / sign in with work email
+  - waitForUrlNotToMatch: signin
+  - wait: 2500
+
+  - javascript:
+      code: |-
+        const stamp = Date.now();
+        setVariable("QUOTE_TITLE", "QA FX Quote " + stamp);
+        setVariable("BUYER_NAME", "QA Buyer " + stamp);
+        return stamp;
+      saveAs: STAMP_RET
+
+  - navigate: https://wekbench.com/quotes?new=1
+  - wait: 8000
+  - type:
+      text: "{{ env.QUOTE_TITLE }}"
+      into: the quote title field (placeholder "e.g. Office laptops for Q3")
+  - click: the "Select a buyer" dropdown
+  - click: the "Create new buyer" option in the dropdown
+  - type:
+      text: "{{ env.BUYER_NAME }}"
+      into: the "New buyer company name" field
+  - click: the "Add" button next to the new buyer name field
+  - wait: 1200
+  - click: the "Create & open" button
+  - wait: 3500
+
+  # Add a sourceable IT product, then source + apply an offer (priced in a foreign currency).
+  - act: >-
+      Add a line item with the description "Lenovo ThinkPad" (a product suppliers stock).
+  - wait: 2000
+  - act: >-
+      Open the sourcing / offers for this line, wait for offers to load, and apply the
+      first available offer to the line.
+  - wait: 3000
+  - assert: >-
+      The line's unit price is now shown in Ghana cedi (GH₵) at a NON‑ZERO value, and the
+      FX provenance is visible — the original source currency (e.g. GBP/USD) and the
+      exchange rate used. The conversion used a fresh, non‑zero rate, not zero or blank.
