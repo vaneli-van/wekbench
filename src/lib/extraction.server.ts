@@ -21,6 +21,7 @@ const ExtractionSchema = z.object({
   confidence: z.number().min(0).max(1),
   summary: z.string(),
   buyer_ref: z.string().nullable().optional(),
+  buyer_company: z.string().nullable().optional(),
   due_date: z.string().nullable().optional(),
   currency: z.string().nullable().optional(),
   incoterm: z.string().nullable().optional(),
@@ -41,6 +42,7 @@ const SYSTEM_PROMPT = `You are a procurement assistant for a B2B vendor. Read an
 Then extract:
 - summary: one-sentence plain-English summary of intent
 - buyer_ref: any RFQ/PO/quote reference number mentioned (e.g. "RFQ-2024-001", "PO #12345")
+- buyer_company: the name of the buying organisation requesting the quote (the company on the letterhead / sender company), otherwise null
 - due_date: ISO date if the buyer specifies one (YYYY-MM-DD), otherwise null
 - currency: 3-letter ISO code if specified (USD, EUR, GBP, etc.), otherwise null
 - incoterm: delivery/shipping term if stated (e.g. DAP, EXW, CIF, DDP, FOB), otherwise null
@@ -106,7 +108,7 @@ export async function extractEmailContent(input: {
         system:
           SYSTEM_PROMPT +
           "\n\nRespond ONLY with a single JSON object matching this TypeScript type — no prose, no markdown fences:\n" +
-          "{ doc_type: 'rfq'|'purchase_order'|'rfq_amendment'|'po_amendment'|'unknown', confidence: number, summary: string, buyer_ref: string|null, due_date: string|null, currency: string|null, incoterm: string|null, delivery_location: string|null, payment_terms: string|null, line_items: Array<{ description: string, brand: string|null, model: string|null, quantity: number|null, unit: string|null, target_price: number|null }> }",
+          "{ doc_type: 'rfq'|'purchase_order'|'rfq_amendment'|'po_amendment'|'unknown', confidence: number, summary: string, buyer_ref: string|null, buyer_company: string|null, due_date: string|null, currency: string|null, incoterm: string|null, delivery_location: string|null, payment_terms: string|null, line_items: Array<{ description: string, brand: string|null, model: string|null, quantity: number|null, unit: string|null, target_price: number|null }> }",
         messages: [{ role: "user", content }],
       });
       const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
@@ -453,6 +455,10 @@ export async function ingestUploadedDocument(opts: {
     if (liErr) console.error("[upload-ingest] line items insert failed", liErr);
   }
 
-  return { documentId: doc.id as string };
+  return {
+    documentId: doc.id as string,
+    suggestedBuyer: extraction.buyer_company ?? extraction.buyer_ref ?? null,
+    summary: extraction.summary ?? null,
+  };
 }
 

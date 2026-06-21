@@ -32,6 +32,7 @@ import {
 import { NewQuoteDialog } from "@/components/new-quote-dialog"
 import { supabase } from "@/integrations/supabase/client"
 import { ingestRfqUpload } from "@/lib/api/uploads.functions"
+import { UploadBuyerConfirmDialog } from "@/components/upload-buyer-confirm"
 
 import { Badge } from "@/components/ui/badge"
 import { FxRatesCard } from "@/components/fx-rates-card"
@@ -107,6 +108,8 @@ function CreateQuoteButton() {
   const approveFn = useServerFn(approveExtractionToRfq)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [pending, setPending] = useState<{ documentId: string; suggestedBuyer: string | null; summary: string | null } | null>(null)
+  const [creatingQuote, setCreatingQuote] = useState(false)
 
   async function handleFile(file: File | null | undefined) {
     if (!file) return
@@ -127,26 +130,38 @@ function CreateQuoteButton() {
         .from("rfq-uploads")
         .upload(path, file, { contentType: file.type || undefined, upsert: false })
       if (upErr) throw new Error(upErr.message)
-      const { documentId } = await ingestFn({ data: { filePath: path, fileName: file.name, contentType: file.type || undefined } })
-      toast.loading("Creating your quote…", { id: tid })
-      try {
-        const { quoteId } = await approveFn({ data: { documentId, createQuote: true, defaultMarginPct: 20 } })
-        if (quoteId) {
-          toast.success("Quote created from your file", { id: tid })
-          navigate({ to: "/quote/$id", params: { id: quoteId } })
-          return
-        }
-      } catch (approveErr) {
-        // If auto-approve can't complete, fall back to the extractions list so nothing is lost.
-        console.error("[upload] auto-approve failed", approveErr)
-      }
-      toast.success("Extracted — review it", { id: tid })
-      navigate({ to: "/extractions" })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res = (await ingestFn({ data: { filePath: path, fileName: file.name, contentType: file.type || undefined } })) as any
+      toast.success("Extracted — confirm the buyer", { id: tid })
+      setPending({ documentId: res.documentId, suggestedBuyer: res.suggestedBuyer ?? null, summary: res.summary ?? null })
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed", { id: tid })
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ""
+    }
+  }
+
+  async function confirmBuyer(sel: { buyerId?: string; buyerName?: string }) {
+    if (!pending) return
+    setCreatingQuote(true)
+    const tid = toast.loading("Creating your quote…")
+    try {
+      const { quoteId } = await approveFn({
+        data: { documentId: pending.documentId, createQuote: true, defaultMarginPct: 20, ...sel },
+      })
+      setPending(null)
+      if (quoteId) {
+        toast.success("Quote created", { id: tid })
+        navigate({ to: "/quote/$id", params: { id: quoteId } })
+      } else {
+        toast.success("Extracted — review it", { id: tid })
+        navigate({ to: "/extractions" })
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not create quote", { id: tid })
+    } finally {
+      setCreatingQuote(false)
     }
   }
 
@@ -185,6 +200,14 @@ function CreateQuoteButton() {
         </DropdownMenuContent>
       </DropdownMenu>
       <NewQuoteDialog open={open} onOpenChange={setOpen} />
+      <UploadBuyerConfirmDialog
+        open={!!pending}
+        suggestedBuyer={pending?.suggestedBuyer ?? null}
+        summary={pending?.summary ?? null}
+        submitting={creatingQuote}
+        onCancel={() => { if (!creatingQuote) setPending(null) }}
+        onConfirm={confirmBuyer}
+      />
     </>
   )
 }

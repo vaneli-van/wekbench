@@ -68,6 +68,8 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
         notes: z.string().max(2000).optional(),
         createQuote: z.boolean().default(true),
         defaultMarginPct: z.number().min(0).max(500).default(20),
+        buyerId: z.string().uuid().optional(),
+        buyerName: z.string().max(200).optional(),
       })
       .parse(input),
   )
@@ -113,10 +115,18 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const email = (doc as any).inbound_emails as { from_address?: string; from_name?: string } | null;
-      const buyerName = doc.buyer_ref || email?.from_name || null;
-      const buyerId = await findOrCreateBuyer(supabase, workspaceId, buyerName, {
-        email: email?.from_address ?? null,
-      });
+      let buyerId: string | null = data.buyerId ?? null;
+      let resolvedBuyerName: string | null = data.buyerName ?? null;
+      if (buyerId && !resolvedBuyerName) {
+        const { data: b } = await supabase.from("buyers").select("name").eq("id", buyerId).maybeSingle();
+        resolvedBuyerName = b?.name ?? null;
+      }
+      if (!buyerId) {
+        resolvedBuyerName = data.buyerName || ex.buyer_company || doc.buyer_ref || email?.from_name || null;
+        buyerId = await findOrCreateBuyer(supabase, workspaceId, resolvedBuyerName, {
+          email: email?.from_address ?? null,
+        });
+      }
       const { data: rfq, error: rfqErr } = await supabase
         .from("rfqs")
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -131,7 +141,8 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
           delivery_location: ex.delivery_location ?? null,
           payment_terms: ex.payment_terms ?? null,
           buyer_email: email?.from_address ?? null,
-          buyer_name: email?.from_name ?? null,
+          buyer_name: resolvedBuyerName ?? email?.from_name ?? null,
+          buyer_company: resolvedBuyerName ?? ex.buyer_company ?? null,
           buyer_id: buyerId,
           status: "open",
         } as any)
@@ -176,6 +187,11 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
 
         const number = await nextQuoteNumber(supabase, doc.workspace_id!);
         const taxPct = await defaultTaxPct(supabase, workspaceId);
+        const { data: rfqBuyer } = await supabase
+          .from("rfqs")
+          .select("buyer_id, buyer_name")
+          .eq("id", rfqId)
+          .maybeSingle();
         const { data: quote, error: qErr } = await supabase
           .from("quotes")
           .insert({
@@ -185,6 +201,8 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
             status: "draft",
             currency: doc.currency,
             tax_pct: taxPct,
+            buyer_id: rfqBuyer?.buyer_id ?? null,
+            buyer_name: rfqBuyer?.buyer_name ?? null,
             buyer_rfq_ref: doc.buyer_ref ?? null,
             incoterm: ex.incoterm ?? null,
             delivery_location: ex.delivery_location ?? null,
