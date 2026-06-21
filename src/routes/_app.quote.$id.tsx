@@ -589,7 +589,7 @@ function QuoteDetailPage() {
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
           <TermsField label="Incoterm" value={q.incoterm} editable={editable} placeholder="DAP / EXW / CIF" onCommit={(v) => headerMut.mutate({ incoterm: v || null })} />
-          <TermsField label="Buyer PO number" value={q.buyer_po_ref} editable={editable} placeholder="e.g. PO-2026-0142" onCommit={(v) => headerMut.mutate({ buyer_po_ref: v || null })} />
+          <TermsField label="Buyer RFQ number" value={q.buyer_rfq_ref} editable={editable} placeholder="e.g. RFQ-2026-0142" onCommit={(v) => headerMut.mutate({ buyer_rfq_ref: v || null })} />
           <TermsField label="Delivery location" value={q.delivery_location} editable={editable} placeholder="Accra warehouse" onCommit={(v) => headerMut.mutate({ delivery_location: v || null })} />
           <TermsField label="Lead time (days)" value={q.lead_time_days} type="number" editable={editable} onCommit={(v) => headerMut.mutate({ lead_time_days: v === "" ? null : Number(v) })} />
           <TermsField label="Tax %" value={q.tax_pct} type="number" editable={editable} onCommit={(v) => headerMut.mutate({ tax_pct: Number(v) || 0 })} />

@@ -43,6 +43,17 @@ function computeUnitPrice(cost: number | null, marginPct: number | null) {
   return Number((cost * (1 + m / 100)).toFixed(4));
 }
 
+/** The workspace's configured default tax rate (Ghana standard 21.9% if unset). */
+async function defaultTaxPct(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  workspaceId: string,
+): Promise<number> {
+  const { data } = await supabase.from("workspaces").select("default_tax_pct").eq("id", workspaceId).maybeSingle();
+  const v = Number(data?.default_tax_pct);
+  return Number.isFinite(v) ? v : 21.9;
+}
+
 /* ---------- approveExtraction: extraction → RFQ → draft Quote ---------- */
 
 export const approveExtractionToRfq = createServerFn({ method: "POST" })
@@ -66,13 +77,15 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
     const { data: doc, error: docErr } = await supabase
       .from("extracted_documents")
       .select(
-        "id, workspace_id, doc_type, buyer_ref, summary, currency, due_date, inbound_email_id, inbound_emails(from_address, from_name)",
+        "id, workspace_id, doc_type, buyer_ref, summary, currency, due_date, raw_extraction, inbound_email_id, inbound_emails(from_address, from_name)",
       )
       .eq("id", data.documentId)
       .maybeSingle();
     if (docErr || !doc) throw new Error("Document not found");
     if (!doc.workspace_id) throw new Error("Extracted document has no workspace");
     const workspaceId: string = doc.workspace_id;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ex = (((doc as any).raw_extraction ?? {}) as any);
 
     // mark approved
     const { error: updErr } = await supabase
@@ -114,6 +127,9 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
           summary: doc.summary,
           currency: doc.currency,
           due_date: doc.due_date,
+          incoterm: ex.incoterm ?? null,
+          delivery_location: ex.delivery_location ?? null,
+          payment_terms: ex.payment_terms ?? null,
           buyer_email: email?.from_address ?? null,
           buyer_name: email?.from_name ?? null,
           buyer_id: buyerId,
@@ -159,6 +175,7 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
         }
 
         const number = await nextQuoteNumber(supabase, doc.workspace_id!);
+        const taxPct = await defaultTaxPct(supabase, workspaceId);
         const { data: quote, error: qErr } = await supabase
           .from("quotes")
           .insert({
@@ -167,6 +184,10 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
             quote_number: number,
             status: "draft",
             currency: doc.currency,
+            tax_pct: taxPct,
+            buyer_rfq_ref: doc.buyer_ref ?? null,
+            incoterm: ex.incoterm ?? null,
+            delivery_location: ex.delivery_location ?? null,
             margin_pct: data.defaultMarginPct,
             subtotal: 0,
             total: 0,
@@ -316,7 +337,7 @@ export const ensureQuoteForRfq = createServerFn({ method: "POST" })
 
     const { data: rfq, error } = await supabase
       .from("rfqs")
-      .select("id, workspace_id, currency, extracted_document_id")
+      .select("id, workspace_id, currency, extracted_document_id, buyer_ref, incoterm, delivery_location")
       .eq("id", data.rfqId)
       .single();
     if (error || !rfq) throw new Error("RFQ not found");
@@ -343,6 +364,7 @@ export const ensureQuoteForRfq = createServerFn({ method: "POST" })
     }
 
     const number = await nextQuoteNumber(supabase, rfq.workspace_id);
+    const taxPct = await defaultTaxPct(supabase, rfq.workspace_id);
     const { data: q, error: qErr } = await supabase
       .from("quotes")
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -352,6 +374,10 @@ export const ensureQuoteForRfq = createServerFn({ method: "POST" })
         quote_number: number,
         status: "draft",
         currency: rfq.currency,
+        tax_pct: taxPct,
+        buyer_rfq_ref: rfq.buyer_ref ?? null,
+        incoterm: rfq.incoterm ?? null,
+        delivery_location: rfq.delivery_location ?? null,
         margin_pct: data.defaultMarginPct,
         subtotal: 0,
         total: 0,
@@ -396,7 +422,7 @@ export const getQuote = createServerFn({ method: "POST" })
     const { data: quote, error } = await context.supabase
       .from("quotes")
       .select(
-        "id, workspace_id, quote_number, status, currency, subtotal, tax_pct, tax_amount, total, margin_pct, valid_until, notes, sent_at, created_at, incoterm, buyer_po_ref, delivery_location, lead_time_days, site_address, site_contact_name, site_contact_phone, install_window, rfq_id, title, buyer_name, sector, assignee, share_token, accepted_at, accepted_by, accept_signature, declined_at, rfqs(buyer_ref, buyer_name, buyer_email, buyer_company, summary, due_date)",
+        "id, workspace_id, quote_number, status, currency, subtotal, tax_pct, tax_amount, total, margin_pct, valid_until, notes, sent_at, created_at, incoterm, buyer_po_ref, buyer_rfq_ref, delivery_location, lead_time_days, site_address, site_contact_name, site_contact_phone, install_window, rfq_id, title, buyer_name, sector, assignee, share_token, accepted_at, accepted_by, accept_signature, declined_at, rfqs(buyer_ref, buyer_name, buyer_email, buyer_company, summary, due_date)",
       )
       .eq("id", data.id)
       .maybeSingle();
@@ -421,6 +447,7 @@ export const updateQuoteHeader = createServerFn({ method: "POST" })
           .object({
             incoterm: z.string().max(32).nullable().optional(),
             buyer_po_ref: z.string().max(200).nullable().optional(),
+            buyer_rfq_ref: z.string().max(200).nullable().optional(),
             delivery_location: z.string().max(255).nullable().optional(),
             lead_time_days: z.number().int().min(0).max(3650).nullable().optional(),
             tax_pct: z.number().min(0).max(100).optional(),
@@ -800,6 +827,7 @@ export const createQuote = createServerFn({ method: "POST" })
       (await findOrCreateBuyer(supabase, workspaceId, data.buyer, { sector: data.sector ?? null }));
 
     const quote_number = await nextQuoteNumber(supabase, workspaceId);
+    const taxPct = await defaultTaxPct(supabase, workspaceId);
 
     const { data: created, error } = await supabase
       .from("quotes")
@@ -809,6 +837,7 @@ export const createQuote = createServerFn({ method: "POST" })
         rfq_id: null,
         quote_number,
         status: "draft",
+        tax_pct: taxPct,
         title: data.title,
         buyer_name: data.buyer,
         buyer_id: buyerId,

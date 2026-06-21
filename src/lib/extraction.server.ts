@@ -23,6 +23,9 @@ const ExtractionSchema = z.object({
   buyer_ref: z.string().nullable().optional(),
   due_date: z.string().nullable().optional(),
   currency: z.string().nullable().optional(),
+  incoterm: z.string().nullable().optional(),
+  delivery_location: z.string().nullable().optional(),
+  payment_terms: z.string().nullable().optional(),
   line_items: z.array(LineItemSchema),
 });
 
@@ -40,6 +43,9 @@ Then extract:
 - buyer_ref: any RFQ/PO/quote reference number mentioned (e.g. "RFQ-2024-001", "PO #12345")
 - due_date: ISO date if the buyer specifies one (YYYY-MM-DD), otherwise null
 - currency: 3-letter ISO code if specified (USD, EUR, GBP, etc.), otherwise null
+- incoterm: delivery/shipping term if stated (e.g. DAP, EXW, CIF, DDP, FOB), otherwise null
+- delivery_location: where the buyer wants the goods delivered (city, port, site, or address), otherwise null
+- payment_terms: payment terms if stated (e.g. "net 30", "50% advance"), otherwise null
 - line_items: every distinct product/SKU the buyer is asking about, with description, brand, model, quantity, unit (each/box/pack), and target_price if stated
 
 Be precise. If a field is missing, return null — do not invent values. Always return at least an empty line_items array.`;
@@ -103,7 +109,7 @@ export async function extractEmailContent(input: {
       system:
         SYSTEM_PROMPT +
         "\n\nRespond ONLY with a single JSON object matching this TypeScript type — no prose, no markdown fences:\n" +
-        "{ doc_type: 'rfq'|'purchase_order'|'rfq_amendment'|'po_amendment'|'unknown', confidence: number, summary: string, buyer_ref: string|null, due_date: string|null, currency: string|null, line_items: Array<{ description: string, brand: string|null, model: string|null, quantity: number|null, unit: string|null, target_price: number|null }> }",
+        "{ doc_type: 'rfq'|'purchase_order'|'rfq_amendment'|'po_amendment'|'unknown', confidence: number, summary: string, buyer_ref: string|null, due_date: string|null, currency: string|null, incoterm: string|null, delivery_location: string|null, payment_terms: string|null, line_items: Array<{ description: string, brand: string|null, model: string|null, quantity: number|null, unit: string|null, target_price: number|null }> }",
       messages: [{ role: "user", content }],
     });
     const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
