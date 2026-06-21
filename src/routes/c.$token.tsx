@@ -2,9 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { ShieldCheck, CheckCircle2, MessageSquare, Plus, Trash2, HelpCircle } from "lucide-react";
+import { ShieldCheck, CheckCircle2, MessageSquare, Plus, Trash2, HelpCircle, Paperclip, Upload, FileText } from "lucide-react";
 
-import { getClarificationPublic, submitClarificationPublic } from "@/lib/api/clarifications.functions";
+import { getClarificationPublic, submitClarificationPublic, addClarificationAttachmentPublic } from "@/lib/api/clarifications.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { Wordmark } from "@/components/wordmark";
 
 type Question = { id: string; line_no: number | null; question: string; buyer_answer: string | null };
@@ -18,6 +19,12 @@ type Item = {
   unit: string | null;
 };
 type AddRow = { description: string; qty: string; unit: string };
+type Attachment = { file_path: string; file_name: string; content_type: string | null; uploader: string };
+
+const CLAR_BUCKET = "clarification-uploads";
+function publicUrl(path: string) {
+  return supabase.storage.from(CLAR_BUCKET).getPublicUrl(path).data.publicUrl;
+}
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -40,6 +47,7 @@ function ClarifyPage() {
   const qc = useQueryClient();
   const getFn = useServerFn(getClarificationPublic);
   const submitFn = useServerFn(submitClarificationPublic);
+  const attachFn = useServerFn(addClarificationAttachmentPublic);
 
   const { data, isLoading } = useQuery({
     queryKey: ["public-clarification", token],
@@ -50,12 +58,36 @@ function ClarifyPage() {
   const clar = payload?.clarification;
   const questions: Question[] = useMemo(() => payload?.questions ?? [], [payload]);
   const items: Item[] = useMemo(() => payload?.items ?? [], [payload]);
+  const attachments: Attachment[] = useMemo(() => payload?.attachments ?? [], [payload]);
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [name, setName] = useState("");
   const [comment, setComment] = useState("");
   const [qtyEdits, setQtyEdits] = useState<Record<string, string>>({});
   const [addRows, setAddRows] = useState<AddRow[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleUpload(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        if (file.size > 10 * 1024 * 1024) continue;
+        const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
+        const path = `${token}/${crypto.randomUUID()}-${safe}`;
+        const { error } = await supabase.storage
+          .from(CLAR_BUCKET)
+          .upload(path, file, { contentType: file.type || undefined, upsert: false });
+        if (error) continue;
+        await attachFn({
+          data: { token, filePath: path, fileName: file.name, contentType: file.type || undefined, sizeBytes: file.size },
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["public-clarification", token] });
+    } finally {
+      setUploading(false);
+    }
+  }
 
   // Prefill from any prior submission once the payload arrives.
   useEffect(() => {
@@ -234,6 +266,40 @@ function ClarifyPage() {
           </button>
         </div>
       )}
+
+      {/* Attachments — pictures / datasheets, both directions */}
+      <div className="mt-4 rounded-xl border border-border bg-card p-5">
+        <h2 className="flex items-center gap-2 text-sm font-semibold"><Paperclip className="size-4" /> Attachments</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Add pictures or datasheets to support your answer (images or PDF, up to 10MB each).
+        </p>
+        {attachments.length > 0 && (
+          <ul className="mt-3 space-y-1.5">
+            {attachments.map((a) => (
+              <li key={a.file_path} className="flex items-center gap-2 text-sm">
+                <FileText className="size-4 shrink-0 text-muted-foreground" />
+                <a href={publicUrl(a.file_path)} target="_blank" rel="noreferrer" className="min-w-0 truncate text-foreground underline">
+                  {a.file_name}
+                </a>
+                {a.uploader === "vendor" && (
+                  <span className="rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">From supplier</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        <label className="mt-3 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:border-foreground/30 hover:text-foreground">
+          <Upload className="size-3.5" /> {uploading ? "Uploading…" : "Add a file"}
+          <input
+            type="file"
+            accept="image/*,application/pdf"
+            multiple
+            className="hidden"
+            disabled={uploading}
+            onChange={(e) => handleUpload(e.target.files)}
+          />
+        </label>
+      </div>
 
       {/* Comment + identity + submit */}
       <div className="mt-4 rounded-xl border border-border bg-card p-5">

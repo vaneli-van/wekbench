@@ -118,19 +118,89 @@ export const getQuoteClarification = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (!c) return { clarification: null, questions: [], changes: [], events: [] };
+    if (!c) return { clarification: null, questions: [], changes: [], events: [], attachments: [] };
 
-    const [questionsRes, changesRes, eventsRes] = await Promise.all([
+    const [questionsRes, changesRes, eventsRes, attachmentsRes] = await Promise.all([
       supabase.from("clarification_questions").select("*").eq("clarification_id", c.id).order("sort").order("created_at"),
       supabase.from("clarification_changes").select("*").eq("clarification_id", c.id).order("created_at"),
       supabase.from("clarification_events").select("*").eq("clarification_id", c.id).order("at", { ascending: false }),
+      supabase.from("clarification_attachments").select("*").eq("clarification_id", c.id).order("created_at"),
     ]);
     return {
       clarification: c,
       questions: questionsRes.data ?? [],
       changes: changesRes.data ?? [],
       events: eventsRes.data ?? [],
+      attachments: attachmentsRes.data ?? [],
     };
+  });
+
+/** Vendor records a reference file they uploaded to the clarification bucket. */
+export const recordClarificationAttachment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        clarificationId: z.string().uuid(),
+        filePath: z.string().min(1),
+        fileName: z.string().min(1),
+        contentType: z.string().optional(),
+        sizeBytes: z.number().int().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = context.supabase as any;
+    const userId = context.userId;
+    const { data: c } = await supabase
+      .from("quote_clarifications")
+      .select("workspace_id")
+      .eq("id", data.clarificationId)
+      .single();
+    if (!c) throw new Error("Clarification not found");
+    const { error } = await supabase.from("clarification_attachments").insert({
+      clarification_id: data.clarificationId,
+      workspace_id: c.workspace_id,
+      uploader: "vendor",
+      uploaded_by: userId,
+      file_path: data.filePath,
+      file_name: data.fileName,
+      content_type: data.contentType ?? null,
+      size_bytes: data.sizeBytes ?? null,
+    });
+    if (error) throw new Error(error.message);
+    await logEvent(supabase, data.clarificationId, c.workspace_id, userId, "updated", { attachment: data.fileName });
+    return { ok: true };
+  });
+
+/** PUBLIC: buyer records a file they uploaded to the clarification bucket. */
+export const addClarificationAttachmentPublic = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        token: z.string().min(6),
+        filePath: z.string().min(1),
+        fileName: z.string().min(1),
+        contentType: z.string().optional(),
+        sizeBytes: z.number().int().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const supabase = anonClient();
+    const { data: result, error } = await supabase.rpc("add_clarification_attachment_public", {
+      p_token: data.token,
+      p_path: data.filePath,
+      p_name: data.fileName,
+      p_type: data.contentType ?? null,
+      p_size: data.sizeBytes ?? null,
+    });
+    if (error) throw new Error(error.message);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const r = (result ?? {}) as any;
+    if (!r.ok) throw new Error(r.error ?? "Could not record the attachment");
+    return r;
   });
 
 /** Add a manual question to a clarification. */

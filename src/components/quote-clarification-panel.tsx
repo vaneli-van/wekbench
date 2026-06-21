@@ -12,11 +12,15 @@ import {
   Clock,
   ChevronDown,
   ChevronRight,
+  Paperclip,
+  Upload,
+  FileText,
 } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
 import {
   createClarification,
   getQuoteClarification,
@@ -25,10 +29,16 @@ import {
   deleteClarificationQuestion,
   sendClarification,
   applyClarificationChange,
+  recordClarificationAttachment,
 } from "@/lib/api/clarifications.functions";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
+
+const CLAR_BUCKET = "clarification-uploads";
+function publicUrl(path: string) {
+  return supabase.storage.from(CLAR_BUCKET).getPublicUrl(path).data.publicUrl;
+}
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
@@ -68,15 +78,18 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
   const deleteQFn = useServerFn(deleteClarificationQuestion);
   const sendFn = useServerFn(sendClarification);
   const applyFn = useServerFn(applyClarificationChange);
+  const recordAttachFn = useServerFn(recordClarificationAttachment);
 
   const { data, isLoading } = useQuery({ queryKey: key, queryFn: () => getFn({ data: { quoteId } }) });
   const clar = (data as Any)?.clarification as Any;
   const questions: Any[] = useMemo(() => (data as Any)?.questions ?? [], [data]);
   const changes: Any[] = useMemo(() => (data as Any)?.changes ?? [], [data]);
   const events: Any[] = useMemo(() => (data as Any)?.events ?? [], [data]);
+  const attachments: Any[] = useMemo(() => (data as Any)?.attachments ?? [], [data]);
 
   const [newQ, setNewQ] = useState("");
   const [showActivity, setShowActivity] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const createMut = useMutation({ mutationFn: () => createFn({ data: { quoteId } }), onSuccess: invalidate });
   const addQMut = useMutation({
@@ -106,6 +119,35 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
   const token = clar?.share_token as string | undefined;
   const link = token ? `${typeof window !== "undefined" ? window.location.origin : ""}/c/${token}` : "";
   const isDraft = clar?.status === "draft";
+
+  async function handleUpload(files: FileList | null) {
+    if (!files || files.length === 0 || !clar) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`${file.name}: over 10MB`);
+          continue;
+        }
+        const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
+        const path = `${token}/${crypto.randomUUID()}-${safe}`;
+        const { error } = await supabase.storage
+          .from(CLAR_BUCKET)
+          .upload(path, file, { contentType: file.type || undefined, upsert: false });
+        if (error) {
+          toast.error(`${file.name}: ${error.message}`);
+          continue;
+        }
+        await recordAttachFn({
+          data: { clarificationId: clar.id, filePath: path, fileName: file.name, contentType: file.type || undefined, sizeBytes: file.size },
+        });
+      }
+      invalidate();
+      toast.success("Attached");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -251,6 +293,41 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
           </div>
         </div>
       )}
+
+      {/* Attachments — both directions (buyer pictures/datasheets + your reference files) */}
+      <div className="mt-3">
+        <p className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <Paperclip className="size-3.5" /> Attachments
+        </p>
+        {attachments.length > 0 ? (
+          <ul className="space-y-1">
+            {attachments.map((a) => (
+              <li key={a.file_path} className="flex items-center gap-2 text-sm">
+                <FileText className="size-4 shrink-0 text-muted-foreground" />
+                <a href={publicUrl(a.file_path)} target="_blank" rel="noreferrer" className="min-w-0 truncate underline">
+                  {a.file_name}
+                </a>
+                <span className="rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
+                  {a.uploader === "buyer" ? "From buyer" : "You"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs text-muted-foreground">No files yet. Buyer pictures/datasheets and your reference files appear here.</p>
+        )}
+        <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:border-foreground/30 hover:text-foreground">
+          <Upload className="size-3.5" /> {uploading ? "Uploading…" : "Add a reference file"}
+          <input
+            type="file"
+            accept="image/*,application/pdf"
+            multiple
+            className="hidden"
+            disabled={uploading}
+            onChange={(e) => handleUpload(e.target.files)}
+          />
+        </label>
+      </div>
 
       {/* Send / link */}
       <div className="mt-4 flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:items-center sm:justify-between">
