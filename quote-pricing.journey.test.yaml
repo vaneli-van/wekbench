@@ -3,8 +3,8 @@ id: 7d4ebc36-9e5f-4ba3-c8d4-3a2f1e6c9b24
 version: 1.0.24
 url: https://wekbench.com/signin
 description: Quote pricing journey — create a quote, add a priced line, totals are correct
-# P0 money-path: the core number a customer relies on. Uses the test account (Pro, so no
-# quote cap). Idempotent: unique quote title each run.
+# P0 money-path. Uses the dedicated test account (Pro). Deterministic dialog steps keep AI
+# usage low; idempotent via a unique quote title + buyer name each run.
 disabled: false
 retries: 1
 viewport: 1920, 1080
@@ -22,31 +22,35 @@ steps:
 
   - javascript:
       code: |-
-        const title = "QA Pricing Quote " + Date.now();
-        setVariable("QUOTE_TITLE", title);
-        return title;
-      saveAs: QUOTE_TITLE_RET
+        const stamp = Date.now();
+        setVariable("QUOTE_TITLE", "QA Pricing Quote " + stamp);
+        setVariable("BUYER_NAME", "QA Buyer " + stamp);
+        return stamp;
+      saveAs: STAMP_RET
 
-  # Create a fresh quote.
   - navigate: https://wekbench.com/quotes?new=1
   - wait: 8000
   - assert: The "New quote" dialog is open (a title field and a buyer control are shown).
+
+  # Deterministic dialog fill (single-target clicks, not a broad act).
   - type:
       text: "{{ env.QUOTE_TITLE }}"
-      into: the quote title / project name field
-  - act: >-
-      In the New Quote dialog, set the buyer to "QA Pricing Buyer" — create the buyer if
-      needed, otherwise pick any buyer — then create / open the quote.
+      into: the quote title field (placeholder "e.g. Office laptops for Q3")
+  - click: the "Select a buyer" dropdown
+  - click: the "Create new buyer" option in the dropdown
+  - type:
+      text: "{{ env.BUYER_NAME }}"
+      into: the "New buyer company name" field
+  - click: the "Add" button next to the new buyer name field
+  - wait: 1200
+  - click: the "Create & open" button
   - wait: 3500
 
-  # Add a priced line item.
+  # Add a priced line item: 10 × 25 = 250.
   - act: >-
       On the quote builder, add a line item and set its description to "QA Test Widget",
-      its quantity to 10, and its unit price to 25 (in the quote's currency). Leave any
-      discount at 0.
+      its quantity to 10, and its unit price to 25. Leave any discount at 0.
   - wait: 2500
-
-  # The money number must be right: 10 × 25 = 250.
   - assert: >-
       The line "QA Test Widget" shows quantity 10 and unit price 25 with a line total of
       250, and the quote subtotal is 250 (in the quote currency). The totals are

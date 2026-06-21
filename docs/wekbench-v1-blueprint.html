@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wekbench v1 — Wireframe, Flow & Test Map</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --ink:#1a1d21; --muted:#6b7280; --line:#d3d7dd; --card:#ffffff;
+    --wf:#eef1f4; --wfline:#c4cad2; --accent:#2f6f4f; --accentbg:#e7f1ec;
+    --p0:#b4232a; --p0bg:#fbe9ea; --p1:#1d5fbf; --p1bg:#e7f0fc; --p2:#7a5300; --p2bg:#fbf2db;
+    --buyer:#6d28d9; --buyerbg:#f1eafd;
+    --radius:10px; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5}
+  a{color:inherit}
+  header.top{position:sticky;top:0;z-index:20;background:rgba(246,247,249,.92);backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line);padding:10px 20px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  header.top h1{font-size:15px;margin:0 16px 0 0;font-weight:700}
+  header.top nav{display:flex;flex-wrap:wrap;gap:6px}
+  header.top nav a{font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);
+    padding:3px 8px;border-radius:999px;background:#fff}
+  header.top nav a:hover{color:var(--ink);border-color:var(--muted)}
+  .wrap{max-width:1080px;margin:0 auto;padding:24px 20px 80px}
+  .lead{color:var(--muted);font-size:14px;max-width:760px}
+  h2.stage{font-size:18px;margin:34px 0 4px;display:flex;align-items:center;gap:10px;scroll-margin-top:64px}
+  h2.stage .num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;
+    background:var(--accent);color:#fff;font-size:13px;font-weight:700;font-family:var(--mono)}
+  .role{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:999px}
+  .role.vendor{background:var(--accentbg);color:var(--accent)}
+  .role.buyer{background:var(--buyerbg);color:var(--buyer)}
+  .role.system{background:#eceef1;color:var(--muted)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-top:12px}
+  .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  .sub{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 8px}
+  ul.actions{margin:0;padding-left:18px;font-size:13px}
+  ul.actions li{margin:3px 0}
+
+  /* wireframe primitives */
+  .wf{background:var(--wf);border:1px solid var(--wfline);border-radius:8px;padding:10px;font-family:var(--mono);font-size:10.5px;color:#41464d}
+  .wf .bar{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--wfline);padding-bottom:6px;margin-bottom:8px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--wfline)}
+  .wf .title{font-weight:700;color:#2b2f35}
+  .row{display:flex;gap:6px;margin:5px 0}
+  .b{background:#fff;border:1px solid var(--wfline);border-radius:5px;padding:5px 6px;flex:1;text-align:center}
+  .b.fill{background:#dfe4ea}
+  .b.dark{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .b.tall{padding:14px 6px}
+  .b.l{text-align:left}
+  .ph{height:8px;background:#dfe4ea;border-radius:3px;margin:5px 0}
+  .ph.s{width:55%}.ph.m{width:75%}.ph.x{width:35%}
+  .side{display:flex;gap:8px}
+  .nav{width:78px;flex:0 0 78px}
+  .nav .b{font-size:9px;margin-bottom:4px}
+  .col{flex:1}
+  .pill{display:inline-block;background:#fff;border:1px solid var(--wfline);border-radius:999px;padding:2px 7px;font-size:9px;margin:2px 3px 0 0}
+
+  /* tests */
+  table.tests{width:100%;border-collapse:collapse;margin-top:4px;font-size:12.5px}
+  table.tests th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+    border-bottom:1px solid var(--line);padding:5px 6px}
+  table.tests td{border-bottom:1px solid #eceef1;padding:6px;vertical-align:top}
+  table.tests td.f{font-family:var(--mono);font-size:11px;white-space:nowrap}
+  .tag{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;font-family:var(--mono)}
+  .t.p0{background:var(--p0bg);color:var(--p0)}
+  .t.p1{background:var(--p1bg);color:var(--p1)}
+  .t.p2{background:var(--p2bg);color:var(--p2)}
+  .kind{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase}
+  .ok{color:var(--accent);font-weight:700}
+
+  /* flow spine */
+  .spine{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch;margin-top:14px}
+  .stp{flex:1;min-width:96px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px;text-align:center;position:relative}
+  .stp .n{font-family:var(--mono);font-size:10px;color:var(--muted)}
+  .stp .l{font-size:12px;font-weight:600;margin-top:2px}
+  .stp .a{font-size:18px;color:var(--wfline);position:absolute;right:-9px;top:50%;transform:translateY(-50%);z-index:2}
+  .buyrail{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .buyrail .stp{border-color:#d9cdf3;background:var(--buyerbg)}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:14px 0 0;font-size:12px;color:var(--muted);align-items:center}
+  .legend .tag{margin-right:4px}
+  .note{font-size:12px;color:var(--muted);background:#fff;border:1px dashed var(--line);border-radius:8px;padding:10px 12px;margin-top:12px}
+  .matrix td,.matrix th{font-size:12px;padding:6px 8px;border-bottom:1px solid #eceef1}
+  .matrix th{text-align:left;color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.04em}
+  footer{margin-top:40px;color:var(--muted);font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Wekbench v1 — Blueprint</h1>
+  <nav>
+    <a href="#flow">Flow</a>
+    <a href="#s0">0 Auth</a>
+    <a href="#s1">1 Dashboard</a>
+    <a href="#s2">2 RFQ Intake</a>
+    <a href="#s3">3 Pipeline</a>
+    <a href="#s4">4 Quote Builder</a>
+    <a href="#s5">5 Clarify</a>
+    <a href="#s6">6 Accept</a>
+    <a href="#s7">7 Order/PO</a>
+    <a href="#s8">8 Track</a>
+    <a href="#s9">9 Invoice/AR</a>
+    <a href="#s10">10 Masters</a>
+    <a href="#s11">11 Gating</a>
+    <a href="#matrix">Matrix</a>
+  </nav>
+</header>
+
+<div class="wrap">
+  <p class="lead">The full version‑1 map of Wekbench end to end — every screen wireframed, wired into the
+  procurement lifecycle, and annotated with the Momentic tests that guard each stage. Test tiers:
+  <span class="tag t p0">P0</span> money‑path, <span class="tag t p1">P1</span> core,
+  <span class="tag t p2">P2</span> secondary. Each stage carries a <b>journey</b> test (happy path) and a
+  <b>technical</b> test (guarantees underneath).</p>
+
+  <!-- ================= FLOW SPINE ================= -->
+  <h2 class="stage" id="flow"><span class="num">↦</span> The lifecycle (start → finish)</h2>
+  <div class="card">
+    <div class="sub">Vendor spine — RFQ to cash</div>
+    <div class="spine">
+      <div class="stp"><div class="n">00</div><div class="l">Auth &amp; Onboard</div><div class="a">›</div></div>
+      <div class="stp"><div class="n">01</div><div class="l">Dashboard</div><div class="a">›</div></div>
+      <div class="stp"><div class="n">02</div><div class="l">RFQ Intake</div><div class="a">›</div></div>
+      <div class="stp"><div class="n">03</div><div class="l">Quote Pipeline</div><div class="a">›</div></div>
+      <div class="stp"><div class="n">04</div><div class="l">Quote Builder</div><div class="a">›</div></div>
+      <div class="stp"><div class="n">06</div><div class="l">Send → Accept</div><div class="a">›</div></div>
+      <div class="stp"><div class="n">07</div><div class="l">Order &amp; PO</div><div class="a">›</div></div>
+      <div class="stp"><div class="n">08</div><div class="l">Deliver/Track</div><div class="a">›</div></div>
+      <div class="stp"><div class="n">09</div><div class="l">Invoice → Collect</div></div>
+    </div>
+    <div class="sub" style="margin-top:14px">Buyer rail — no‑login public touchpoints (tokenized)</div>
+    <div class="buyrail">
+      <div class="stp"><div class="n">05</div><div class="l">/c/&lt;token&gt; Clarify</div></div>
+      <div class="stp"><div class="n">06</div><div class="l">/q/&lt;token&gt; Accept &amp; e‑sign</div></div>
+      <div class="stp"><div class="n">08</div><div class="l">/track/&lt;token&gt; Status</div></div>
+    </div>
+    <div class="legend">
+      <span><span class="tag t p0">P0</span>money‑path: pricing · FX · AR · tenant isolation · buyer pages</span>
+      <span><span class="tag t p1">P1</span>core product</span>
+      <span><span class="tag t p2">P2</span>secondary &amp; gating</span>
+    </div>
+    <div class="note">Cross‑cutting guards that ride every stage: <b>tenant isolation</b> (workspace A never sees B) ·
+    <b>freemium gating</b> (quote cap, seats, sourcing depth, AR) · <b>audit trail</b> on buyer round‑trips.</div>
+  </div>
+
+  <!-- ================= STAGE 0 ================= -->
+  <h2 class="stage" id="s0"><span class="num">0</span> Auth &amp; Onboarding <span class="role system">system</span></h2>
+  <div class="grid">
+    <div class="card">
+      <div class="sub">Wireframe — sign in / onboarding wizard</div>
+      <div class="wf">
+        <div class="bar"><span class="dot"></span><span class="title">Sign in — Wekbench</span></div>
+        <div class="ph x"></div>
+        <div class="row"><div class="b l">Work email …</div></div>
+        <div class="row"><div class="b l">Password …</div></div>
+        <div class="row"><div class="b dark">Continue with work email</div></div>
+        <div class="row"><div class="b">Continue with Microsoft (soon)</div></div>
+        <div class="ph s"></div>
+      </div>
+      <div class="wf" style="margin-top:10px">
+        <div class="bar"><span class="dot"></span><span class="title">Onboarding wizard</span></div>
+        <div class="row"><div class="b fill">Step ①</div><div class="b">Step ②</div><div class="b">Step ③ → first quote</div></div>
+        <div class="ph m"></div><div class="ph s"></div>
+        <div class="row"><div class="b dark">Create your first quote →</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sub">Key actions</div>
+      <ul class="actions">
+        <li>Sign in / sign up (email confirm), reset password</li>
+        <li>Workspace created on first login; invites claimed</li>
+        <li>Guided onboarding → lands on first quote (<span class="kind">?new=1</span>)</li>
+      </ul>
+      <div class="sub" style="margin-top:12px">Tests at this stage</div>
+      <table class="tests">
+        <tr><th>Test</th><th>Type</th><th>Guards</th></tr>
+        <tr><td class="f">auth.journey <span class="ok">✓</span></td><td><span class="tag t p0">P0</span> <span class="kind">journey</span></td><td>sign in → app shell shown</td></tr>
+        <tr><td class="f">auth.technical <span class="ok">✓</span></td><td><span class="tag t p0">P0</span> <span class="kind">technical</span></td><td>bad password rejected; protected route → sign‑in</td></tr>
+        <tr><td class="f">onboarding.journey</td><td><span class="tag t p1">P1</span> <span class="kind">journey</span></td><td>sign up → onboard → first quote (needs inbox)</td></tr>
+        <tr><td class="f">onboarding.technical</td><td><span class="tag t p1">P1</span> <span class="kind">technical</span></td><td><span class="kind">?new=1</span> opens New Quote dialog</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= STAGE 1 ================= -->
+  <h2 class="stage" id="s1"><span class="num">1</span> Dashboard <span class="role vendor">vendor</span></h2>
+  <div class="grid">
+    <div class="card">
+      <div class="sub">Wireframe — dashboard</div>
+      <div class="wf">
+        <div class="bar"><span class="dot"></span><span class="title">Dashboard</span></div>
+        <div class="side">
+          <div class="nav"><div class="b dark">Home</div><div class="b">Inbox</div><div class="b">Quotes</div><div class="b">Orders</div><div class="b">Invoices</div><div class="b">Buyers</div><div class="b">Catalog</div></div>
+          <div class="col">
+            <div class="row"><div class="b">RFQs needing attention</div><div class="b">Quotes open</div><div class="b">AR due</div></div>
+            <div class="row"><div class="b tall l">Activity feed<br><span class="pill">RFQ</span><span class="pill">quote</span><span class="pill">order</span></div><div class="b tall l">Email highlights<br><span class="pill">inbound</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sub">Key actions</div>
+      <ul class="actions">
+        <li>Live activity feed (RFQs, quotes, orders)</li>
+        <li>RFQ‑attention &amp; AR‑due widgets; email highlights</li>
+        <li>First‑quote empty state for fresh workspaces</li>
+      </ul>
+      <div class="sub" style="margin-top:12px">Tests at this stage</div>
+      <table class="tests">
+        <tr><th>Test</th><th>Type</th><th>Guards</th></tr>
+        <tr><td class="f">dashboard.journey</td><td><span class="tag t p1">P1</span> <span class="kind">journey</span></td><td>feeds + widgets render with data</td></tr>
+        <tr><td class="f">dashboard.technical</td><td><span class="tag t p1">P1</span> <span class="kind">technical</span></td><td>empty state on fresh workspace; email feed</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= STAGE 2 ================= -->
+  <h2 class="stage" id="s2"><span class="num">2</span> RFQ Intake <span class="role system">system</span> <span class="role vendor">vendor</span></h2>
+  <div class="grid">
+    <div class="card">
+      <div class="sub">Wireframe — inbox → extraction → review</div>
+      <div class="wf">
+        <div class="bar"><span class="dot"></span><span class="title">RFQ Inbox</span></div>
+        <div class="row"><div class="b l">✉ Inbound email · PDF · Excel</div></div>
+        <div class="row"><div class="b">→ Extraction</div><div class="b">→ Review queue</div><div class="b dark">→ Approve to RFQ</div></div>
+        <div class="ph m"></div><div class="ph s"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sub">Key actions</div>
+      <ul class="actions">
+        <li>Capture inbound RFQs (email/PDF/Excel) into one inbox</li>
+        <li>AI extraction → review queue → approve to a structured RFQ</li>
+        <li>RFQ becomes the seed for a quote</li>
+      </ul>
+      <div class="sub" style="margin-top:12px">Tests at this stage</div>
+      <table class="tests">
+        <tr><th>Test</th><th>Type</th><th>Guards</th></tr>
+        <tr><td class="f">inbox.journey</td><td><span class="tag t p2">P2</span> <span class="kind">journey</span></td><td>inbox → extraction → review → approve to RFQ</td></tr>
+        <tr><td class="f">inbox.technical</td><td><span class="tag t p2">P2</span> <span class="kind">technical</span></td><td>inbound‑email capture (needs provisioned inbox)</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= STAGE 3 ================= -->
+  <h2 class="stage" id="s3"><span class="num">3</span> Quote Pipeline <span class="role vendor">vendor</span></h2>
+  <div class="grid">
+    <div class="card">
+      <div class="sub">Wireframe — kanban pipeline</div>
+      <div class="wf">
+        <div class="bar"><span class="dot"></span><span class="title">Quote pipeline</span><span style="margin-left:auto" class="pill">Kanban · List</span></div>
+        <div class="row">
+          <div class="b l">Drafted<br><span class="pill">Q‑1</span><span class="pill">Q‑2</span></div>
+          <div class="b l">Submitted<br><span class="pill">Q‑3</span></div>
+          <div class="b l">Clarify<br><span class="pill">Q‑4</span></div>
+          <div class="b l">Won</div><div class="b l">Lost</div>
+        </div>
+        <div class="row"><div class="b">Filter: buyer · sector · assignee</div><div class="b">Search</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sub">Key actions</div>
+      <ul class="actions">
+        <li>Board of quotes by stage; drag to move stage</li>
+        <li>Filter/search; kanban ↔ list toggle</li>
+        <li>Open a quote → builder</li>
+      </ul>
+      <div class="sub" style="margin-top:12px">Tests at this stage</div>
+      <table class="tests">
+        <tr><th>Test</th><th>Type</th><th>Guards</th></tr>
+        <tr><td class="f">quotes-pipeline.journey</td><td><span class="tag t p1">P1</span> <span class="kind">journey</span></td><td>board loads; move a quote across a stage</td></tr>
+        <tr><td class="f">quotes-pipeline.technical</td><td><span class="tag t p1">P1</span> <span class="kind">technical</span></td><td>stage change persists on reload; view toggle</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= STAGE 4 ================= -->
+  <h2 class="stage" id="s4"><span class="num">4</span> Quote Builder — the heart <span class="role vendor">vendor</span></h2>
+  <div class="card">
+    <div class="sub">Wireframe — quote detail / builder</div>
+    <div class="wf">
+      <div class="bar"><span class="dot"></span><span class="title">Quote Q‑2026‑0042 · for Buyer Co</span><span style="margin-left:auto" class="pill">Draft → Send</span></div>
+      <div class="row"><div class="b l">Header: title · buyer · status · valid‑until</div></div>
+      <div class="row"><div class="b l">Buyer acceptance link <span class="pill">/q/token</span> Copy · Preview</div><div class="b l">Buyer clarification <span class="pill">/c/token</span> Start · Send</div></div>
+      <div class="row"><div class="b l">Delivery &amp; terms (incoterm, PO, lead time, tax)</div><div class="b l">Site &amp; install</div></div>
+      <div class="row"><div class="b l">Shipping — auto chargeable weight from catalogue</div></div>
+      <div class="row"><div class="b l" style="flex:2">Line items&nbsp;&nbsp;[ desc | qty | unit price | margin | FX | total ]<br><span class="pill">+ Add line</span><span class="pill">Catalog pick</span><span class="pill">Source offers</span></div></div>
+      <div class="row"><div class="b">Sourcing offers drawer (SITC · OEMsecrets)</div><div class="b">FX → GH₵ (fresh rate)</div></div>
+      <div class="row"><div class="b l" style="flex:2"></div><div class="b dark">Subtotal · Tax · <b>Total</b></div></div>
+    </div>
+    <div class="grid" style="margin-top:14px">
+      <div>
+        <div class="sub">Sub‑flows on this screen</div>
+        <ul class="actions">
+          <li><b>Pricing &amp; margin</b> — line math → subtotal/tax/total</li>
+          <li><b>Sourcing</b> — fan‑out to providers, apply an offer to a line</li>
+          <li><b>FX</b> — GBP/USD offer → GH₵ at a fresh, non‑zero rate</li>
+          <li><b>Shipping</b> — chargeable weight = max(actual, volumetric)</li>
+          <li><b>Clarification</b> — curate questions → buyer link → apply answers</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub">Tests at this stage</div>
+        <table class="tests">
+          <tr><th>Test</th><th>Type</th><th>Guards</th></tr>
+          <tr><td class="f">quote-pricing.journey <span class="ok">✓</span></td><td><span class="tag t p0">P0</span> <span class="kind">journey</span></td><td>10×25 = 250 total correct</td></tr>
+          <tr><td class="f">quote-pricing.technical <span class="ok">✓</span></td><td><span class="tag t p0">P0</span> <span class="kind">technical</span></td><td>totals recompute on qty change</td></tr>
+          <tr><td class="f">fx.technical</td><td><span class="tag t p0">P0</span> <span class="kind">technical</span></td><td>foreign offer → GH₵ fresh, never zero/stale</td></tr>
+          <tr><td class="f">sourcing.journey / .technical</td><td><span class="tag t p1">P1</span></td><td>offers returned; apply price to line; routing</td></tr>
+          <tr><td class="f">shipping.journey / .technical</td><td><span class="tag t p1">P1</span></td><td>auto weight; chargeable‑weight math</td></tr>
+          <tr><td class="f">clarification.journey <span class="ok">✓</span></td><td><span class="tag t p1">P1</span> <span class="kind">journey</span></td><td>curate → send buyer link</td></tr>
+          <tr><td class="f">clarification.technical <span class="ok">✓</span></td><td><span class="tag t p1">P1</span> <span class="kind">technical</span></td><td>no‑login page; answer round‑trips</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= STAGE 5 ================= -->
+  <h2 class="stage" id="s5"><span class="num">5</span> Buyer Clarification <span class="role buyer">buyer · no login</span></h2>
+  <div class="grid">
+    <div class="card">
+      <div class="sub">Wireframe — /c/&lt;token&gt;</div>
+      <div class="wf">
+        <div class="bar"><span class="dot"></span><span class="title">Secure clarification</span></div>
+        <div class="ph x"></div>
+        <div class="row"><div class="b l">Q1: confirm voltage rating?  ▸ answer …</div></div>
+        <div class="row"><div class="b l">Items: [ desc | qty ▸ edit | + add item ]</div></div>
+        <div class="row"><div class="b l">Comment …</div><div class="b l">Your name …</div></div>
+        <div class="row"><div class="b dark">Send response</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sub">Key actions / guarantees</div>
+      <ul class="actions">
+        <li>Answer questions, comment, adjust qty / add items — no login</li>
+        <li>Submit → vendor emailed; audit trail stamps opened/answered</li>
+        <li>Vendor reviews &amp; one‑click applies changes to the quote</li>
+      </ul>
+      <div class="sub" style="margin-top:12px">Tests</div>
+      <table class="tests">
+        <tr><th>Test</th><th>Type</th><th>Guards</th></tr>
+        <tr><td class="f">clarification.journey <span class="ok">✓</span></td><td><span class="tag t p1">P1</span> <span class="kind">journey</span></td><td>vendor sends; awaiting‑buyer state</td></tr>
+        <tr><td class="f">clarification.technical <span class="ok">✓</span></td><td><span class="tag t p1">P1</span> <span class="kind">technical</span></td><td>invalid token rejected; answer persists on reload</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= STAGE 6 ================= -->
+  <h2 class="stage" id="s6"><span class="num">6</span> Send → Accept &amp; e‑sign <span class="role buyer">buyer · no login</span></h2>
+  <div class="grid">
+    <div class="card">
+      <div class="sub">Wireframe — /q/&lt;token&gt;</div>
+      <div class="wf">
+        <div class="bar"><span class="dot"></span><span class="title">Secure quote</span></div>
+        <div class="row"><div class="b l" style="flex:2">Line items | qty | unit | total</div></div>
+        <div class="row"><div class="b l" style="flex:2"></div><div class="b">Subtotal · Tax · Total</div></div>
+        <div class="row"><div class="b l">Your name …</div><div class="b l">Signature (type name) …</div></div>
+        <div class="row"><div class="b dark">Accept &amp; sign</div><div class="b">Decline</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sub">Key actions / guarantees</div>
+      <ul class="actions">
+        <li>Buyer reviews, accepts &amp; e‑signs (or declines) — no login</li>
+        <li>Accept idempotently <b>creates the order</b> + seeds an invoice</li>
+        <li>Seller notified by email</li>
+      </ul>
+      <div class="sub" style="margin-top:12px">Tests</div>
+      <table class="tests">
+        <tr><th>Test</th><th>Type</th><th>Guards</th></tr>
+        <tr><td class="f">quote-accept.journey <span class="ok">✓</span></td><td><span class="tag t p0">P0</span> <span class="kind">journey</span></td><td>accept &amp; sign → order created</td></tr>
+        <tr><td class="f">quote-accept.technical <span class="ok">✓</span></td><td><span class="tag t p0">P0</span> <span class="kind">technical</span></td><td>invalid token rejected; decline path</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= STAGE 7 ================= -->
+  <h2 class="stage" id="s7"><span class="num">7</span> Order &amp; Purchase Order <span class="role vendor">vendor</span></h2>
+  <div class="grid">
+    <div class="card">
+      <div class="sub">Wireframe — order detail</div>
+      <div class="wf">
+        <div class="bar"><span class="dot"></span><span class="title">Order ORD‑2026‑0007</span><span style="margin-left:auto" class="pill">received → delivered</span></div>
+        <div class="row"><div class="b l">Buyer PO # · acknowledgement status</div></div>
+        <div class="row"><div class="b l" style="flex:2">Order line items | qty | price</div></div>
+        <div class="row"><div class="b">Status timeline / events</div><div class="b">Docs pack</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sub">Key actions</div>
+      <ul class="actions">
+        <li>Order auto‑created on accept; itemized lines</li>
+        <li>Record buyer PO + acknowledge it</li>
+        <li>Advance status; events logged</li>
+      </ul>
+      <div class="sub" style="margin-top:12px">Tests</div>
+      <table class="tests">
+        <tr><th>Test</th><th>Type</th><th>Guards</th></tr>
+        <tr><td class="f">orders.journey</td><td><span class="tag t p1">P1</span> <span class="kind">journey</span></td><td>order detail; acknowledge PO; line items</td></tr>
+        <tr><td class="f">orders.technical</td><td><span class="tag t p1">P1</span> <span class="kind">technical</span></td><td>status events persist; isolation</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= STAGE 8 ================= -->
+  <h2 class="stage" id="s8"><span class="num">8</span> Deliver &amp; Track <span class="role buyer">buyer · no login</span></h2>
+  <div class="grid">
+    <div class="card">
+      <div class="sub">Wireframe — /track/&lt;token&gt;</div>
+      <div class="wf">
+        <div class="bar"><span class="dot"></span><span class="title">Track order</span></div>
+        <div class="row"><div class="b fill">● Received</div><div class="b fill">● Processing</div><div class="b">○ Shipped</div><div class="b">○ Delivered</div></div>
+        <div class="ph m"></div><div class="ph s"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sub">Key actions / guarantees</div>
+      <ul class="actions">
+        <li>Buyer follows order status via a tokenized link — no login</li>
+        <li>Status &amp; events mirror the vendor order timeline</li>
+      </ul>
+      <div class="sub" style="margin-top:12px">Tests</div>
+      <table class="tests">
+        <tr><th>Test</th><th>Type</th><th>Guards</th></tr>
+        <tr><td class="f">orders.technical (track)</td><td><span class="tag t p1">P1</span> <span class="kind">technical</span></td><td>public /track shows status; invalid token rejected</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= STAGE 9 ================= -->
+  <h2 class="stage" id="s9"><span class="num">9</span> Invoice → Collect (AR) <span class="role vendor">vendor</span></h2>
+  <div class="grid">
+    <div class="card">
+      <div class="sub">Wireframe — invoice detail + aging</div>
+      <div class="wf">
+        <div class="bar"><span class="dot"></span><span class="title">Invoice INV‑2026‑0007</span><span style="margin-left:auto" class="pill">aging: 0‑30 · 31‑60 · 60+</span></div>
+        <div class="row"><div class="b l" style="flex:2">Lines · subtotal · tax · total (GH₵)</div></div>
+        <div class="row"><div class="b">Record payment</div><div class="b">Balance / overdue</div><div class="b">Send reminder</div></div>
+        <div class="row"><div class="b l">Payments history</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sub">Key actions</div>
+      <ul class="actions">
+        <li>Invoice seeded on accept; aging buckets</li>
+        <li>Record payments → balance &amp; aging update; rounding to the cedi</li>
+        <li>Send billing reminders</li>
+      </ul>
+      <div class="sub" style="margin-top:12px">Tests</div>
+      <table class="tests">
+        <tr><th>Test</th><th>Type</th><th>Guards</th></tr>
+        <tr><td class="f">ar.journey</td><td><span class="tag t p0">P0</span> <span class="kind">journey</span></td><td>record payment → balance/aging updates</td></tr>
+        <tr><td class="f">ar.technical</td><td><span class="tag t p0">P0</span> <span class="kind">technical</span></td><td>aging buckets &amp; cedi rounding correct</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= STAGE 10 ================= -->
+  <h2 class="stage" id="s10"><span class="num">10</span> Supporting masters <span class="role vendor">vendor</span></h2>
+  <div class="card">
+    <div class="grid">
+      <div>
+        <div class="sub">Wireframe — masters (buyers · suppliers · catalog · documents · team)</div>
+        <div class="wf">
+          <div class="bar"><span class="dot"></span><span class="title">Buyers / Suppliers / Catalog</span></div>
+          <div class="row"><div class="b l">List + search</div><div class="b">+ New</div></div>
+          <div class="row"><div class="b l" style="flex:2">Detail: profile · contracts/agreed prices · history</div></div>
+          <div class="row"><div class="b l">Catalog: item · category · unit · weight/dims</div></div>
+          <div class="row"><div class="b l">Documents: per‑order pack (upload/scoped)</div><div class="b l">Team: invite · role · seat</div></div>
+        </div>
+      </div>
+      <div>
+        <div class="sub">Tests at this stage</div>
+        <table class="tests">
+          <tr><th>Test</th><th>Type</th><th>Guards</th></tr>
+          <tr><td class="f">buyers.journey / .technical</td><td><span class="tag t p1">P1</span></td><td>create buyer + contract; agreed price applies</td></tr>
+          <tr><td class="f">catalog.journey / .technical</td><td><span class="tag t p1">P1</span></td><td>add item → use in quote; category filter</td></tr>
+          <tr><td class="f">documents.journey / .technical</td><td><span class="tag t p1">P1</span></td><td>upload to order pack; workspace‑scoped storage</td></tr>
+          <tr><td class="f">team.journey / .technical</td><td><span class="tag t p1">P1</span></td><td>invite + role; claim on login; seat gate</td></tr>
+          <tr><td class="f">suppliers.journey</td><td><span class="tag t p2">P2</span> <span class="kind">journey</span></td><td>add/view a supplier</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= STAGE 11 ================= -->
+  <h2 class="stage" id="s11"><span class="num">11</span> Monetization &amp; cross‑cutting guards <span class="role system">system</span></h2>
+  <div class="grid">
+    <div class="card">
+      <div class="sub">Wireframe — paywall / upgrade</div>
+      <div class="wf">
+        <div class="bar"><span class="dot"></span><span class="title">Upgrade required</span></div>
+        <div class="ph m"></div>
+        <div class="row"><div class="b l">Starter limit hit: quotes · seats · sourcing depth · AR</div></div>
+        <div class="row"><div class="b dark">Upgrade to Pro</div><div class="b">Maybe later</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sub">Tests — gating &amp; isolation</div>
+      <table class="tests">
+        <tr><th>Test</th><th>Type</th><th>Guards</th></tr>
+        <tr><td class="f">gating.technical</td><td><span class="tag t p2">P2</span> <span class="kind">technical</span></td><td>Starter quote cap · seat · sourcing‑depth · AR paywalls (needs Starter account)</td></tr>
+        <tr><td class="f">tenant-isolation.technical</td><td><span class="tag t p0">P0</span> <span class="kind">technical</span></td><td>workspace A can't open B's quote/order/invoice (needs 2nd account)</td></tr>
+      </table>
+      <div class="note">These two ride the whole app. Isolation is the one bug that can never ship; gating is what makes v1 a business.</div>
+    </div>
+  </div>
+
+  <!-- ================= MATRIX ================= -->
+  <h2 class="stage" id="matrix"><span class="num">∑</span> Coverage matrix &amp; build waves</h2>
+  <div class="card">
+    <table class="matrix" style="width:100%">
+      <tr><th>Wave</th><th>Tier</th><th>Tests</th><th>Status</th></tr>
+      <tr><td><b>1</b></td><td><span class="tag t p0">P0</span> money‑path</td><td>smoke · auth ×2 · quote‑pricing ×2 · quote‑accept ×2 · fx · ar ×2 · tenant‑isolation</td><td><span class="ok">6 built ✓</span> · fx/ar/isolation next</td></tr>
+      <tr><td><b>2</b></td><td><span class="tag t p1">P1</span> core</td><td>onboarding ×2 · pipeline ×2 · rfq‑to‑quote ×2 · sourcing ×2 · shipping ×2 · clarification ×2 · orders ×2 · buyers ×2 · catalog ×2 · documents ×2 · team ×2</td><td>clarification ✓; rest to build</td></tr>
+      <tr><td><b>3</b></td><td><span class="tag t p2">P2</span> secondary</td><td>gating · dashboard ×2 · inbox ×2 · suppliers · product‑search · app‑pages smoke</td><td>to build</td></tr>
+    </table>
+    <div class="note">Convention: every area ships a <b>journey</b> + a <b>technical</b> test (<span class="kind">docs/testing-convention.md</span>),
+    run by CI on every push against <b>wekbench.com</b>. A feature must be <b>published</b> before its tests can pass.
+    Target ≈ 30 test files. <span class="ok">✓</span> = built today.</div>
+  </div>
+
+  <footer>Wekbench v1 blueprint · wireframes are low‑fidelity layout sketches, not final UI · generated for planning &amp; test coverage</footer>
+</div>
+</body>
+</html>

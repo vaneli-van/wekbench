@@ -2,8 +2,8 @@ fileType: momentic/test/v2
 id: 8e5fcd47-af60-4cb4-d9e5-4b3a2f7d0c35
 version: 1.0.24
 url: https://wekbench.com/signin
-description: Quote pricing technical — totals recompute live when quantity/price change
-# P0 money-path: the totals must always reflect the current line values.
+description: Quote pricing technical — totals recompute live when quantity changes
+# P0 money-path. Deterministic dialog steps keep AI usage low.
 disabled: false
 retries: 1
 viewport: 1920, 1080
@@ -21,19 +21,27 @@ steps:
 
   - javascript:
       code: |-
-        const title = "QA Pricing Tech " + Date.now();
-        setVariable("QUOTE_TITLE", title);
-        return title;
-      saveAs: QUOTE_TITLE_RET
+        const stamp = Date.now();
+        setVariable("QUOTE_TITLE", "QA Pricing Tech " + stamp);
+        setVariable("BUYER_NAME", "QA Buyer " + stamp);
+        return stamp;
+      saveAs: STAMP_RET
 
   - navigate: https://wekbench.com/quotes?new=1
   - wait: 8000
+  - assert: The "New quote" dialog is open (a title field and a buyer control are shown).
+
   - type:
       text: "{{ env.QUOTE_TITLE }}"
-      into: the quote title / project name field
-  - act: >-
-      In the New Quote dialog set the buyer to "QA Pricing Buyer" (create if needed) and
-      create the quote.
+      into: the quote title field (placeholder "e.g. Office laptops for Q3")
+  - click: the "Select a buyer" dropdown
+  - click: the "Create new buyer" option in the dropdown
+  - type:
+      text: "{{ env.BUYER_NAME }}"
+      into: the "New buyer company name" field
+  - click: the "Add" button next to the new buyer name field
+  - wait: 1200
+  - click: the "Create & open" button
   - wait: 3500
 
   - act: >-
@@ -46,4 +54,4 @@ steps:
   - wait: 2500
   - assert: >-
       The line total and the quote subtotal updated to 500 (20 × 25) — the totals
-      recomputed live from the new quantity, not left stale at 250.
+      recomputed live, not left stale at 250.
