@@ -299,6 +299,60 @@ export type Database = {
           },
         ]
       }
+      clarification_attachments: {
+        Row: {
+          clarification_id: string
+          content_type: string | null
+          created_at: string
+          file_name: string
+          file_path: string
+          id: string
+          size_bytes: number | null
+          uploaded_by: string | null
+          uploader: string
+          workspace_id: string
+        }
+        Insert: {
+          clarification_id: string
+          content_type?: string | null
+          created_at?: string
+          file_name: string
+          file_path: string
+          id?: string
+          size_bytes?: number | null
+          uploaded_by?: string | null
+          uploader: string
+          workspace_id: string
+        }
+        Update: {
+          clarification_id?: string
+          content_type?: string | null
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          size_bytes?: number | null
+          uploaded_by?: string | null
+          uploader?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clarification_attachments_clarification_id_fkey"
+            columns: ["clarification_id"]
+            isOneToOne: false
+            referencedRelation: "quote_clarifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clarification_attachments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clarification_changes: {
         Row: {
           applied_at: string | null
@@ -401,6 +455,51 @@ export type Database = {
           },
           {
             foreignKeyName: "clarification_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clarification_messages: {
+        Row: {
+          author: string
+          author_name: string | null
+          body: string
+          clarification_id: string
+          created_at: string
+          id: string
+          workspace_id: string
+        }
+        Insert: {
+          author: string
+          author_name?: string | null
+          body: string
+          clarification_id: string
+          created_at?: string
+          id?: string
+          workspace_id: string
+        }
+        Update: {
+          author?: string
+          author_name?: string | null
+          body?: string
+          clarification_id?: string
+          created_at?: string
+          id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clarification_messages_clarification_id_fkey"
+            columns: ["clarification_id"]
+            isOneToOne: false
+            referencedRelation: "quote_clarifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clarification_messages_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -542,7 +641,7 @@ export type Database = {
           due_date: string | null
           error_message: string | null
           id: string
-          inbound_email_id: string
+          inbound_email_id: string | null
           raw_extraction: Json
           review_notes: string | null
           reviewed_at: string | null
@@ -561,7 +660,7 @@ export type Database = {
           due_date?: string | null
           error_message?: string | null
           id?: string
-          inbound_email_id: string
+          inbound_email_id?: string | null
           raw_extraction?: Json
           review_notes?: string | null
           reviewed_at?: string | null
@@ -580,7 +679,7 @@ export type Database = {
           due_date?: string | null
           error_message?: string | null
           id?: string
-          inbound_email_id?: string
+          inbound_email_id?: string | null
           raw_extraction?: Json
           review_notes?: string | null
           reviewed_at?: string | null
@@ -1394,6 +1493,8 @@ export type Database = {
       }
       quote_clarifications: {
         Row: {
+          ai_feedback: Json | null
+          ai_feedback_at: string | null
           answered_at: string | null
           answered_by: string | null
           buyer_comment: string | null
@@ -1410,6 +1511,8 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          ai_feedback?: Json | null
+          ai_feedback_at?: string | null
           answered_at?: string | null
           answered_by?: string | null
           buyer_comment?: string | null
@@ -1426,6 +1529,8 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          ai_feedback?: Json | null
+          ai_feedback_at?: string | null
           answered_at?: string | null
           answered_by?: string | null
           buyer_comment?: string | null
@@ -1708,6 +1813,7 @@ export type Database = {
           buyer_id: string | null
           buyer_name: string | null
           buyer_po_ref: string | null
+          buyer_rfq_ref: string | null
           created_at: string
           currency: string | null
           decline_note: string | null
@@ -1746,6 +1852,7 @@ export type Database = {
           buyer_id?: string | null
           buyer_name?: string | null
           buyer_po_ref?: string | null
+          buyer_rfq_ref?: string | null
           created_at?: string
           currency?: string | null
           decline_note?: string | null
@@ -1784,6 +1891,7 @@ export type Database = {
           buyer_id?: string | null
           buyer_name?: string | null
           buyer_po_ref?: string | null
+          buyer_rfq_ref?: string | null
           created_at?: string
           currency?: string | null
           decline_note?: string | null
@@ -1892,10 +2000,13 @@ export type Database = {
           buyer_ref: string | null
           created_at: string
           currency: string | null
+          delivery_location: string | null
           due_date: string | null
           extracted_document_id: string
           id: string
+          incoterm: string | null
           notes: string | null
+          payment_terms: string | null
           status: Database["public"]["Enums"]["rfq_status"]
           summary: string | null
           updated_at: string
@@ -1909,10 +2020,13 @@ export type Database = {
           buyer_ref?: string | null
           created_at?: string
           currency?: string | null
+          delivery_location?: string | null
           due_date?: string | null
           extracted_document_id: string
           id?: string
+          incoterm?: string | null
           notes?: string | null
+          payment_terms?: string | null
           status?: Database["public"]["Enums"]["rfq_status"]
           summary?: string | null
           updated_at?: string
@@ -1926,10 +2040,13 @@ export type Database = {
           buyer_ref?: string | null
           created_at?: string
           currency?: string | null
+          delivery_location?: string | null
           due_date?: string | null
           extracted_document_id?: string
           id?: string
+          incoterm?: string | null
           notes?: string | null
+          payment_terms?: string | null
           status?: Database["public"]["Enums"]["rfq_status"]
           summary?: string | null
           updated_at?: string
@@ -2281,6 +2398,64 @@ export type Database = {
           },
         ]
       }
+      workspace_agent_memory: {
+        Row: {
+          created_at: string
+          facts: Json
+          id: string
+          kind: string
+          quote_id: string | null
+          rfq_id: string | null
+          summary: string | null
+          title: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          facts?: Json
+          id?: string
+          kind: string
+          quote_id?: string | null
+          rfq_id?: string | null
+          summary?: string | null
+          title?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          facts?: Json
+          id?: string
+          kind?: string
+          quote_id?: string | null
+          rfq_id?: string | null
+          summary?: string | null
+          title?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_agent_memory_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_agent_memory_rfq_id_fkey"
+            columns: ["rfq_id"]
+            isOneToOne: false
+            referencedRelation: "rfqs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_agent_memory_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_invites: {
         Row: {
           accepted_at: string | null
@@ -2418,6 +2593,7 @@ export type Database = {
           auto_approve_threshold: number
           country: string | null
           created_at: string
+          default_tax_pct: number
           first_quote_at: string | null
           id: string
           name: string
@@ -2436,6 +2612,7 @@ export type Database = {
           auto_approve_threshold?: number
           country?: string | null
           created_at?: string
+          default_tax_pct?: number
           first_quote_at?: string | null
           id?: string
           name?: string
@@ -2454,6 +2631,7 @@ export type Database = {
           auto_approve_threshold?: number
           country?: string | null
           created_at?: string
+          default_tax_pct?: number
           first_quote_at?: string | null
           id?: string
           name?: string
@@ -2478,6 +2656,16 @@ export type Database = {
         Args: { p_name: string; p_signature: string; p_token: string }
         Returns: Json
       }
+      add_clarification_attachment_public: {
+        Args: {
+          p_name: string
+          p_path: string
+          p_size: number
+          p_token: string
+          p_type: string
+        }
+        Returns: Json
+      }
       claim_workspace_invites: { Args: never; Returns: number }
       decline_quote_public: {
         Args: { p_note: string; p_token: string }
@@ -2494,6 +2682,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_member_clarification_token: {
+        Args: { p_token: string }
+        Returns: boolean
+      }
+      is_open_clarification_token: {
+        Args: { p_token: string }
+        Returns: boolean
+      }
       is_workspace_admin: { Args: { ws: string }; Returns: boolean }
       is_workspace_member: { Args: { ws: string }; Returns: boolean }
       list_workspace_members: {
@@ -2504,6 +2700,10 @@ export type Database = {
           role: string
           user_id: string
         }[]
+      }
+      post_clarification_message_public: {
+        Args: { p_body: string; p_name: string; p_token: string }
+        Returns: Json
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
