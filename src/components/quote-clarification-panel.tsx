@@ -102,7 +102,18 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
   const feedbackFn = useServerFn(runClarificationFeedback);
   const suggestFn = useServerFn(suggestClarificationQuestions);
 
-  const { data, isLoading } = useQuery({ queryKey: key, queryFn: () => getFn({ data: { quoteId } }) });
+  const { data, isLoading } = useQuery({
+    queryKey: key,
+    queryFn: () => getFn({ data: { quoteId } }),
+    // While the clarification is out with the buyer, poll so their response shows up
+    // without a manual page reload. Stops once answered/closed.
+    refetchInterval: (q) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const st = (q.state.data as any)?.clarification?.status;
+      return st === "sent" ? 20000 : false;
+    },
+    refetchOnWindowFocus: true,
+  });
   const clar = (data as Any)?.clarification as Any;
   const questions: Any[] = useMemo(() => (data as Any)?.questions ?? [], [data]);
   const changes: Any[] = useMemo(() => (data as Any)?.changes ?? [], [data]);
