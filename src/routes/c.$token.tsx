@@ -166,6 +166,7 @@ function ClarifyPage() {
   }
 
   const submitted = submitMut.isSuccess || clar.status === "answered";
+  const isOpen = clar.status === "sent";
 
   return (
     <Shell>
@@ -174,7 +175,7 @@ function ClarifyPage() {
           <CheckCircle2 className="size-5 shrink-0" />
           <div>
             <p className="text-sm font-semibold">Thank you — your response was sent</p>
-            <p className="text-xs">{clar.seller ?? "The supplier"} has been notified. You can update your answers below if needed.</p>
+            <p className="text-xs">{clar.seller ?? "The supplier"} has been notified. This clarification is now locked — please contact the supplier if you need to add anything further.</p>
           </div>
         </div>
       )}
@@ -203,8 +204,10 @@ function ClarifyPage() {
                   value={answers[q.id] ?? ""}
                   onChange={(e) => setAnswers((s) => ({ ...s, [q.id]: e.target.value }))}
                   rows={2}
-                  placeholder="Your answer"
-                  className="mt-1.5 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+                  placeholder={isOpen ? "Your answer" : "—"}
+                  readOnly={!isOpen}
+                  disabled={!isOpen}
+                  className="mt-1.5 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring disabled:opacity-70"
                 />
               </div>
             ))}
@@ -310,17 +313,19 @@ function ClarifyPage() {
             ))}
           </ul>
         )}
-        <label className="mt-3 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:border-foreground/30 hover:text-foreground">
-          <Upload className="size-3.5" /> {uploading ? "Uploading…" : "Add a file"}
-          <input
-            type="file"
-            accept="image/*,application/pdf"
-            multiple
-            className="hidden"
-            disabled={uploading}
-            onChange={(e) => handleUpload(e.target.files)}
-          />
-        </label>
+        {isOpen && (
+          <label className="mt-3 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:border-foreground/30 hover:text-foreground">
+            <Upload className="size-3.5" /> {uploading ? "Uploading…" : "Add a file"}
+            <input
+              type="file"
+              accept="image/*,application/pdf"
+              multiple
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => handleUpload(e.target.files)}
+            />
+          </label>
+        )}
       </div>
 
       {/* Follow-up conversation — both directions */}
@@ -342,22 +347,24 @@ function ClarifyPage() {
             ))}
           </ul>
         )}
-        <div className="mt-3 flex gap-2">
-          <textarea
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            rows={2}
-            placeholder="Write a follow-up…"
-            className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
-          />
-          <button
-            onClick={handlePostMessage}
-            disabled={posting || !newMessage.trim()}
-            className="inline-flex shrink-0 items-center gap-1.5 self-end rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50"
-          >
-            <Send className="size-3.5" /> {posting ? "Sending…" : "Send"}
-          </button>
-        </div>
+        {isOpen && (
+          <div className="mt-3 flex gap-2">
+            <textarea
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              rows={2}
+              placeholder="Write a follow-up…"
+              className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+            />
+            <button
+              onClick={handlePostMessage}
+              disabled={posting || !newMessage.trim()}
+              className="inline-flex shrink-0 items-center gap-1.5 self-end rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50"
+            >
+              <Send className="size-3.5" /> {posting ? "Sending…" : "Send"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Comment + identity + submit */}
@@ -368,7 +375,9 @@ function ClarifyPage() {
           onChange={(e) => setComment(e.target.value)}
           rows={2}
           placeholder="Add any context for the supplier"
-          className="mt-1.5 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+          readOnly={!isOpen}
+          disabled={!isOpen}
+          className="mt-1.5 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring disabled:opacity-70"
         />
         <div className="mt-3">
           <label className="text-sm font-medium">Signature</label>
@@ -377,7 +386,9 @@ function ClarifyPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Type your full name to sign"
-            className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm italic outline-none focus:border-ring sm:w-72"
+            readOnly={!isOpen}
+            disabled={!isOpen}
+            className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm italic outline-none focus:border-ring disabled:opacity-70 sm:w-72"
           />
         </div>
         {submitMut.isError && (
@@ -388,10 +399,10 @@ function ClarifyPage() {
         <div className="mt-4">
           <button
             onClick={() => submitMut.mutate()}
-            disabled={submitMut.isPending}
+            disabled={submitMut.isPending || !isOpen}
             className="inline-flex items-center gap-1.5 rounded-md bg-success px-4 py-2 text-sm font-medium text-success-foreground disabled:opacity-50"
           >
-            <CheckCircle2 className="size-4" /> {submitMut.isPending ? "Signing…" : submitted ? "Sign & update" : "Sign & send"}
+            <CheckCircle2 className="size-4" /> {!isOpen ? "Submitted — locked" : submitMut.isPending ? "Signing…" : "Sign & send"}
           </button>
         </div>
       </div>

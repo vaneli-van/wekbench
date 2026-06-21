@@ -40,6 +40,7 @@ export const createClarification = createServerFn({ method: "POST" })
     z
       .object({
         quoteId: z.string().uuid(),
+        forceNew: z.boolean().optional(),
         questions: z
           .array(
             z.object({
@@ -67,17 +68,26 @@ export const createClarification = createServerFn({ method: "POST" })
       .single();
     if (!q) throw new Error("Quote not found");
 
-    // Reuse an existing open clarification for this quote if one exists.
-    const { data: existing } = await supabase
-      .from("quote_clarifications")
-      .select("id, share_token, status")
-      .eq("quote_id", data.quoteId)
-      .neq("status", "closed")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (existing) {
-      return { id: existing.id as string, token: existing.share_token as string, status: existing.status as string };
+    if (data.forceNew) {
+      // Start a fresh round: close any existing open clarification for this quote first.
+      await supabase
+        .from("quote_clarifications")
+        .update({ status: "closed", closed_at: new Date().toISOString() })
+        .eq("quote_id", data.quoteId)
+        .neq("status", "closed");
+    } else {
+      // Reuse an existing open clarification for this quote if one exists.
+      const { data: existing } = await supabase
+        .from("quote_clarifications")
+        .select("id, share_token, status")
+        .eq("quote_id", data.quoteId)
+        .neq("status", "closed")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (existing) {
+        return { id: existing.id as string, token: existing.share_token as string, status: existing.status as string };
+      }
     }
 
     const { data: created, error } = await supabase

@@ -172,6 +172,11 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not suggest questions"),
   });
+  const newRoundMut = useMutation({
+    mutationFn: () => createFn({ data: { quoteId, forceNew: true } }),
+    onSuccess: () => { invalidate(); toast.success("New clarification round started — add or suggest questions"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not start a new round"),
+  });
 
   // Auto-summarize the buyer's feedback when there's new buyer activity since the last run.
   const lastBuyerAt = useMemo(() => {
@@ -258,7 +263,14 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <MessageSquareText className="size-4" /> Buyer clarification
         </h3>
-        <StatusBadge status={clar.status} />
+        <div className="flex items-center gap-2">
+          {clar.status === "answered" && (
+            <Button size="sm" variant="outline" onClick={() => newRoundMut.mutate()} disabled={newRoundMut.isPending}>
+              <Plus className="size-3.5" /> New round
+            </Button>
+          )}
+          <StatusBadge status={clar.status} />
+        </div>
       </div>
 
       {/* Questions */}
