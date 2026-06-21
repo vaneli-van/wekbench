@@ -34,6 +34,7 @@ import {
   recordClarificationAttachment,
   postClarificationMessage,
   runClarificationFeedback,
+  suggestClarificationQuestions,
 } from "@/lib/api/clarifications.functions";
 
 function FeedbackList({ label, items }: { label: string; items: string[] }) {
@@ -99,6 +100,7 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
   const recordAttachFn = useServerFn(recordClarificationAttachment);
   const postMsgFn = useServerFn(postClarificationMessage);
   const feedbackFn = useServerFn(runClarificationFeedback);
+  const suggestFn = useServerFn(suggestClarificationQuestions);
 
   const { data, isLoading } = useQuery({ queryKey: key, queryFn: () => getFn({ data: { quoteId } }) });
   const clar = (data as Any)?.clarification as Any;
@@ -146,6 +148,18 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
   const feedbackMut = useMutation({
     mutationFn: () => feedbackFn({ data: { clarificationId: clar.id } }),
     onSuccess: () => invalidate(),
+  });
+  const suggestMut = useMutation({
+    mutationFn: () => suggestFn({ data: { quoteId } }),
+    onSuccess: (r) => {
+      invalidate();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res = r as any;
+      if (res?.cached) toast.success("Suggestions already up to date");
+      else if ((res?.created ?? 0) > 0) toast.success(`Suggested ${res.created} question${res.created === 1 ? "" : "s"}`);
+      else toast.success("No clarifications needed for this RFQ");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not suggest questions"),
   });
 
   // Auto-summarize the buyer's feedback when there's new buyer activity since the last run.
@@ -215,9 +229,14 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
             Confirm specs, quantities or certifications with the buyer before you quote — optional, and never blocks sourcing.
           </p>
         </div>
-        <Button size="sm" variant="outline" onClick={() => createMut.mutate()} disabled={createMut.isPending}>
-          <Plus className="size-3.5" /> Start clarification
-        </Button>
+        <div className="flex shrink-0 gap-2">
+          <Button size="sm" onClick={() => suggestMut.mutate()} disabled={suggestMut.isPending}>
+            <Sparkles className="size-3.5" /> {suggestMut.isPending ? "Thinking…" : "Suggest questions"}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => createMut.mutate()} disabled={createMut.isPending}>
+            <Plus className="size-3.5" /> Start blank
+          </Button>
+        </div>
       </Card>
     );
   }
@@ -303,6 +322,16 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
             <Plus className="size-3.5" /> Add
           </Button>
         </div>
+      )}
+
+      {isDraft && (
+        <button
+          onClick={() => suggestMut.mutate()}
+          disabled={suggestMut.isPending}
+          className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline disabled:opacity-50"
+        >
+          <Sparkles className="size-3.5" /> {suggestMut.isPending ? "Thinking…" : "Suggest questions with AI"}
+        </button>
       )}
 
       {/* Buyer comment */}

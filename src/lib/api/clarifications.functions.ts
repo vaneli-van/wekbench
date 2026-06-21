@@ -291,6 +291,19 @@ export const runClarificationFeedback = createServerFn({ method: "POST" })
     return { feedback };
   });
 
+/** Draft AI clarification questions for a quote's RFQ (cheap, cached, grounded). */
+export const suggestClarificationQuestions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ quoteId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = context.supabase as any;
+    const { data: q } = await supabase.from("quotes").select("id").eq("id", data.quoteId).single();
+    if (!q) throw new Error("Quote not found");
+    const { suggestQuestionsForQuote } = await import("@/lib/clarification-suggest.server");
+    return await suggestQuestionsForQuote(data.quoteId);
+  });
+
 /** Add a manual question to a clarification. */
 export const addClarificationQuestion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
