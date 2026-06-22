@@ -5,6 +5,12 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveWorkspaceId, getEntitlement } from "./workspace.functions";
 import { sendEmail, escapeHtml } from "@/lib/email.server";
 import { upgradeError } from "@/lib/plans";
+import { emitProductEvent } from "@/lib/telemetry.server";
+
+function csvCell(v: unknown): string {
+  const s = v == null ? "" : String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
 
 /** AR (reminders + statements) is a Pro feature. Throws UPGRADE_REQUIRED:ar on Starter. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -370,6 +376,76 @@ export const createInvoiceFromOrder = createServerFn({ method: "POST" })
     const id = await createInvoiceForOrder(context.supabase, data.orderId);
     if (!id) throw new Error("Order not found");
     return { id };
+  });
+
+/**
+ * Accounting-ready CSV export for one invoice or a date range, so finance doesn't run a
+ * parallel ledger. Columns are QuickBooks / Sage import-friendly. Returns the CSV string;
+ * the client triggers the download.
+ */
+export const exportInvoicesCsv = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        invoiceId: z.string().uuid().optional(),
+        from: z.string().optional(),
+        to: z.string().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    let q = context.supabase
+      .from("invoices")
+      .select(
+        "invoice_number, status, currency, amount, tax_amount, total, amount_paid, terms, issued_at, due_date, paid_at, created_at, buyer_name, buyer_company, description, orders(order_number)",
+      )
+      .order("created_at", { ascending: false });
+    if (data.invoiceId) q = q.eq("id", data.invoiceId);
+    if (data.from) q = q.gte("created_at", data.from);
+    if (data.to) q = q.lte("created_at", data.to);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    const header = [
+      "InvoiceNo", "InvoiceDate", "DueDate", "Customer", "CustomerCompany", "Description",
+      "Currency", "Amount", "Tax", "Total", "AmountPaid", "Outstanding", "Status", "OrderNo", "PaidDate",
+    ];
+    const lines = [header.join(",")];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const r of (rows ?? []) as any[]) {
+      const total = Number(r.total ?? 0);
+      const paid = Number(r.amount_paid ?? 0);
+      const ord = Array.isArray(r.orders) ? r.orders[0] : r.orders;
+      lines.push(
+        [
+          r.invoice_number,
+          (r.issued_at ?? r.created_at ?? "").slice(0, 10),
+          (r.due_date ?? "").slice(0, 10),
+          r.buyer_name ?? "",
+          r.buyer_company ?? "",
+          r.description ?? "",
+          r.currency ?? "",
+          Number(r.amount ?? 0).toFixed(2),
+          Number(r.tax_amount ?? 0).toFixed(2),
+          total.toFixed(2),
+          paid.toFixed(2),
+          (total - paid).toFixed(2),
+          r.status ?? "",
+          ord?.order_number ?? "",
+          (r.paid_at ?? "").slice(0, 10),
+        ]
+          .map(csvCell)
+          .join(","),
+      );
+    }
+    const wsId = await resolveWorkspaceId(context.supabase, context.userId);
+    await emitProductEvent(context.supabase, {
+      workspaceId: wsId,
+      userId: context.userId,
+      event: "invoice_exported",
+      props: { scope: data.invoiceId ? "single" : "range", count: (rows ?? []).length },
+    });
+    return { csv: lines.join("\n"), count: (rows ?? []).length };
   });
 
 export const updateInvoiceStatus = createServerFn({ method: "POST" })

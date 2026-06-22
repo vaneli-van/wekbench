@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -10,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/foundations/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { listInvoices, updateInvoiceStatus, backfillInvoices } from "@/lib/api/invoices.functions";
+import { listInvoices, updateInvoiceStatus, backfillInvoices, exportInvoicesCsv } from "@/lib/api/invoices.functions";
 
 const STATUS_TONE: Record<string, string> = {
   draft: "bg-warning/15 text-warning border-warning/30",
@@ -55,6 +56,28 @@ function InvoicesPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
+  const exportFn = useServerFn(exportInvoicesCsv);
+  const [exporting, setExporting] = useState(false);
+  async function handleExport() {
+    setExporting(true);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const r = (await exportFn({ data: {} })) as any;
+      const blob = new Blob([r.csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoices-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${r.count} invoice(s)`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const cards = [
     { label: "Outstanding", value: money(stats.outstanding, stats.currency), tone: "text-foreground" },
     { label: "Overdue", value: money(stats.overdue, stats.currency), tone: "text-destructive" },
@@ -78,10 +101,16 @@ function InvoicesPage() {
         title="Invoices"
         description="Commercial invoices generated from orders. Track delivery and payment status."
         actions={
-          <Button size="sm" variant="outline" onClick={() => backfillMut.mutate()} disabled={backfillMut.isPending}>
-            <RefreshCw className={`size-4 ${backfillMut.isPending ? "animate-spin" : ""}`} />
-            Sync from orders
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={handleExport} disabled={exporting || invoices.length === 0}>
+              <Download className={`size-4 ${exporting ? "animate-pulse" : ""}`} />
+              Export to accounting
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => backfillMut.mutate()} disabled={backfillMut.isPending}>
+              <RefreshCw className={`size-4 ${backfillMut.isPending ? "animate-spin" : ""}`} />
+              Sync from orders
+            </Button>
+          </div>
         }
       />
 

@@ -35,6 +35,7 @@ import {
   postClarificationMessage,
   runClarificationFeedback,
   suggestClarificationQuestions,
+  recordBuyerReply,
 } from "@/lib/api/clarifications.functions";
 
 function FeedbackList({ label, items }: { label: string; items: string[] }) {
@@ -101,6 +102,7 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
   const postMsgFn = useServerFn(postClarificationMessage);
   const feedbackFn = useServerFn(runClarificationFeedback);
   const suggestFn = useServerFn(suggestClarificationQuestions);
+  const recordReplyFn = useServerFn(recordBuyerReply);
 
   const { data, isLoading } = useQuery({
     queryKey: key,
@@ -126,6 +128,8 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
   const [showActivity, setShowActivity] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
+  const [replyText, setReplyText] = useState("");
+  const [replySigner, setReplySigner] = useState("");
 
   const createMut = useMutation({ mutationFn: () => createFn({ data: { quoteId } }), onSuccess: invalidate });
   const addQMut = useMutation({
@@ -176,6 +180,19 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
     mutationFn: () => createFn({ data: { quoteId, forceNew: true } }),
     onSuccess: () => { invalidate(); toast.success("New clarification round started — add or suggest questions"); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not start a new round"),
+  });
+  const recordReplyMut = useMutation({
+    mutationFn: () =>
+      recordReplyFn({ data: { clarificationId: clar.id, text: replyText.trim(), signerName: replySigner.trim() || undefined } }),
+    onSuccess: (r) => {
+      setReplyText("");
+      setReplySigner("");
+      invalidate();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const matched = (r as any)?.matched ?? 0;
+      toast.success(`Recorded — mapped ${matched} answer${matched === 1 ? "" : "s"}`);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not record reply"),
   });
 
   // Auto-summarize the buyer's feedback when there's new buyer activity since the last run.
@@ -355,6 +372,41 @@ export function QuoteClarificationPanel({ quoteId, onApplied }: { quoteId: strin
         >
           <Sparkles className="size-3.5" /> {suggestMut.isPending ? "Thinking…" : "Suggest questions with AI"}
         </button>
+      )}
+
+      {/* Buyer-loop fallback: record an emailed reply (no link click needed) */}
+      {clar.status === "sent" && (
+        <div className="mt-3 rounded-md border border-dashed border-border p-2.5">
+          <p className="flex items-center gap-1.5 text-xs font-medium">
+            <MessageSquareText className="size-3.5" /> Buyer replied by email?
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Paste their reply and AI will map it to the questions above — no link click needed.
+          </p>
+          <textarea
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            rows={3}
+            placeholder="Paste the buyer's email reply…"
+            className="mt-2 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+          />
+          <div className="mt-2 flex items-center gap-2">
+            <Input
+              value={replySigner}
+              onChange={(e) => setReplySigner(e.target.value)}
+              placeholder="Who replied (name)"
+              className="h-8 flex-1 text-sm"
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => recordReplyMut.mutate()}
+              disabled={!replyText.trim() || recordReplyMut.isPending}
+            >
+              <Check className="size-3.5" /> {recordReplyMut.isPending ? "Recording…" : "Record reply"}
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* Buyer comment */}

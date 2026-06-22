@@ -6,7 +6,7 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
 
-import { getExtractionModel } from "./ai-model.server";
+import { getExtractionModel, getFastModel } from "./ai-model.server";
 
 const FeedbackSchema = z.object({
   summary: z.string(),
@@ -111,4 +111,110 @@ export async function extractClarificationFeedback(clarificationId: string): Pro
   });
 
   return feedback;
+}
+
+const ReplyMapSchema = z.object({
+  answers: z.array(z.object({ id: z.string(), answer: z.string() })),
+});
+
+/**
+ * Buyer-loop fallback: the buyer replied by EMAIL instead of using the clarification link.
+ * Map the pasted reply onto the open questions with AI, write the answers, lock the
+ * clarification (status=answered), and refresh the AI feedback — no buyer click required.
+ */
+export async function mapBuyerReplyToAnswers(
+  clarificationId: string,
+  replyText: string,
+  signerName?: string | null,
+): Promise<{ matched: number }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const { data: c } = await supabaseAdmin
+    .from("quote_clarifications")
+    .select("id, workspace_id, status")
+    .eq("id", clarificationId)
+    .single();
+  if (!c) throw new Error("Clarification not found");
+
+  const { data: questions } = await supabaseAdmin
+    .from("clarification_questions")
+    .select("id, question")
+    .eq("clarification_id", clarificationId)
+    .eq("included", true);
+  const qs = questions ?? [];
+  if (qs.length === 0) throw new Error("No questions to answer");
+
+  const qText = qs.map((q, i) => `${i + 1}. [id:${q.id}] ${q.question}`).join("\n");
+  const userMsg =
+    `The buyer replied to these clarification questions by email. Map their reply to each question it answers. ` +
+    `Only include a question id if the reply genuinely answers it; copy the buyer's wording, don't invent.\n\n` +
+    `QUESTIONS:\n${qText}\n\nBUYER REPLY:\n${replyText.slice(0, 12000)}`;
+
+  const model = getFastModel();
+  let answers: Array<{ id: string; answer: string }> = [];
+  try {
+    const { experimental_output } = await generateText({
+      model,
+      system:
+        "You map a buyer's free-text reply onto specific clarification questions for a procurement vendor. Return only questions the reply actually addresses.",
+      messages: [{ role: "user", content: userMsg }],
+      experimental_output: Output.object({ schema: ReplyMapSchema }),
+    });
+    answers = experimental_output.answers ?? [];
+  } catch {
+    const { text } = await generateText({
+      model,
+      system: 'Map the buyer reply to question ids. Respond ONLY with JSON: { "answers": [ { "id": string, "answer": string } ] }',
+      messages: [{ role: "user", content: userMsg }],
+    });
+    const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+    const s = cleaned.indexOf("{");
+    const e = cleaned.lastIndexOf("}");
+    if (s !== -1 && e !== -1) {
+      try {
+        const parsed = JSON.parse(cleaned.slice(s, e + 1));
+        answers = Array.isArray(parsed.answers) ? parsed.answers : [];
+      } catch {
+        answers = [];
+      }
+    }
+  }
+
+  const validIds = new Set(qs.map((q) => q.id));
+  let matched = 0;
+  for (const a of answers) {
+    if (!a.id || !validIds.has(a.id) || !a.answer?.trim()) continue;
+    await supabaseAdmin
+      .from("clarification_questions")
+      .update({ buyer_answer: a.answer.trim(), answered_at: new Date().toISOString() })
+      .eq("id", a.id)
+      .eq("clarification_id", clarificationId);
+    matched++;
+  }
+
+  await supabaseAdmin
+    .from("quote_clarifications")
+    .update({
+      status: "answered",
+      answered_at: new Date().toISOString(),
+      answered_by: signerName?.trim() || "Recorded from email",
+      buyer_comment: replyText.slice(0, 4000),
+    })
+    .eq("id", clarificationId);
+
+  await supabaseAdmin.from("clarification_events").insert({
+    clarification_id: clarificationId,
+    workspace_id: c.workspace_id,
+    actor: "vendor",
+    action: "answered",
+    detail: { by: signerName?.trim() || "vendor", recorded_from_email: true, matched } as never,
+  });
+
+  try {
+    await extractClarificationFeedback(clarificationId);
+  } catch (e) {
+    console.error("[record reply] feedback failed", e);
+  }
+
+  return { matched };
 }

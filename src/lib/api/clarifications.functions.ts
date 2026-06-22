@@ -301,6 +301,51 @@ export const runClarificationFeedback = createServerFn({ method: "POST" })
     return { feedback };
   });
 
+/**
+ * Buyer-loop fallback: record a buyer's EMAILED clarification reply (no link click).
+ * AI maps the pasted text onto the open questions, locks the clarification, refreshes feedback.
+ */
+export const recordBuyerReply = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        clarificationId: z.string().uuid(),
+        text: z.string().min(1).max(20000),
+        signerName: z.string().max(200).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = context.supabase as any;
+    // Membership gate: RLS lets only members read the row.
+    const { data: c } = await supabase
+      .from("quote_clarifications")
+      .select("id, status")
+      .eq("id", data.clarificationId)
+      .single();
+    if (!c) throw new Error("Clarification not found");
+    if (c.status === "answered" || c.status === "closed") {
+      throw new Error("This clarification is already answered. Start a new round to record more.");
+    }
+    const { mapBuyerReplyToAnswers } = await import("@/lib/clarification-feedback.server");
+    const res = await mapBuyerReplyToAnswers(data.clarificationId, data.text, data.signerName ?? null);
+    try {
+      const wsId = await resolveWorkspaceId(context.supabase, context.userId);
+      const { emitProductEvent } = await import("@/lib/telemetry.server");
+      await emitProductEvent(context.supabase, {
+        workspaceId: wsId,
+        userId: context.userId,
+        event: "buyer_reply_recorded",
+        props: { matched: res.matched },
+      });
+    } catch {
+      /* best-effort */
+    }
+    return res;
+  });
+
 /** Draft AI clarification questions for a quote's RFQ (cheap, cached, grounded). */
 export const suggestClarificationQuestions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

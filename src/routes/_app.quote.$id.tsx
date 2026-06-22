@@ -619,7 +619,27 @@ function QuoteDetailPage() {
 
       <Card className="mt-6 p-0 overflow-hidden">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h3 className="text-sm font-semibold">Line items</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold">Line items</h3>
+            {(() => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const low = (items as any[]).filter((li) => li.ai_confidence != null && Number(li.ai_confidence) < 0.75);
+              if (low.length === 0) return null;
+              return (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById(`qline-${low[0].id}`);
+                    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }}
+                  title="AI was unsure about these lines — click to review and verify"
+                  className="inline-flex items-center gap-1 rounded-md border border-warning/40 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning"
+                >
+                  ⚠ Review {low.length} line{low.length === 1 ? "" : "s"}
+                </button>
+              );
+            })()}
+          </div>
           {editable && (
             <div className="flex items-center gap-2">
               <CatalogPickerDialog quoteId={id} onAdded={invalidate} />
@@ -660,8 +680,18 @@ function QuoteDetailPage() {
                     const commit = (patch: Record<string, unknown>) =>
                       updateMut.mutate({ lineItemId: li.id, patch });
                     return (
-                      <tr key={li.id}>
-                        <td className="px-2 py-2 text-muted-foreground tabular-nums align-top">{li.line_no}</td>
+                      <tr key={li.id} id={`qline-${li.id}`}>
+                        <td className="px-2 py-2 text-muted-foreground tabular-nums align-top">
+                          <div className="flex items-center gap-1">
+                            <span>{li.line_no}</span>
+                            {li.ai_confidence != null && Number(li.ai_confidence) < 0.75 && (
+                              <span
+                                title={`Low AI confidence (${Math.round(Number(li.ai_confidence) * 100)}%) — please verify`}
+                                className="inline-block size-2 rounded-full bg-warning"
+                              />
+                            )}
+                          </div>
+                        </td>
                         <td className="px-2 py-2">
                           {editable ? (
                             <EditableCell

@@ -7,6 +7,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { priceAtQty } from "@/lib/sourcing/pricing";
 import { createOrderForQuote } from "./orders.functions";
 import { createInvoiceForOrder } from "./invoices.functions";
+import { emitProductEvent } from "@/lib/telemetry.server";
 import { resolveWorkspaceId, getEntitlement, startOfMonthIso } from "./workspace.functions";
 import { STARTER_QUOTE_CAP, upgradeError } from "@/lib/plans";
 import { convertAmount } from "@/lib/fx.server";
@@ -167,7 +168,7 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
         const { data: items } = await supabase
           .from("extracted_line_items")
           .select(
-            "id, line_no, requested_description, requested_brand, requested_model, requested_qty, requested_unit, target_price, matched_catalog_item_id, match_status",
+            "id, line_no, requested_description, requested_brand, requested_model, requested_qty, requested_unit, target_price, matched_catalog_item_id, match_status, match_confidence",
           )
           .eq("document_id", doc.id)
           .order("line_no");
@@ -236,12 +237,20 @@ export const approveExtractionToRfq = createServerFn({ method: "POST" })
               catalog_item_id: li.matched_catalog_item_id,
               extracted_line_item_id: li.id,
               source: li.match_status === "matched" ? "catalog" : li.match_status === "sourcing" ? "sourcing" : "manual",
+              ai_confidence: li.match_confidence ?? null,
             };
           });
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const { error: liErr } = await supabase.from("quote_line_items").insert(rows as any);
           if (liErr) console.error("[approve] line items insert", liErr);
           await recomputeQuoteTotals(supabase, quoteId!);
+          const autoSourced = rows.filter((r) => r.source === "catalog" || r.source === "sourcing").length;
+          const lowConf = rows.filter((r) => (r.ai_confidence ?? 1) < 0.75).length;
+          await emitProductEvent(supabase, {
+            workspaceId: doc.workspace_id,
+            event: "quote_created",
+            props: { source: "extraction", lines: rows.length, auto_sourced: autoSourced, low_confidence: lowConf },
+          });
         }
       }
     }
@@ -988,6 +997,15 @@ export const acceptQuotePublic = createServerFn({ method: "POST" })
         console.error("[public accept] invoice creation failed", e);
         r.invoiceError = e instanceof Error ? e.message : "invoice failed";
       }
+    }
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await emitProductEvent(supabaseAdmin, {
+        event: "quote_accepted_online",
+        props: { quote_number: r.quote_number ?? null, order_created: !!r.order_created, already: !!r.already },
+      });
+    } catch {
+      /* best-effort */
     }
 
     // Notify the seller that the buyer accepted online (best-effort; never blocks acceptance).

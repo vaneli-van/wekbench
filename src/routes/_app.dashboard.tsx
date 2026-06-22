@@ -30,6 +30,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { NewQuoteDialog } from "@/components/new-quote-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { supabase } from "@/integrations/supabase/client"
 import { ingestRfqUpload } from "@/lib/api/uploads.functions"
 import { UploadBuyerConfirmDialog } from "@/components/upload-buyer-confirm"
@@ -110,6 +118,17 @@ function CreateQuoteButton() {
   const [uploading, setUploading] = useState(false)
   const [pending, setPending] = useState<{ documentId: string; suggestedBuyer: string | null; summary: string | null } | null>(null)
   const [creatingQuote, setCreatingQuote] = useState(false)
+  const [pasteOpen, setPasteOpen] = useState(false)
+  const [pasteText, setPasteText] = useState("")
+
+  async function handlePaste() {
+    const text = pasteText.trim()
+    if (text.length < 10) { toast.error("Paste the RFQ text first"); return }
+    setPasteOpen(false)
+    const file = new File([text], `pasted-rfq-${Date.now()}.txt`, { type: "text/plain" })
+    setPasteText("")
+    await handleFile(file)
+  }
 
   async function handleFile(file: File | null | undefined) {
     if (!file) return
@@ -191,6 +210,10 @@ function CreateQuoteButton() {
             <Upload className="size-4" />
             Upload a file (PDF, CSV, image)
           </DropdownMenuItem>
+          <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setTimeout(() => setPasteOpen(true), 0) }}>
+            <FileText className="size-4" />
+            Paste RFQ text
+          </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link to="/email-capture" className="gap-2">
               <Mail className="size-4" />
@@ -200,6 +223,29 @@ function CreateQuoteButton() {
         </DropdownMenuContent>
       </DropdownMenu>
       <NewQuoteDialog open={open} onOpenChange={setOpen} />
+      <Dialog open={pasteOpen} onOpenChange={(o) => { if (!o) setPasteOpen(false) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Paste an RFQ</DialogTitle>
+            <DialogDescription>
+              Paste the RFQ text from an email or document. We'll read it and draft a quote — no setup needed.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            value={pasteText}
+            onChange={(e) => setPasteText(e.target.value)}
+            rows={10}
+            placeholder="Paste the buyer's RFQ here — line items, quantities, specs…"
+            className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasteOpen(false)}>Cancel</Button>
+            <Button onClick={handlePaste} disabled={pasteText.trim().length < 10}>
+              Read & draft quote
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <UploadBuyerConfirmDialog
         open={!!pending}
         suggestedBuyer={pending?.suggestedBuyer ?? null}
