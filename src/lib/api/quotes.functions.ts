@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { priceAtQty } from "@/lib/sourcing/pricing";
 import { createOrderForQuote } from "./orders.functions";
+import { createInvoiceForOrder } from "./invoices.functions";
 import { resolveWorkspaceId, getEntitlement, startOfMonthIso } from "./workspace.functions";
 import { STARTER_QUOTE_CAP, upgradeError } from "@/lib/plans";
 import { convertAmount } from "@/lib/fx.server";
@@ -678,23 +679,48 @@ export const updateQuoteStatus = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = { status: data.status };
+    const { data: q0 } = await context.supabase
+      .from("quotes")
+      .select("workspace_id, rfq_id")
+      .eq("id", data.quoteId)
+      .single();
+    // Keep the pipeline stage in lockstep with status so the two can't drift.
+    const STAGE_FOR_STATUS: Record<string, string> = {
+      draft: "drafted",
+      sent: "submitted",
+      accepted: "won",
+      declined: "lost",
+      expired: "expired",
+    };
+    const patch: Record<string, unknown> = { status: data.status, stage: STAGE_FOR_STATUS[data.status] };
     if (data.status === "sent") patch.sent_at = new Date().toISOString();
+    if (data.status === "accepted") patch.accepted_at = new Date().toISOString();
+    if (data.status === "declined") patch.declined_at = new Date().toISOString();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await context.supabase.from("quotes").update(patch as any).eq("id", data.quoteId);
     if (error) throw new Error(error.message);
-    // also mark the RFQ as quoted
-    if (data.status === "sent") {
-      const { data: q } = await context.supabase.from("quotes").select("rfq_id").eq("id", data.quoteId).single();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (q?.rfq_id) await context.supabase.from("rfqs").update({ status: "quoted" } as any).eq("id", q.rfq_id);
+
+    if (q0?.workspace_id) {
+      await context.supabase.from("quote_events").insert({
+        quote_id: data.quoteId,
+        workspace_id: q0.workspace_id,
+        event_type: "status",
+        status: data.status,
+        label: `Status set to ${data.status}`,
+      });
     }
-    // accepting a quote spins up an order to track
+    // mark the RFQ as quoted when the quote is sent
+    if (data.status === "sent" && q0?.rfq_id) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await context.supabase.from("rfqs").update({ status: "quoted" } as any).eq("id", q0.rfq_id);
+    }
+    // accepting a quote spins up an order; surface failure loudly rather than swallow it
     if (data.status === "accepted") {
       try {
         await createOrderForQuote(context.supabase, data.quoteId);
       } catch (e) {
-        console.error("[quote accept] order creation failed", e);
+        const msg = e instanceof Error ? e.message : String(e);
+        throw new Error(`Quote marked accepted but order creation failed: ${msg}. Please retry.`);
       }
     }
     return { ok: true };
@@ -721,13 +747,46 @@ export const updateQuoteStage = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await context.supabase
+    const { data: q0 } = await context.supabase
       .from("quotes")
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .update({ stage: data.stage } as any)
-      .eq("id", data.quoteId);
+      .select("workspace_id, status")
+      .eq("id", data.quoteId)
+      .single();
+    // Terminal pipeline stages drive the canonical status so the two can't drift.
+    const STATUS_FOR_STAGE: Record<string, string | undefined> = {
+      won: "accepted",
+      lost: "declined",
+      expired: "expired",
+    };
+    const patch: Record<string, unknown> = { stage: data.stage };
+    const mappedStatus = STATUS_FOR_STAGE[data.stage];
+    if (mappedStatus && mappedStatus !== q0?.status) {
+      patch.status = mappedStatus;
+      if (mappedStatus === "accepted") patch.accepted_at = new Date().toISOString();
+      if (mappedStatus === "declined") patch.declined_at = new Date().toISOString();
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await context.supabase.from("quotes").update(patch as any).eq("id", data.quoteId);
     if (error) throw new Error(error.message);
+
+    if (q0?.workspace_id) {
+      await context.supabase.from("quote_events").insert({
+        quote_id: data.quoteId,
+        workspace_id: q0.workspace_id,
+        event_type: "stage",
+        status: data.stage,
+        label: `Moved to ${data.stage}`,
+      });
+    }
+    // Dragging to "won" accepts the quote -> create the order (parity with accept).
+    if (patch.status === "accepted") {
+      try {
+        await createOrderForQuote(context.supabase, data.quoteId);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        throw new Error(`Quote moved to won but order creation failed: ${msg}. Please retry.`);
+      }
+    }
     return { ok: true };
   });
 
@@ -918,6 +977,18 @@ export const acceptQuotePublic = createServerFn({ method: "POST" })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const r = (result ?? {}) as any;
     if (!r.ok) throw new Error(r.error ?? "Could not accept quote");
+
+    // Parity with the internal accept path: a freshly created order must also get
+    // its draft invoice. Done here via the service-role client because the RPC runs as anon.
+    if (r.order_created && r.order_id) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await createInvoiceForOrder(supabaseAdmin, r.order_id as string);
+      } catch (e) {
+        console.error("[public accept] invoice creation failed", e);
+        r.invoiceError = e instanceof Error ? e.message : "invoice failed";
+      }
+    }
 
     // Notify the seller that the buyer accepted online (best-effort; never blocks acceptance).
     if (!r.already && r.seller_email) {

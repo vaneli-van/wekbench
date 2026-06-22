@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveWorkspaceId } from "./workspace.functions";
-import { createInvoiceForOrder } from "./invoices.functions";
+import { createInvoiceForOrder, issueInvoiceForOrder } from "./invoices.functions";
 
 export const ORDER_STATUSES = [
   "received",
@@ -105,11 +105,20 @@ export async function createOrderForQuote(supabase: any, quoteId: string): Promi
     status: "received",
     label: STATUS_LABEL.received,
   });
-  // Generate a draft invoice for the new order.
+  // Generate a draft invoice for the new order. If it fails, record a visible
+  // alert on the order timeline rather than swallowing the failure silently.
   try {
     await createInvoiceForOrder(supabase, order.id);
   } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
     console.error("[order] invoice creation failed", e);
+    await supabase.from("order_events").insert({
+      order_id: order.id,
+      workspace_id: order.workspace_id,
+      event_type: "alert",
+      label: "Draft invoice not created — needs attention",
+      note: msg,
+    });
   }
   return order.id;
 }
@@ -233,6 +242,21 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
       label: STATUS_LABEL[data.status] ?? data.status,
       note: data.note ?? null,
     });
+    // Delivery issues the draft invoice (draft -> sent). Surface failure loudly.
+    if (data.status === "delivered") {
+      try {
+        await issueInvoiceForOrder(context.supabase, order.id);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        await context.supabase.from("order_events").insert({
+          order_id: order.id,
+          workspace_id: order.workspace_id,
+          event_type: "alert",
+          label: "Invoice not issued on delivery — needs attention",
+          note: msg,
+        });
+      }
+    }
     return { ok: true };
   });
 

@@ -118,6 +118,23 @@ export async function createInvoiceForOrder(supabase: any, orderId: string): Pro
   return inv?.id ?? null;
 }
 
+/** Issue an order's draft invoice (draft -> sent) when the order is delivered. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function issueInvoiceForOrder(supabase: any, orderId: string): Promise<void> {
+  const { data: inv } = await supabase
+    .from("invoices")
+    .select("id, status")
+    .eq("order_id", orderId)
+    .maybeSingle();
+  if (!inv || inv.status !== "draft") return;
+  const { error } = await supabase
+    .from("invoices")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update({ status: "sent", issued_at: new Date().toISOString() } as any)
+    .eq("id", inv.id);
+  if (error) throw new Error(error.message);
+}
+
 export const listInvoices = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
