@@ -158,7 +158,7 @@ export const proposePriceBookMapping = createServerFn({ method: "POST" })
     if (!book) throw new Error("Price book not found");
     const { proposeMappingForFile } = await import("@/lib/oem/import.server");
     const { mapping, preview } = await proposeMappingForFile(data.filePath);
-    return { mapping, preview };
+    return { mapping, preview: preview as (string | number | null)[][] };
   });
 
 /** Ingest the file under the confirmed mapping. */
