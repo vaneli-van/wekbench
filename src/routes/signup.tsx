@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Check, Eye, EyeOff, Loader2, Mail, Info } from "lucide-react";
 import { toast } from "sonner";
+import * as amplitude from "@amplitude/unified";
+import { Identify } from "@amplitude/unified";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +53,22 @@ function SignUpPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
+
+  const handleMicrosoft = async () => {
+    setOauthLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "azure",
+      options: {
+        scopes: "openid email profile",
+        redirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+    if (error) {
+      setOauthLoading(false);
+      toast.error(error.message);
+    }
+  };
 
   const isPersonalEmail = useMemo(() => {
     const domain = email.split("@")[1]?.toLowerCase().trim();
@@ -78,8 +96,16 @@ function SignUpPage() {
       return;
     }
     if (data.session) {
+      if (data.user) {
+        amplitude.setUserId(data.user.id);
+        const identifyObj = new Identify();
+        identifyObj.set("email_domain", email.split("@")[1] ?? "");
+        amplitude.identify(identifyObj);
+      }
+      amplitude.track("User Signed Up", { method: "email", email_domain: email.split("@")[1] ?? "" });
       navigate({ to: "/onboarding" });
     } else {
+      amplitude.track("User Signed Up", { method: "email", email_domain: email.split("@")[1] ?? "", requires_confirmation: true });
       toast.success("Check your inbox to confirm your email, then sign in.");
       navigate({ to: "/signin" });
     }
@@ -172,15 +198,12 @@ function SignUpPage() {
             <Button
               type="button"
               variant="outline"
-              disabled
+              onClick={handleMicrosoft}
+              disabled={oauthLoading}
               className="w-full gap-2 bg-transparent"
-              title="Microsoft sign-in is coming soon"
             >
-              <MicrosoftIcon className="size-4" />
+              {oauthLoading ? <Loader2 className="size-4 animate-spin" /> : <MicrosoftIcon className="size-4" />}
               Continue with Microsoft
-              <span className="ml-1 rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                Soon
-              </span>
             </Button>
 
             <p className="mt-6 text-center text-xs leading-relaxed text-muted-foreground">

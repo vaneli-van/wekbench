@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
+import * as amplitude from "@amplitude/unified";
 import { ArrowLeft, Copy, Truck, Plus, FileQuestion } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
@@ -54,12 +55,24 @@ function OrderDetailPage() {
 
   const statusMut = useMutation({
     mutationFn: (status: string) => statusFn({ data: { orderId: id, status: status as (typeof ORDER_STATUSES)[number] } }),
-    onSuccess: () => { toast.success("Status updated"); invalidate(); },
+    onSuccess: (_d, status) => {
+      amplitude.track("Order Status Updated", { order_id: id, new_status: status });
+      toast.success("Status updated");
+      invalidate();
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Update failed"),
   });
   const shipMut = useMutation({
     mutationFn: (vars: Record<string, string>) => shipFn({ data: { orderId: id, ...vars } }),
-    onSuccess: () => { toast.success("Shipment saved"); invalidate(); },
+    onSuccess: (_d, vars) => {
+      amplitude.track("Shipment Saved", {
+        order_id: id,
+        has_tracking: Boolean(vars.trackingNumber),
+        carrier: vars.carrier ?? null,
+      });
+      toast.success("Shipment saved");
+      invalidate();
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Save failed"),
   });
   const eventMut = useMutation({

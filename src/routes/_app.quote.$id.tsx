@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import * as amplitude from "@amplitude/unified";
 import {
   ArrowLeft,
   FileQuestion,
@@ -156,6 +157,10 @@ function SourceOfferDialog({
     setApplyingId(offerId);
     try {
       await applyFn({ data: { lineItemId, offerId } });
+      amplitude.track("Line Item Sourced", {
+        line_item_id: lineItemId,
+        distributor: data?.offers?.find((o: { offerId: string }) => o.offerId === offerId)?.distributor ?? null,
+      });
       toast.success("Line cost updated from live offer");
       setOpen(false);
       setDetail(null);
@@ -449,6 +454,11 @@ function QuoteDetailPage() {
     mutationFn: (status: "draft" | "sent" | "accepted" | "declined" | "expired") =>
       updateStatus({ data: { quoteId: id, status } }),
     onSuccess: (_d, status) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const qData = data?.quote as any;
+      if (status === "sent") amplitude.track("Quote Sent", { quote_id: id, item_count: data?.items?.length ?? 0, currency: qData?.currency });
+      else if (status === "accepted") amplitude.track("Quote Accepted", { quote_id: id, total: qData?.total, currency: qData?.currency });
+      else if (status === "declined") amplitude.track("Quote Declined", { quote_id: id, currency: qData?.currency });
       toast.success(`Quote ${status}`);
       invalidate();
     },

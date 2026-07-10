@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-r
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import * as amplitude from "@amplitude/unified";
 import { format } from "date-fns";
 import {
   ArrowLeft,
@@ -66,6 +67,10 @@ function RfqDetailPage() {
   const buildQuote = useMutation({
     mutationFn: () => ensureQuoteFn({ data: { rfqId: id, defaultMarginPct: 20 } }),
     onSuccess: ({ quoteId }) => {
+      amplitude.track("Quote Built", {
+        rfq_id: id,
+        item_count: data?.items?.length ?? 0,
+      });
       toast.success("Quote ready");
       navigate({ to: "/quote/$id", params: { id: quoteId } });
     },

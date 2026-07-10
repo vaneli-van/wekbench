@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff, Check, Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
+import * as amplitude from "@amplitude/unified";
+import { Identify } from "@amplitude/unified";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,17 +23,41 @@ function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
+
+  const handleMicrosoft = async () => {
+    setOauthLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "azure",
+      options: {
+        scopes: "openid email profile",
+        redirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+    if (error) {
+      setOauthLoading(false);
+      toast.error(error.message);
+    }
+    // On success the browser redirects to Microsoft, so no further handling here.
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setSubmitting(false);
     if (error) {
       toast.error(error.message === "Invalid login credentials"
         ? "That email and password don't match. Try again."
         : error.message);
       return;
+    }
+    if (data.user) {
+      amplitude.setUserId(data.user.id);
+      const identifyObj = new Identify();
+      identifyObj.set("email_domain", email.split("@")[1] ?? "");
+      amplitude.identify(identifyObj);
+      amplitude.track("User Signed In", { method: "email" });
     }
     navigate({ to: "/dashboard" });
   };
@@ -111,15 +137,12 @@ function SignInPage() {
             <Button
               type="button"
               variant="outline"
-              disabled
+              onClick={handleMicrosoft}
+              disabled={oauthLoading}
               className="w-full gap-2 bg-transparent"
-              title="Microsoft sign-in is coming soon"
             >
-              <MicrosoftIcon className="size-4" />
+              {oauthLoading ? <Loader2 className="size-4 animate-spin" /> : <MicrosoftIcon className="size-4" />}
               Continue with Microsoft
-              <span className="ml-1 rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                Soon
-              </span>
             </Button>
 
             <p className="mt-8 text-center text-sm text-muted-foreground">

@@ -8,9 +8,34 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import * as amplitude from "@amplitude/unified";
 
 import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
+
+// Initialize Amplitude once before any route renders
+if (typeof window !== "undefined") {
+  void amplitude.initAll(import.meta.env.VITE_AMPLITUDE_API_KEY as string, {
+    analytics: {
+      serverZone: "EU",                                     // EU data residency
+      remoteConfig: { fetchRemoteConfig: true },            // remote SDK config from Amplitude
+      autocapture: {
+        attribution: true,           // UTM / referrer attribution events
+        pageViews: true,             // SPA route changes + initial load
+        sessions: true,              // Session start / end events
+        formInteractions: true,      // Form starts + submits
+        fileDownloads: true,         // Downloads of common file types
+        elementInteractions: true,   // Click + change on instrumented elements
+        frustrationInteractions: true, // Rage clicks, dead clicks
+        pageUrlEnrichment: true,     // Adds path / search to event props
+        networkTracking: true,       // XHR + fetch request events
+        webVitals: true,             // CWV (LCP, INP, CLS) on page hide
+      },
+    },
+    sessionReplay: { sampleRate: 1 }, // Record user sessions; comment out to disable
+    engagement: {},                   // In-product Guides & Surveys; comment out to disable
+  });
+}
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";

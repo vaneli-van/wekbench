@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
+import * as amplitude from "@amplitude/unified";
 import { ArrowLeft, Download, FileQuestion, Package, Plus, Send, Trash2, Wallet } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
@@ -118,6 +119,7 @@ function InvoiceDetailPage() {
 </body></html>`;
     const w = window.open("", "_blank", "width=860,height=1000");
     if (!w) { toast.error("Pop-up blocked — allow pop-ups to print the invoice"); return; }
+    amplitude.track("Invoice Downloaded", { invoice_id: id, currency: inv.currency });
     w.document.open(); w.document.write(html); w.document.close(); w.focus();
     setTimeout(() => w.print(), 300);
   }
@@ -138,7 +140,14 @@ function InvoiceDetailPage() {
   });
   const payMut = useMutation({
     mutationFn: () => payFn({ data: { invoiceId: id, amount: Number(amount), paidOn, method: method || undefined, reference: reference || undefined } }),
-    onSuccess: () => { toast.success("Payment recorded"); setAmount(""); setMethod(""); setReference(""); refresh(); },
+    onSuccess: () => {
+      amplitude.track("Payment Recorded", { invoice_id: id, amount: Number(amount), method: method || null, currency: inv?.currency });
+      toast.success("Payment recorded");
+      setAmount("");
+      setMethod("");
+      setReference("");
+      refresh();
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
   const delPayMut = useMutation({
@@ -167,9 +176,14 @@ function InvoiceDetailPage() {
     mutationFn: () => reminderFn({ data: { invoiceId: id } }),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onSuccess: (r: any) => {
-      if (r?.sent) toast.success(`Reminder sent to ${r.recipient}`);
-      else if (r?.skipped) toast.message(`Email not configured (${r.skipped}). Recipient would be ${r.recipient}.`);
-      else toast.error(r?.error ?? "Could not send reminder");
+      if (r?.sent) {
+        amplitude.track("Payment Reminder Sent", { invoice_id: id, recipient: r.recipient });
+        toast.success(`Reminder sent to ${r.recipient}`);
+      } else if (r?.skipped) {
+        toast.message(`Email not configured (${r.skipped}). Recipient would be ${r.recipient}.`);
+      } else {
+        toast.error(r?.error ?? "Could not send reminder");
+      }
       refresh();
     },
     onError: (e) => {

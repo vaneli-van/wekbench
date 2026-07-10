@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import * as amplitude from "@amplitude/unified";
 import {
   Check,
   ArrowLeft,
@@ -162,6 +163,11 @@ function OnboardingPage() {
       ]);
       if (profileResult.error) throw profileResult.error;
       if (workspaceResult.error) throw workspaceResult.error;
+      amplitude.track("Onboarding Completed", {
+        account_type: accountType ?? "vendor",
+        country,
+        vendor_types: isVendorFlow ? vendorTypes : [],
+      });
       setDone(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not save your details.");
