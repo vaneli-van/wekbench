@@ -694,9 +694,9 @@ function QuoteDetailPage() {
                         <td className="px-2 py-2 text-muted-foreground tabular-nums align-top">
                           <div className="flex items-center gap-1">
                             <span>{li.line_no}</span>
-                            {li.ai_confidence != null && Number(li.ai_confidence) < 0.75 && (
+                            {(li as { ai_confidence?: number | null }).ai_confidence != null && Number((li as { ai_confidence?: number | null }).ai_confidence) < 0.75 && (
                               <span
-                                title={`Low AI confidence (${Math.round(Number(li.ai_confidence) * 100)}%) — please verify`}
+                                title={`Low AI confidence (${Math.round(Number((li as { ai_confidence?: number | null }).ai_confidence) * 100)}%) — please verify`}
                                 className="inline-block size-2 rounded-full bg-warning"
                               />
                             )}
