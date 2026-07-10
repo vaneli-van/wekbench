@@ -195,13 +195,31 @@ function SourcingPage() {
                   </TableBody>
                 </Table>
               </div>
-              <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-                <span className="text-sm text-muted-foreground">Estimated landed subtotal (goods)</span>
-                <span className="text-lg font-semibold tabular-nums">{money(landedSubtotal, reqCurrency)}</span>
+              <div className="mt-3 border-t border-border pt-3 text-sm">
+                <div className="flex items-center justify-between py-0.5">
+                  <span className="text-muted-foreground">Goods</span>
+                  <span className="tabular-nums">{money(request?.goods_subtotal ?? landedSubtotal, reqCurrency)}</span>
+                </div>
+                <div className="flex items-center justify-between py-0.5">
+                  <span className="text-muted-foreground">Freight (est · {request?.freight_pct ?? 12}%)</span>
+                  <span className="tabular-nums">{money(request?.freight_est, reqCurrency)}</span>
+                </div>
+                <div className="flex items-center justify-between py-0.5">
+                  <span className="text-muted-foreground">Import duty (est · {request?.duty_pct ?? 20}%)</span>
+                  <span className="tabular-nums">{money(request?.duty_est, reqCurrency)}</span>
+                </div>
+                <div className="flex items-center justify-between py-0.5">
+                  <span className="text-muted-foreground">VAT &amp; levies (est · {request?.vat_pct ?? 21.9}%)</span>
+                  <span className="tabular-nums">{money(request?.vat_est, reqCurrency)}</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between border-t border-border pt-2">
+                  <span className="font-medium">Estimated landed total</span>
+                  <span className="text-lg font-semibold tabular-nums">{money(request?.landed_total ?? landedSubtotal, reqCurrency)}</span>
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Freight, duty and VAT/levies are estimates for {request?.destination_country ?? "your country"}. Prices convert live to {reqCurrency}.
+                </p>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Goods only — freight, duties and clearing are added at checkout. Prices convert live to {reqCurrency}.
-              </p>
             </>
           )}
         </Card>

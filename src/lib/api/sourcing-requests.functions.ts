@@ -98,7 +98,7 @@ export const priceSourcingRequest = createServerFn({ method: "POST" })
     const workspace_id = await wsId(context.supabase, context.userId);
     const { data: req } = await context.supabase
       .from("sourcing_requests")
-      .select("id, currency, workspace_id")
+      .select("id, currency, workspace_id, freight_pct, duty_pct, vat_pct")
       .eq("id", data.id)
       .single();
     if (!req) throw new Error("Request not found");
@@ -164,10 +164,29 @@ export const priceSourcingRequest = createServerFn({ method: "POST" })
         .eq("id", li.id);
     }
 
+    // Landed cost = goods + freight, then duty on the customs value, then VAT/levies on top.
+    const freightPct = Number(req.freight_pct ?? 12);
+    const dutyPct = Number(req.duty_pct ?? 20);
+    const vatPct = Number(req.vat_pct ?? 21.9);
+    const goods = landedSubtotal;
+    const freight = goods * (freightPct / 100);
+    const customsValue = goods + freight;
+    const duty = customsValue * (dutyPct / 100);
+    const vat = (customsValue + duty) * (vatPct / 100);
+    const landedTotal = customsValue + duty + vat;
+
     await context.supabase
       .from("sourcing_requests")
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .update({ status: "priced", updated_at: new Date().toISOString() } as any)
+      .update({
+        status: "priced",
+        goods_subtotal: goods,
+        freight_est: freight,
+        duty_est: duty,
+        vat_est: vat,
+        landed_total: landedTotal,
+        updated_at: new Date().toISOString(),
+      } as any)
       .eq("id", data.id);
 
     try {
@@ -176,12 +195,21 @@ export const priceSourcingRequest = createServerFn({ method: "POST" })
         workspaceId: workspace_id,
         userId: context.userId,
         event: "sourcing_request_priced",
-        props: { lines: lines.length, priced, landed_subtotal: Math.round(landedSubtotal) },
+        props: { lines: lines.length, priced, goods: Math.round(goods), landed_total: Math.round(landedTotal) },
       });
     } catch {
       /* best-effort */
     }
-    return { priced, total: lines.length, landedSubtotal, currency: req.currency };
+    return {
+      priced,
+      total: lines.length,
+      currency: req.currency,
+      goods,
+      freight,
+      duty,
+      vat,
+      landedTotal,
+    };
   });
 
 export const getSourcingRequest = createServerFn({ method: "POST" })
@@ -190,7 +218,9 @@ export const getSourcingRequest = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: request, error } = await context.supabase
       .from("sourcing_requests")
-      .select("id, title, destination_country, destination_city, currency, status, notes, created_at")
+      .select(
+        "id, title, destination_country, destination_city, currency, status, notes, created_at, goods_subtotal, freight_pct, freight_est, duty_pct, duty_est, vat_pct, vat_est, landed_total",
+      )
       .eq("id", data.id)
       .maybeSingle();
     if (error || !request) throw new Error("Request not found");
