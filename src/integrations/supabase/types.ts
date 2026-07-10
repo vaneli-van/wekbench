@@ -1072,6 +1072,343 @@ export type Database = {
           },
         ]
       }
+      oem_discount_schedules: {
+        Row: {
+          basis: string
+          category: string
+          created_at: string
+          discount_pct: number
+          effective_from: string | null
+          effective_to: string | null
+          id: string
+          notes: string | null
+          oem_supplier_id: string
+          workspace_id: string
+        }
+        Insert: {
+          basis?: string
+          category?: string
+          created_at?: string
+          discount_pct: number
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          notes?: string | null
+          oem_supplier_id: string
+          workspace_id: string
+        }
+        Update: {
+          basis?: string
+          category?: string
+          created_at?: string
+          discount_pct?: number
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          notes?: string | null
+          oem_supplier_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oem_discount_schedules_oem_supplier_id_fkey"
+            columns: ["oem_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "oem_suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oem_discount_schedules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oem_price_books: {
+        Row: {
+          column_mapping: Json
+          currency: string
+          effective_from: string | null
+          effective_to: string | null
+          id: string
+          label: string
+          oem_supplier_id: string
+          row_count: number
+          scope_note: string | null
+          source_file_path: string | null
+          status: string
+          uploaded_at: string
+          workspace_id: string
+        }
+        Insert: {
+          column_mapping?: Json
+          currency?: string
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          label: string
+          oem_supplier_id: string
+          row_count?: number
+          scope_note?: string | null
+          source_file_path?: string | null
+          status?: string
+          uploaded_at?: string
+          workspace_id: string
+        }
+        Update: {
+          column_mapping?: Json
+          currency?: string
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          label?: string
+          oem_supplier_id?: string
+          row_count?: number
+          scope_note?: string | null
+          source_file_path?: string | null
+          status?: string
+          uploaded_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oem_price_books_oem_supplier_id_fkey"
+            columns: ["oem_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "oem_suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oem_price_books_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oem_price_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          currency: string | null
+          description: string | null
+          dims: string | null
+          id: string
+          list_price: number | null
+          model: string | null
+          normalized_part: string | null
+          oem_supplier_id: string
+          part_number: string | null
+          price_book_id: string
+          raw: Json | null
+          superseded_by: string | null
+          supersedes: string | null
+          unit_price: number | null
+          uom: string | null
+          upc: string | null
+          weight_kg: number | null
+          workspace_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          dims?: string | null
+          id?: string
+          list_price?: number | null
+          model?: string | null
+          normalized_part?: string | null
+          oem_supplier_id: string
+          part_number?: string | null
+          price_book_id: string
+          raw?: Json | null
+          superseded_by?: string | null
+          supersedes?: string | null
+          unit_price?: number | null
+          uom?: string | null
+          upc?: string | null
+          weight_kg?: number | null
+          workspace_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          dims?: string | null
+          id?: string
+          list_price?: number | null
+          model?: string | null
+          normalized_part?: string | null
+          oem_supplier_id?: string
+          part_number?: string | null
+          price_book_id?: string
+          raw?: Json | null
+          superseded_by?: string | null
+          supersedes?: string | null
+          unit_price?: number | null
+          uom?: string | null
+          upc?: string | null
+          weight_kg?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oem_price_items_oem_supplier_id_fkey"
+            columns: ["oem_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "oem_suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oem_price_items_price_book_id_fkey"
+            columns: ["price_book_id"]
+            isOneToOne: false
+            referencedRelation: "oem_price_books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oem_price_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oem_price_requests: {
+        Row: {
+          contact_used: string | null
+          description: string | null
+          id: string
+          oem_supplier_id: string | null
+          part_number: string | null
+          quote_id: string | null
+          quote_line_item_id: string | null
+          quoted_price: number | null
+          requested_at: string
+          responded_at: string | null
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          contact_used?: string | null
+          description?: string | null
+          id?: string
+          oem_supplier_id?: string | null
+          part_number?: string | null
+          quote_id?: string | null
+          quote_line_item_id?: string | null
+          quoted_price?: number | null
+          requested_at?: string
+          responded_at?: string | null
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          contact_used?: string | null
+          description?: string | null
+          id?: string
+          oem_supplier_id?: string | null
+          part_number?: string | null
+          quote_id?: string | null
+          quote_line_item_id?: string | null
+          quoted_price?: number | null
+          requested_at?: string
+          responded_at?: string | null
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oem_price_requests_oem_supplier_id_fkey"
+            columns: ["oem_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "oem_suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oem_price_requests_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oem_price_requests_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oem_suppliers: {
+        Row: {
+          brand: string | null
+          created_at: string
+          currency: string
+          id: string
+          name: string
+          notes: string | null
+          partner_id: string | null
+          portal_url: string | null
+          primary_contact_email: string | null
+          primary_contact_name: string | null
+          primary_contact_phone: string | null
+          region: string | null
+          relationship: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          name: string
+          notes?: string | null
+          partner_id?: string | null
+          portal_url?: string | null
+          primary_contact_email?: string | null
+          primary_contact_name?: string | null
+          primary_contact_phone?: string | null
+          region?: string | null
+          relationship?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          partner_id?: string | null
+          portal_url?: string | null
+          primary_contact_email?: string | null
+          primary_contact_name?: string | null
+          primary_contact_phone?: string | null
+          region?: string | null
+          relationship?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oem_suppliers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_events: {
         Row: {
           created_at: string
@@ -1308,6 +1645,41 @@ export type Database = {
           },
         ]
       }
+      product_events: {
+        Row: {
+          event: string
+          id: string
+          occurred_at: string
+          props: Json
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          event: string
+          id?: string
+          occurred_at?: string
+          props?: Json
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          event?: string
+          id?: string
+          occurred_at?: string
+          props?: Json
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1507,6 +1879,8 @@ export type Database = {
           sent_at: string | null
           share_token: string
           status: string
+          suggest_hash: string | null
+          suggested_at: string | null
           updated_at: string
           workspace_id: string
         }
@@ -1525,6 +1899,8 @@ export type Database = {
           sent_at?: string | null
           share_token?: string
           status?: string
+          suggest_hash?: string | null
+          suggested_at?: string | null
           updated_at?: string
           workspace_id: string
         }
@@ -1543,6 +1919,8 @@ export type Database = {
           sent_at?: string | null
           share_token?: string
           status?: string
+          suggest_hash?: string | null
+          suggested_at?: string | null
           updated_at?: string
           workspace_id?: string
         }
@@ -1570,13 +1948,66 @@ export type Database = {
           },
         ]
       }
+      quote_events: {
+        Row: {
+          actor: string | null
+          event_type: string
+          id: string
+          label: string | null
+          note: string | null
+          occurred_at: string
+          quote_id: string
+          status: string | null
+          workspace_id: string
+        }
+        Insert: {
+          actor?: string | null
+          event_type?: string
+          id?: string
+          label?: string | null
+          note?: string | null
+          occurred_at?: string
+          quote_id: string
+          status?: string | null
+          workspace_id: string
+        }
+        Update: {
+          actor?: string | null
+          event_type?: string
+          id?: string
+          label?: string | null
+          note?: string | null
+          occurred_at?: string
+          quote_id?: string
+          status?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_events_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_line_items: {
         Row: {
+          ai_confidence: number | null
           brand: string | null
           catalog_item_id: string | null
           created_at: string
           description: string
           discount_pct: number
+          discount_pct_applied: number | null
           external_part_id: string | null
           extracted_line_item_id: string | null
           fx_rate: number | null
@@ -1585,12 +2016,16 @@ export type Database = {
           length_cm: number | null
           line_no: number
           line_type: Database["public"]["Enums"]["quote_line_type"]
+          list_price: number | null
           manufacturer: string | null
           margin_pct: number | null
           model: string | null
           mpn: string | null
           notes: string | null
+          price_book_id: string | null
           price_fetched_at: string | null
+          price_provisional: boolean
+          price_source: string | null
           qty: number
           quote_id: string
           section: string | null
@@ -1609,11 +2044,13 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          ai_confidence?: number | null
           brand?: string | null
           catalog_item_id?: string | null
           created_at?: string
           description: string
           discount_pct?: number
+          discount_pct_applied?: number | null
           external_part_id?: string | null
           extracted_line_item_id?: string | null
           fx_rate?: number | null
@@ -1622,12 +2059,16 @@ export type Database = {
           length_cm?: number | null
           line_no: number
           line_type?: Database["public"]["Enums"]["quote_line_type"]
+          list_price?: number | null
           manufacturer?: string | null
           margin_pct?: number | null
           model?: string | null
           mpn?: string | null
           notes?: string | null
+          price_book_id?: string | null
           price_fetched_at?: string | null
+          price_provisional?: boolean
+          price_source?: string | null
           qty?: number
           quote_id: string
           section?: string | null
@@ -1646,11 +2087,13 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          ai_confidence?: number | null
           brand?: string | null
           catalog_item_id?: string | null
           created_at?: string
           description?: string
           discount_pct?: number
+          discount_pct_applied?: number | null
           external_part_id?: string | null
           extracted_line_item_id?: string | null
           fx_rate?: number | null
@@ -1659,12 +2102,16 @@ export type Database = {
           length_cm?: number | null
           line_no?: number
           line_type?: Database["public"]["Enums"]["quote_line_type"]
+          list_price?: number | null
           manufacturer?: string | null
           margin_pct?: number | null
           model?: string | null
           mpn?: string | null
           notes?: string | null
+          price_book_id?: string | null
           price_fetched_at?: string | null
+          price_provisional?: boolean
+          price_source?: string | null
           qty?: number
           quote_id?: string
           section?: string | null
@@ -1945,6 +2392,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      regional_sources: {
+        Row: {
+          brand: string
+          contact: string | null
+          created_at: string
+          id: string
+          region: string
+          source_name: string
+          type: string
+          url: string | null
+        }
+        Insert: {
+          brand: string
+          contact?: string | null
+          created_at?: string
+          id?: string
+          region: string
+          source_name: string
+          type?: string
+          url?: string | null
+        }
+        Update: {
+          brand?: string
+          contact?: string | null
+          created_at?: string
+          id?: string
+          region?: string
+          source_name?: string
+          type?: string
+          url?: string | null
+        }
+        Relationships: []
       }
       review_notifications: {
         Row: {
