@@ -1,9 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Globe2, Loader2, PackageSearch, Sparkles } from "lucide-react";
+import { Check, Globe2, Loader2, PackageSearch, Sparkles } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import {
   priceSourcingRequest,
   getSourcingRequest,
   listSourcingRequests,
+  placeSourcingOrder,
 } from "@/lib/api/sourcing-requests.functions";
 
 export const Route = createFileRoute("/_app/sourcing")({
@@ -41,6 +42,8 @@ function SourcingPage() {
   const priceFn = useServerFn(priceSourcingRequest);
   const getFn = useServerFn(getSourcingRequest);
   const listFn = useServerFn(listSourcingRequests);
+  const orderFn = useServerFn(placeSourcingOrder);
+  const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
   const [country, setCountry] = useState("Ghana");
@@ -87,6 +90,17 @@ function SourcingPage() {
       toast.success("Priced — see landed cost below");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not price request"),
+  });
+
+  const orderMut = useMutation({
+    mutationFn: () => orderFn({ data: { id: selectedId! } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sourcing-requests"] });
+      qc.invalidateQueries({ queryKey: ["sourcing-request", selectedId] });
+      toast.success("Import order placed — track it under My orders");
+      navigate({ to: "/orders" });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not place order"),
   });
 
   const landedSubtotal = items.reduce(
@@ -219,6 +233,20 @@ function SourcingPage() {
                 <p className="mt-1.5 text-xs text-muted-foreground">
                   Freight, duty and VAT/levies are estimates for {request?.destination_country ?? "your country"}. Prices convert live to {reqCurrency}.
                 </p>
+                {request?.status === "ordered" ? (
+                  <div className="mt-3 flex items-center gap-2 rounded-md bg-success/10 px-3 py-2 text-sm text-success">
+                    <Check className="size-4" /> Order placed — track it under My orders.
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => orderMut.mutate()}
+                    disabled={orderMut.isPending || !(Number(request?.landed_total ?? 0) > 0)}
+                    className="mt-3 w-full gap-1.5"
+                  >
+                    {orderMut.isPending ? <Loader2 className="size-4 animate-spin" /> : <PackageSearch className="size-4" />}
+                    Place import order
+                  </Button>
+                )}
               </div>
             </>
           )}

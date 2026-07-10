@@ -212,6 +212,120 @@ export const priceSourcingRequest = createServerFn({ method: "POST" })
     };
   });
 
+/** Turn a priced sourcing request into a tracked import order (reuses the orders pipeline). */
+export const placeSourcingOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const workspace_id = await wsId(context.supabase, context.userId);
+    const { data: req } = await context.supabase
+      .from("sourcing_requests")
+      .select("id, title, currency, status, order_id, landed_total, goods_subtotal, destination_country")
+      .eq("id", data.id)
+      .single();
+    if (!req) throw new Error("Request not found");
+    if (req.order_id) return { orderId: req.order_id as string, already: true };
+    if (req.status !== "priced") throw new Error("Price the request before ordering");
+
+    const { data: items } = await context.supabase
+      .from("sourcing_request_items")
+      .select("line_no, description, brand, model, qty, unit, converted_unit_price")
+      .eq("request_id", data.id)
+      .order("line_no");
+    const lines = items ?? [];
+
+    // Order number: ORD-YYYY-NNNN
+    const year = new Date().getFullYear();
+    const prefix = `ORD-${year}-`;
+    const { data: last } = await context.supabase
+      .from("orders")
+      .select("order_number")
+      .eq("workspace_id", workspace_id)
+      .like("order_number", `${prefix}%`)
+      .order("order_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    let n = 1;
+    if (last?.order_number) {
+      const parsed = parseInt(String(last.order_number).split("-").pop() ?? "0", 10);
+      if (!Number.isNaN(parsed)) n = parsed + 1;
+    }
+    const orderNumber = `${prefix}${String(n).padStart(4, "0")}`;
+
+    const value = Number(req.landed_total ?? req.goods_subtotal ?? 0);
+    const { data: order, error: ordErr } = await context.supabase
+      .from("orders")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .insert({
+        workspace_id,
+        order_number: orderNumber,
+        description: req.title,
+        currency: req.currency,
+        value,
+        status: "received",
+        ordered_at: new Date().toISOString(),
+      } as any)
+      .select("id, workspace_id")
+      .single();
+    if (ordErr || !order) throw new Error(ordErr?.message ?? "Could not create order");
+
+    if (lines.length) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rows = lines.map((li: any) => {
+        const unitPrice = li.converted_unit_price != null ? Number(li.converted_unit_price) : null;
+        const qty = Number(li.qty ?? 1);
+        return {
+          order_id: order.id,
+          workspace_id,
+          line_no: li.line_no,
+          product: li.description,
+          description: [li.brand, li.model].filter(Boolean).join(" · ") || null,
+          qty,
+          unit: li.unit,
+          unit_price: unitPrice,
+          subtotal: unitPrice != null ? unitPrice * qty : null,
+          currency: req.currency,
+        };
+      });
+      await context.supabase.from("order_line_items").insert(rows as never);
+    }
+
+    await context.supabase.from("order_events").insert({
+      order_id: order.id,
+      workspace_id,
+      event_type: "status",
+      status: "received",
+      label: "Import order placed",
+    });
+
+    // Draft invoice so the buyer has something to pay.
+    try {
+      const { createInvoiceForOrder } = await import("./invoices.functions");
+      await createInvoiceForOrder(context.supabase, order.id);
+    } catch (e) {
+      console.error("[sourcing order] invoice creation failed", e);
+    }
+
+    await context.supabase
+      .from("sourcing_requests")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update({ status: "ordered", order_id: order.id, updated_at: new Date().toISOString() } as any)
+      .eq("id", data.id);
+
+    try {
+      const { emitProductEvent } = await import("@/lib/telemetry.server");
+      await emitProductEvent(context.supabase, {
+        workspaceId: workspace_id,
+        userId: context.userId,
+        event: "sourcing_order_placed",
+        props: { lines: lines.length, value: Math.round(value) },
+      });
+    } catch {
+      /* best-effort */
+    }
+    return { orderId: order.id as string, orderNumber, already: false };
+  });
+
 export const getSourcingRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
@@ -219,7 +333,7 @@ export const getSourcingRequest = createServerFn({ method: "POST" })
     const { data: request, error } = await context.supabase
       .from("sourcing_requests")
       .select(
-        "id, title, destination_country, destination_city, currency, status, notes, created_at, goods_subtotal, freight_pct, freight_est, duty_pct, duty_est, vat_pct, vat_est, landed_total",
+        "id, title, destination_country, destination_city, currency, status, notes, created_at, order_id, goods_subtotal, freight_pct, freight_est, duty_pct, duty_est, vat_pct, vat_est, landed_total",
       )
       .eq("id", data.id)
       .maybeSingle();
