@@ -174,24 +174,7 @@ export const Route = createFileRoute("/api/public/inbound-email")({
             }
           }
 
-          // 10. Track inbound email received in Amplitude (server-side).
-          try {
-            const { createInstance } = await import("@amplitude/analytics-node");
-            const nodeClient = createInstance();
-            nodeClient.init(process.env.AMPLITUDE_API_KEY ?? "", { serverZone: "EU" });
-            nodeClient.track({
-              event_type: "Inbound Email Received",
-              user_id: workspaceId ?? "anonymous",
-              event_properties: {
-                has_attachments: attachmentCount > 0,
-                attachment_count: attachmentCount,
-                workspace_id: workspaceId,
-              },
-            });
-            await nodeClient.flush();
-          } catch (err) {
-            console.error("[inbound-email] amplitude track failed", err);
-          }
+          // 10. Amplitude tracking omitted (package not installed).
 
           return new Response(JSON.stringify({ ok: true, id: inserted.id }), {
             status: 200,

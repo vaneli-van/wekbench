@@ -374,7 +374,7 @@ export async function ingestUploadedDocument(opts: {
   filePath: string;
   fileName: string;
   contentType: string;
-}): Promise<{ documentId: string }> {
+}): Promise<{ documentId: string; suggestedBuyer?: string | null; summary?: string | null }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   const { data: blob, error: dlErr } = await supabaseAdmin.storage.from("rfq-uploads").download(opts.filePath);
