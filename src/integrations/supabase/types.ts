@@ -2729,6 +2729,140 @@ export type Database = {
         }
         Relationships: []
       }
+      sourcing_request_items: {
+        Row: {
+          best_currency: string | null
+          best_distributor: string | null
+          best_price: number | null
+          brand: string | null
+          category: string | null
+          converted_unit_price: number | null
+          created_at: string
+          datasheet_url: string | null
+          description: string | null
+          fx_rate: number | null
+          id: string
+          item_status: string
+          line_no: number
+          model: string | null
+          mpn: string | null
+          offer_count: number
+          priced_at: string | null
+          qty: number
+          request_id: string
+          unit: string | null
+          workspace_id: string
+        }
+        Insert: {
+          best_currency?: string | null
+          best_distributor?: string | null
+          best_price?: number | null
+          brand?: string | null
+          category?: string | null
+          converted_unit_price?: number | null
+          created_at?: string
+          datasheet_url?: string | null
+          description?: string | null
+          fx_rate?: number | null
+          id?: string
+          item_status?: string
+          line_no?: number
+          model?: string | null
+          mpn?: string | null
+          offer_count?: number
+          priced_at?: string | null
+          qty?: number
+          request_id: string
+          unit?: string | null
+          workspace_id: string
+        }
+        Update: {
+          best_currency?: string | null
+          best_distributor?: string | null
+          best_price?: number | null
+          brand?: string | null
+          category?: string | null
+          converted_unit_price?: number | null
+          created_at?: string
+          datasheet_url?: string | null
+          description?: string | null
+          fx_rate?: number | null
+          id?: string
+          item_status?: string
+          line_no?: number
+          model?: string | null
+          mpn?: string | null
+          offer_count?: number
+          priced_at?: string | null
+          qty?: number
+          request_id?: string
+          unit?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sourcing_request_items_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "sourcing_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sourcing_request_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sourcing_requests: {
+        Row: {
+          created_at: string
+          currency: string
+          destination_city: string | null
+          destination_country: string | null
+          id: string
+          notes: string | null
+          status: string
+          title: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          destination_city?: string | null
+          destination_country?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          destination_city?: string | null
+          destination_country?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sourcing_requests_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_contracts: {
         Row: {
           contract_type: Database["public"]["Enums"]["contract_type"]
