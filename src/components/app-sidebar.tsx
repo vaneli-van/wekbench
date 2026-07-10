@@ -17,6 +17,7 @@ import {
   Sparkles,
   ShieldCheck,
   Users,
+  Globe2,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -36,6 +37,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { name: "Review Queue", href: "/review-queue", icon: ShieldCheck, badgeKey: "reviewQueue" },
       { name: "Quotes", href: "/quotes", icon: FileText, badgeKey: "quotes" },
       { name: "Product Search", href: "/product-search", icon: Search },
+      { name: "Source & import", href: "/sourcing", icon: Globe2 },
       { name: "Catalog", href: "/catalog", icon: Library },
       { name: "Orders", href: "/orders", icon: Package, badgeKey: "orders" },
       { name: "Invoices", href: "/invoices", icon: ReceiptText },

@@ -21,6 +21,7 @@ import {
   LogOut,
   User as UserIcon,
   Search as SearchIcon,
+  Globe2,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -79,6 +80,7 @@ const mobileNav = [
   { name: "Email Capture", href: "/email-capture", icon: AtSign },
   { name: "Quotes", href: "/quotes", icon: FileText },
   { name: "Product Search", href: "/product-search", icon: SearchIcon },
+  { name: "Source & import", href: "/sourcing", icon: Globe2 },
   { name: "Orders", href: "/orders", icon: Package },
   { name: "Invoices", href: "/invoices", icon: ReceiptText },
   { name: "Documents", href: "/documents", icon: FolderArchive },
@@ -95,6 +97,7 @@ const titleMap: Record<string, string> = {
   "/email-capture": "Email Capture",
   "/quotes": "Quotes",
   "/product-search": "Product Search",
+  "/sourcing": "Source & import",
   "/orders": "Orders",
   "/invoices": "Invoices",
   "/documents": "Documents",
