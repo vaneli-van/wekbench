@@ -18,6 +18,7 @@ import {
   getSourcingRequest,
   listSourcingRequests,
   placeSourcingOrder,
+  requestLineQuote,
 } from "@/lib/api/sourcing-requests.functions";
 
 export const Route = createFileRoute("/_app/sourcing")({
@@ -43,6 +44,7 @@ function SourcingPage() {
   const getFn = useServerFn(getSourcingRequest);
   const listFn = useServerFn(listSourcingRequests);
   const orderFn = useServerFn(placeSourcingOrder);
+  const reqQuoteFn = useServerFn(requestLineQuote);
   const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
@@ -90,6 +92,15 @@ function SourcingPage() {
       toast.success("Priced — see landed cost below");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not price request"),
+  });
+
+  const quoteReqMut = useMutation({
+    mutationFn: (itemId: string) => reqQuoteFn({ data: { itemId } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sourcing-request", selectedId] });
+      toast.success("Quote requested — we'll source this line for you");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not request quote"),
   });
 
   const orderMut = useMutation({
@@ -187,13 +198,25 @@ function SourcingPage() {
                         <TableCell>
                           <div className="font-medium">{it.description}</div>
                           <div className="mt-0.5">
-                            <Badge variant="outline" className={`text-[10px] ${STATUS_TONE[it.item_status] ?? ""}`}>
-                              {it.item_status === "priced"
-                                ? `${it.offer_count} offer${it.offer_count === 1 ? "" : "s"}`
-                                : it.item_status === "no_offer"
-                                  ? "No offer — request a quote"
+                            {it.item_status === "no_offer" ? (
+                              <button
+                                onClick={() => quoteReqMut.mutate(it.id)}
+                                disabled={quoteReqMut.isPending}
+                                className="rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/20 disabled:opacity-50"
+                              >
+                                No offer — request a quote
+                              </button>
+                            ) : it.item_status === "quote_requested" ? (
+                              <Badge variant="outline" className="border-info/30 bg-info/15 text-[10px] text-info">
+                                Quote requested
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className={`text-[10px] ${STATUS_TONE[it.item_status] ?? ""}`}>
+                                {it.item_status === "priced"
+                                  ? `${it.offer_count} offer${it.offer_count === 1 ? "" : "s"}`
                                   : "Pending"}
-                            </Badge>
+                              </Badge>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{it.best_distributor ?? "—"}</TableCell>

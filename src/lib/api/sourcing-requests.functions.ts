@@ -326,6 +326,51 @@ export const placeSourcingOrder = createServerFn({ method: "POST" })
     return { orderId: order.id as string, orderNumber, already: false };
   });
 
+/** Request-a-quote fallback: turn a no-offer sourcing line into a price request. */
+export const requestLineQuote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ itemId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const workspace_id = await wsId(context.supabase, context.userId);
+    const { data: item } = await context.supabase
+      .from("sourcing_request_items")
+      .select("id, request_id, description, brand, model, item_status")
+      .eq("id", data.itemId)
+      .single();
+    if (!item) throw new Error("Line not found");
+    if (item.item_status === "quote_requested") return { ok: true, already: true };
+
+    await context.supabase
+      .from("oem_price_requests")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .insert({
+        workspace_id,
+        sourcing_request_item_id: item.id,
+        part_number: [item.brand, item.model].filter(Boolean).join(" ") || null,
+        description: item.description,
+        status: "requested",
+      } as any);
+
+    await context.supabase
+      .from("sourcing_request_items")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update({ item_status: "quote_requested" } as any)
+      .eq("id", item.id);
+
+    try {
+      const { emitProductEvent } = await import("@/lib/telemetry.server");
+      await emitProductEvent(context.supabase, {
+        workspaceId: workspace_id,
+        userId: context.userId,
+        event: "quote_requested",
+        props: { source: "sourcing_line" },
+      });
+    } catch {
+      /* best-effort */
+    }
+    return { ok: true, already: false };
+  });
+
 export const getSourcingRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
