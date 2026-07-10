@@ -23,9 +23,31 @@ import {
 import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/wordmark";
 import { useProfile } from "@/hooks/use-profile";
+import { useVendorTypes } from "@/hooks/use-vendor-types";
 import { useSidebarCounts } from "@/hooks/use-sidebar-counts";
 
 type NavItem = { name: string; href: string; icon: React.ElementType; badgeKey?: "inbox" | "quotes" | "orders" | "reviewQueue" };
+
+// Buyers (self-serve importers) get a purchasing-focused nav — no quotes pipeline,
+// review queue, buyers/suppliers directory, etc.
+const buyerNavGroups: { label: string; items: NavItem[] }[] = [
+  {
+    label: "Buy & import",
+    items: [
+      { name: "Source & import", href: "/sourcing", icon: Globe2 },
+      { name: "My orders", href: "/orders", icon: Package, badgeKey: "orders" },
+      { name: "Invoices & payments", href: "/invoices", icon: ReceiptText },
+      { name: "Documents", href: "/documents", icon: FolderArchive },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { name: "Team", href: "/team", icon: Users },
+      { name: "Settings", href: "/settings", icon: Settings },
+    ],
+  },
+];
 
 const navGroups: { label: string; items: NavItem[] }[] = [
   {
@@ -66,6 +88,10 @@ const navGroups: { label: string; items: NavItem[] }[] = [
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { data: profile } = useProfile();
+  const { workspace } = useVendorTypes();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const isBuyer = (workspace as any)?.account_type === "buyer";
+  const groups = isBuyer ? buyerNavGroups : navGroups;
   const counts = useSidebarCounts();
   const isActive = (href: string) =>
     href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
@@ -88,7 +114,7 @@ export function AppSidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-2">
-        {navGroups.map((group) => (
+        {groups.map((group) => (
           <div key={group.label} className="mb-4">
             <p className="px-2 mb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/45">
               {group.label}

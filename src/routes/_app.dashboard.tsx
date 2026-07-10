@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link, useNavigate } from "@tanstack/react-router"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { useQuery } from "@tanstack/react-query"
 import { useServerFn } from "@tanstack/react-start"
@@ -49,6 +49,7 @@ import { GettingStartedTutorials } from "@/components/getting-started-tutorials"
 import { cn } from "@/lib/utils"
 import { useProfile } from "@/hooks/use-profile"
 import { useWorkspaceId } from "@/hooks/use-workspace"
+import { useVendorTypes } from "@/hooks/use-vendor-types"
 import { listActivity, listRfqs, approveExtractionToRfq } from "@/lib/api/quotes.functions"
 import { listInboundHighlights } from "@/lib/api/emails.functions"
 import { getDashboardStats } from "@/lib/api/dashboard.functions"
@@ -261,6 +262,14 @@ function CreateQuoteButton() {
 function DashboardPage() {
   const { data: profile } = useProfile();
   const { data: workspaceId } = useWorkspaceId();
+  const { workspace } = useVendorTypes();
+  const navigate = useNavigate();
+  // Buyers (self-serve importers) don't use the vendor command center — send them home.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const isBuyer = (workspace as any)?.account_type === "buyer";
+  useEffect(() => {
+    if (isBuyer) navigate({ to: "/sourcing" });
+  }, [isBuyer, navigate]);
 
   const statsFn = useServerFn(getDashboardStats);
   const { data: statsData } = useQuery({
