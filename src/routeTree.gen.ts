@@ -22,6 +22,7 @@ import { Route as CTokenRouteImport } from './routes/c.$token'
 import { Route as ApiFxRouteImport } from './routes/api/fx'
 import { Route as AppTeamRouteImport } from './routes/_app.team'
 import { Route as AppSuppliersRouteImport } from './routes/_app.suppliers'
+import { Route as AppSourcingRouteImport } from './routes/_app.sourcing'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppReviewQueueRouteImport } from './routes/_app.review-queue'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
@@ -108,6 +109,11 @@ const AppTeamRoute = AppTeamRouteImport.update({
 const AppSuppliersRoute = AppSuppliersRouteImport.update({
   id: '/suppliers',
   path: '/suppliers',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSourcingRoute = AppSourcingRouteImport.update({
+  id: '/sourcing',
+  path: '/sourcing',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
@@ -247,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AppReportsRoute
   '/review-queue': typeof AppReviewQueueRoute
   '/settings': typeof AppSettingsRoute
+  '/sourcing': typeof AppSourcingRoute
   '/suppliers': typeof AppSuppliersRoute
   '/team': typeof AppTeamRoute
   '/api/fx': typeof ApiFxRoute
@@ -284,6 +291,7 @@ export interface FileRoutesByTo {
   '/reports': typeof AppReportsRoute
   '/review-queue': typeof AppReviewQueueRoute
   '/settings': typeof AppSettingsRoute
+  '/sourcing': typeof AppSourcingRoute
   '/suppliers': typeof AppSuppliersRoute
   '/team': typeof AppTeamRoute
   '/api/fx': typeof ApiFxRoute
@@ -323,6 +331,7 @@ export interface FileRoutesById {
   '/_app/reports': typeof AppReportsRoute
   '/_app/review-queue': typeof AppReviewQueueRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/sourcing': typeof AppSourcingRoute
   '/_app/suppliers': typeof AppSuppliersRoute
   '/_app/team': typeof AppTeamRoute
   '/api/fx': typeof ApiFxRoute
@@ -362,6 +371,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/review-queue'
     | '/settings'
+    | '/sourcing'
     | '/suppliers'
     | '/team'
     | '/api/fx'
@@ -399,6 +409,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/review-queue'
     | '/settings'
+    | '/sourcing'
     | '/suppliers'
     | '/team'
     | '/api/fx'
@@ -437,6 +448,7 @@ export interface FileRouteTypes {
     | '/_app/reports'
     | '/_app/review-queue'
     | '/_app/settings'
+    | '/_app/sourcing'
     | '/_app/suppliers'
     | '/_app/team'
     | '/api/fx'
@@ -562,6 +574,13 @@ declare module '@tanstack/react-router' {
       path: '/suppliers'
       fullPath: '/suppliers'
       preLoaderRoute: typeof AppSuppliersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/sourcing': {
+      id: '/_app/sourcing'
+      path: '/sourcing'
+      fullPath: '/sourcing'
+      preLoaderRoute: typeof AppSourcingRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/settings': {
@@ -743,6 +762,7 @@ interface AppRouteChildren {
   AppReportsRoute: typeof AppReportsRoute
   AppReviewQueueRoute: typeof AppReviewQueueRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppSourcingRoute: typeof AppSourcingRoute
   AppSuppliersRoute: typeof AppSuppliersRoute
   AppTeamRoute: typeof AppTeamRoute
   AppInvoicesIdRoute: typeof AppInvoicesIdRoute
@@ -768,6 +788,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppReportsRoute: AppReportsRoute,
   AppReviewQueueRoute: AppReviewQueueRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppSourcingRoute: AppSourcingRoute,
   AppSuppliersRoute: AppSuppliersRoute,
   AppTeamRoute: AppTeamRoute,
   AppInvoicesIdRoute: AppInvoicesIdRoute,
@@ -799,3 +820,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
