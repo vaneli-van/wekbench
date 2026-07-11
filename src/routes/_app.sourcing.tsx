@@ -254,7 +254,10 @@ function SourcingPage() {
                   <span className="text-lg font-semibold tabular-nums">{money(request?.landed_total ?? landedSubtotal, reqCurrency)}</span>
                 </div>
                 <p className="mt-1.5 text-xs text-muted-foreground">
-                  Freight, duty and VAT/levies are estimates for {request?.destination_country ?? "your country"}. Prices convert live to {reqCurrency}.
+                  {request?.landed_source === "zonos"
+                    ? "Duty & tax calculated by Zonos in real time; freight estimated. "
+                    : `Freight, duty and VAT/levies are estimates for ${request?.destination_country ?? "your country"}. `}
+                  Prices convert live to {reqCurrency}.
                 </p>
                 {request?.status === "ordered" ? (
                   <div className="mt-3 flex items-center gap-2 rounded-md bg-success/10 px-3 py-2 text-sm text-success">

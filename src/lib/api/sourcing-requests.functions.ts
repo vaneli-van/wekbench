@@ -21,6 +21,20 @@ async function wsId(
   return id;
 }
 
+/** Best-effort country name/code → ISO-2 for the Zonos destination. Returns null if unknown. */
+function countryToIso2(country?: string | null): string | null {
+  if (!country) return null;
+  const c = country.trim();
+  if (/^[A-Za-z]{2}$/.test(c)) return c.toUpperCase();
+  const m: Record<string, string> = {
+    ghana: "GH", nigeria: "NG", togo: "TG", benin: "BJ", "burkina faso": "BF",
+    "cote d'ivoire": "CI", "côte d'ivoire": "CI", "ivory coast": "CI", senegal: "SN",
+    "sierra leone": "SL", liberia: "LR", mali: "ML", niger: "NE", "the gambia": "GM", gambia: "GM",
+    "united states": "US", usa: "US", "united kingdom": "GB", uk: "GB",
+  };
+  return m[c.toLowerCase()] ?? null;
+}
+
 const itemInput = z.object({
   description: z.string().max(2000).optional(),
   brand: z.string().max(255).optional(),
@@ -98,7 +112,7 @@ export const priceSourcingRequest = createServerFn({ method: "POST" })
     const workspace_id = await wsId(context.supabase, context.userId);
     const { data: req } = await context.supabase
       .from("sourcing_requests")
-      .select("id, currency, workspace_id, freight_pct, duty_pct, vat_pct")
+      .select("id, currency, workspace_id, freight_pct, duty_pct, vat_pct, destination_country")
       .eq("id", data.id)
       .single();
     if (!req) throw new Error("Request not found");
@@ -124,6 +138,7 @@ export const priceSourcingRequest = createServerFn({ method: "POST" })
 
     let priced = 0;
     let landedSubtotal = 0;
+    const pricedItems: Array<{ amount: number; quantity: number; description: string | null }> = [];
     for (let i = 0; i < lines.length; i++) {
       const li = lines[i];
       const r = routed.items[i];
@@ -146,6 +161,7 @@ export const priceSourcingRequest = createServerFn({ method: "POST" })
       if (best) {
         priced++;
         landedSubtotal += (converted ?? 0) * Number(li.qty ?? 1);
+        pricedItems.push({ amount: converted ?? 0, quantity: Number(li.qty ?? 1), description: li.description });
       }
       await context.supabase
         .from("sourcing_request_items")
@@ -164,16 +180,48 @@ export const priceSourcingRequest = createServerFn({ method: "POST" })
         .eq("id", li.id);
     }
 
-    // Landed cost = goods + freight, then duty on the customs value, then VAT/levies on top.
+    // Landed cost. Freight is always our estimate (the forwarder leg). Duty + VAT/levies
+    // come from Zonos when configured (real, per-HS), else from the % estimate.
     const freightPct = Number(req.freight_pct ?? 12);
     const dutyPct = Number(req.duty_pct ?? 20);
     const vatPct = Number(req.vat_pct ?? 21.9);
     const goods = landedSubtotal;
     const freight = goods * (freightPct / 100);
-    const customsValue = goods + freight;
-    const duty = customsValue * (dutyPct / 100);
-    const vat = (customsValue + duty) * (vatPct / 100);
-    const landedTotal = customsValue + duty + vat;
+
+    let duty: number;
+    let vat: number;
+    let landedTotal: number;
+    let landedSource = "estimate";
+
+    const destIso = countryToIso2(req.destination_country);
+    let zonos: { duties: number; taxes: number; fees: number } | null = null;
+    if (destIso && pricedItems.length) {
+      try {
+        const { computeZonosLandedCost } = await import("@/lib/landed-cost/zonos.server");
+        zonos = await computeZonosLandedCost({
+          items: pricedItems,
+          destinationCountry: destIso,
+          currency: req.currency,
+          freight,
+          forResale: false,
+        });
+      } catch (e) {
+        console.error("[sourcing] zonos failed", e);
+      }
+    }
+
+    if (zonos) {
+      duty = zonos.duties;
+      vat = zonos.taxes + zonos.fees;
+      landedTotal = goods + freight + duty + vat;
+      landedSource = "zonos";
+    } else {
+      const customsValue = goods + freight;
+      duty = customsValue * (dutyPct / 100);
+      vat = (customsValue + duty) * (vatPct / 100);
+      landedTotal = customsValue + duty + vat;
+      landedSource = "estimate";
+    }
 
     await context.supabase
       .from("sourcing_requests")
@@ -185,6 +233,7 @@ export const priceSourcingRequest = createServerFn({ method: "POST" })
         duty_est: duty,
         vat_est: vat,
         landed_total: landedTotal,
+        landed_source: landedSource,
         updated_at: new Date().toISOString(),
       } as any)
       .eq("id", data.id);
@@ -195,7 +244,7 @@ export const priceSourcingRequest = createServerFn({ method: "POST" })
         workspaceId: workspace_id,
         userId: context.userId,
         event: "sourcing_request_priced",
-        props: { lines: lines.length, priced, goods: Math.round(goods), landed_total: Math.round(landedTotal) },
+        props: { lines: lines.length, priced, goods: Math.round(goods), landed_total: Math.round(landedTotal), landed_source: landedSource },
       });
     } catch {
       /* best-effort */
@@ -378,7 +427,7 @@ export const getSourcingRequest = createServerFn({ method: "POST" })
     const { data: request, error } = await context.supabase
       .from("sourcing_requests")
       .select(
-        "id, title, destination_country, destination_city, currency, status, notes, created_at, order_id, goods_subtotal, freight_pct, freight_est, duty_pct, duty_est, vat_pct, vat_est, landed_total",
+        "id, title, destination_country, destination_city, currency, status, notes, created_at, order_id, goods_subtotal, freight_pct, freight_est, duty_pct, duty_est, vat_pct, vat_est, landed_total, landed_source",
       )
       .eq("id", data.id)
       .maybeSingle();
