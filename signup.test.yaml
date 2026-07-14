@@ -1,11 +1,10 @@
 fileType: momentic/test/v2
 id: 1e98c4d2-2155-4494-a1e6-b5869a059781
 version: 1.0.24
-url: https://wekbench.lovable.app/signup
-description: Sign up end-to-end — provisioned inbox, confirm email, sign in, reach onboarding
-# Parked: the whole flow runs (inbox → signup → confirm email → follow link); only the
-# final post-confirmation landing assertion needs tuning. Re-enable once verified.
-disabled: true
+url: https://wekbench.com/signup
+description: Sign up end-to-end — provisioned inbox, confirm email, land signed-in on onboarding
+# Money-path guard: a verified stranger must go homepage → signup → confirm email →
+# onboarding unassisted. Runs in CI (--env ci, baseUrl https://wekbench.com).
 retries: 1
 viewport: 1920, 1080
 browserType: Chromium
@@ -31,7 +30,12 @@ steps:
       into: the password field
   - click: the button to create the account / sign up
 
-  # 3. Wait for the confirmation email and extract the verification link.
+  # 3. Wait for the confirmation email and extract the Supabase verification link.
+  #    IMPORTANT: HTML emails begin with an xmlns namespace URL (http://www.w3.org/...),
+  #    so we must NOT fall back to "the first URL". Target the Supabase verify endpoint
+  #    (or any URL carrying a confirmation token) and explicitly exclude namespace/asset
+  #    URLs. A bad extraction here silently skips confirmation and the later sign-in
+  #    fails with a 400 "email_not_confirmed".
   - javascript:
       timeout: 70000
       code: |-
@@ -41,24 +45,32 @@ steps:
           timeout: 60000,
         });
         const body = (msg.html || "") + " " + (msg.text || "");
-        const urls = body.match(/https?:\/\/[^\s"'<>]+/g) ?? [];
-        const link = urls.find((u) => /token|verify|confirm|onboarding/i.test(u)) || urls[0];
-        if (!link) throw new Error("No confirmation link found in the email");
-        setVariable("VERIFICATION_LINK", link.replace(/&amp;/g, "&"));
+        const urls = (body.match(/https?:\/\/[^\s"'<>()]+/g) ?? [])
+          .map((u) => u.replace(/&amp;/g, "&"))
+          .filter((u) => !/w3\.org|schemas\.|\.(png|jpg|jpeg|gif|svg|css|js)(\?|$)/i.test(u));
+        const link =
+          urls.find((u) => /\/auth\/v\d\/verify/i.test(u)) ||
+          urls.find((u) => /[?&](token|token_hash|confirmation_token)=/i.test(u)) ||
+          urls.find((u) => /confirm|verify|onboarding/i.test(u));
+        if (!link) {
+          throw new Error("No confirmation link found in the email. URLs seen: " + urls.join(" | "));
+        }
+        setVariable("VERIFICATION_LINK", link);
         return link;
       saveAs: VERIFICATION_LINK_RET
 
-  # 4. Open the verification link — this confirms the email.
+  # 4. Open the verification link. This confirms the email and, on the implicit flow,
+  #    redirects to /onboarding with the session in the URL — auto-signing the user in.
   - navigate: "{{ env.VERIFICATION_LINK }}"
-  - wait: 2500
+  - wait: 4000
 
-  # 5. Go to sign-in. If a login form is shown (not auto-signed-in), log in
-  #    with the new account; if already signed in this is skipped.
-  - navigate: https://wekbench.lovable.app/signin
-  - wait: 1500
+  # 5. Fallback: if the app did NOT auto-sign-in (a sign-in form is showing), sign in
+  #    with the new account. When auto-signed-in this whole block is skipped.
   - if:
       checkElementVisible: a password input field on a sign-in form
       then:
+        - navigate: https://wekbench.com/signin
+        - wait: 1500
         - type:
             text: "{{ env.INBOX_EMAIL }}"
             into: the work email field
@@ -72,6 +84,6 @@ steps:
   # 6. Confirm the account is active and signed in.
   - assert: >-
       The new account is active and signed in — the page shows the Wekbench
-      onboarding wizard (a "Welcome to Wekbench" / choose-your-role screen) or
-      the dashboard. No "invalid or expired link", "email and password don't
-      match", or error page is visible.
+      onboarding wizard (a "How will you use Wekbench" / choose-your-role screen)
+      or the dashboard. No "invalid or expired link", "email and password don't
+      match", "email not confirmed", or error page is visible.

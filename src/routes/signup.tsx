@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Check, Eye, EyeOff, Loader2, Mail, Info } from "lucide-react";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/wordmark";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({ meta: [{ title: "Create your account — Wekbench" }] }),
@@ -48,12 +49,19 @@ function MicrosoftIcon({ className }: { className?: string }) {
 
 function SignUpPage() {
   const navigate = useNavigate();
+  const { session, loading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
+
+  // Already authenticated (e.g. confirmed email, auto-signed-in) — go into the app
+  // rather than showing the sign-up form again. The shell routes to onboarding.
+  useEffect(() => {
+    if (!loading && session) navigate({ to: "/dashboard", replace: true });
+  }, [loading, session, navigate]);
 
   const handleMicrosoft = async () => {
     setOauthLoading(true);
@@ -106,7 +114,7 @@ function SignUpPage() {
       navigate({ to: "/onboarding" });
     } else {
       amplitude.track("User Signed Up", { method: "email", email_domain: email.split("@")[1] ?? "", requires_confirmation: true });
-      toast.success("Check your inbox to confirm your email, then sign in.");
+      toast.success("Check your inbox — click the confirmation link to finish setting up your workspace.");
       navigate({ to: "/signin" });
     }
   };
